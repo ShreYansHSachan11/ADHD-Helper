@@ -1,19 +1,184 @@
 <!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <style>
-        body {
-            width: 350px;
-            padding: 0;
-            margin: 0;
-        }
-    </style>
-</head>
-<body>
-    <div id="app">
-        <!-- Popup content will be implemented in later tasks -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Focus Productivity Extension</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="container">
+      <!-- Header Section -->
+      <header class="header">
+        <h1 class="title">Focus Productivity</h1>
+        <button class="settings-btn" id="settingsBtn" aria-label="Settings">
+          ⚙️
+        </button>
+      </header>
+
+      <!-- Screen Time Monitoring Section -->
+      <section class="section screen-time-section">
+        <div class="section-header">
+          <h2 class="section-title">Screen Time</h2>
+          <span class="current-time" id="currentTime">0 min</span>
+        </div>
+        <div class="section-content">
+          <div class="time-limit-control">
+            <label for="timeLimitInput">Break reminder after:</label>
+            <div class="input-group">
+              <input
+                type="number"
+                id="timeLimitInput"
+                min="5"
+                max="120"
+                value="30"
+              />
+              <span>minutes</span>
+            </div>
+          </div>
+          <button class="btn btn-secondary" id="takeBreakBtn">
+            Take Break Now
+          </button>
+        </div>
+      </section>
+
+      <!-- Focus Tracking Section -->
+      <section class="section focus-section">
+        <div class="section-header">
+          <h2 class="section-title">Focus Tracking</h2>
+          <button class="btn btn-small" id="resetFocusBtn">Reset</button>
+        </div>
+        <div class="section-content">
+          <div class="focus-tab-display">
+            <span class="focus-label">Focus Tab:</span>
+            <span class="focus-url" id="focusUrl">Not set</span>
+          </div>
+          <button class="btn btn-secondary" id="setFocusBtn">
+            Set Current Tab as Focus
+          </button>
+        </div>
+      </section>
+
+      <!-- Task Management Section -->
+      <section class="section task-section">
+        <div class="section-header">
+          <h2 class="section-title">AI Task Breakdown</h2>
+        </div>
+        <div class="section-content">
+          <div class="task-input-group">
+            <input
+              type="text"
+              id="taskNameInput"
+              placeholder="Enter task name"
+              class="task-input"
+            />
+            <input
+              type="datetime-local"
+              id="taskDeadlineInput"
+              class="task-input"
+            />
+          </div>
+          <button class="btn btn-primary" id="getBreakdownBtn">
+            Get AI Breakdown
+          </button>
+          <div class="task-breakdown" id="taskBreakdown" style="display: none">
+            <h3>Task Breakdown:</h3>
+            <ul id="breakdownList"></ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Calendar Integration Section -->
+      <section class="section calendar-section">
+        <div class="section-header">
+          <h2 class="section-title">Calendar Reminders</h2>
+        </div>
+        <div class="section-content">
+          <div class="calendar-input-group">
+            <select id="prioritySelect" class="priority-select">
+              <option value="high">High Priority</option>
+              <option value="medium" selected>Medium Priority</option>
+              <option value="low">Low Priority</option>
+            </select>
+            <button class="btn btn-primary" id="createRemindersBtn">
+              Create Reminders
+            </button>
+          </div>
+          <div class="calendar-status" id="calendarStatus"></div>
+        </div>
+      </section>
+
+      <!-- Wellness Tools Section -->
+      <section class="section wellness-section">
+        <div class="section-header">
+          <h2 class="section-title">Wellness Tools</h2>
+        </div>
+        <div class="section-content">
+          <div class="wellness-controls">
+            <div class="breathing-control">
+              <button class="btn btn-wellness" id="breathingBtn">
+                <span class="icon">🫁</span>
+                <span>Breathing Exercise</span>
+              </button>
+            </div>
+            <div class="audio-control">
+              <button class="btn btn-wellness toggle-btn" id="whiteNoiseBtn">
+                <span class="icon">🔊</span>
+                <span>White Noise</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- External Pages Section -->
+      <section class="section external-pages-section">
+        <div class="section-header">
+          <h2 class="section-title">Additional Tools</h2>
+        </div>
+        <div class="section-content">
+          <div class="external-buttons">
+            <button class="btn btn-external" id="focusAnxietyBtn">
+              <span class="icon">🧘</span>
+              <span>Focus & Anxiety Management</span>
+            </button>
+            <button class="btn btn-external" id="asmrFidgetBtn">
+              <span class="icon">🎵</span>
+              <span>ASMR & Fidgeting Tools</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Breathing Exercise Modal -->
+      <div class="modal" id="breathingModal" style="display: none">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Breathing Exercise</h3>
+            <button class="close-btn" id="closeBreathingBtn">&times;</button>
+          </div>
+          <div class="breathing-container">
+            <div class="breathing-circle" id="breathingCircle"></div>
+            <div class="breathing-text" id="breathingText">
+              Click Start to begin
+            </div>
+            <div class="breathing-controls">
+              <button class="btn btn-primary" id="startBreathingBtn">
+                Start
+              </button>
+              <button
+                class="btn btn-secondary"
+                id="stopBreathingBtn"
+                style="display: none"
+              >
+                Stop
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
+
     <script src="popup.js"></script>
-</body>
+  </body>
 </html>

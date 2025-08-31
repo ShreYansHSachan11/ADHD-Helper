@@ -1,8 +1,545 @@
-/* Popup styles - to be implemented in later tasks */
+/* Reset and Base Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    margin: 0;
-    padding: 16px;
-    width: 350px;
-    background-color: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+  color: #333;
+  background: #f8f9fa;
+  width: 380px;
+  min-height: 600px;
+}
+
+.container {
+  padding: 16px;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+/* Header Styles */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.settings-btn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.settings-btn:hover {
+  background-color: #e9ecef;
+}
+
+/* Section Styles */
+.section {
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e9ecef;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.section-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Screen Time Section */
+.current-time {
+  font-weight: 600;
+  color: #3498db;
+  font-size: 14px;
+}
+
+.time-limit-control {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.input-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.input-group input {
+  width: 60px;
+  padding: 6px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.input-group span {
+  font-size: 12px;
+  color: #666;
+}
+
+/* Focus Section */
+.focus-tab-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+}
+
+.focus-label {
+  font-weight: 500;
+  color: #666;
+  min-width: 70px;
+}
+
+.focus-url {
+  font-family: monospace;
+  font-size: 12px;
+  color: #2c3e50;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+/* Task Section */
+.task-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.task-input {
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.task-input:focus {
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.task-breakdown {
+  margin-top: 12px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+}
+
+.task-breakdown h3 {
+  font-size: 14px;
+  margin-bottom: 8px;
+  color: #2c3e50;
+}
+
+.task-breakdown ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.task-breakdown li {
+  padding: 4px 0;
+  font-size: 13px;
+  color: #555;
+  border-left: 3px solid #3498db;
+  padding-left: 8px;
+  margin-bottom: 4px;
+}
+
+/* Calendar Section */
+.calendar-input-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.priority-select {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  background: white;
+}
+
+.calendar-status {
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  text-align: center;
+  display: none;
+}
+
+.calendar-status.success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+  display: block;
+}
+
+.calendar-status.error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+  display: block;
+}
+
+/* Wellness Section */
+.wellness-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.breathing-control,
+.audio-control {
+  flex: 1;
+}
+
+/* External Pages Section */
+.external-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Button Styles */
+.btn {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-decoration: none;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn-primary {
+  background: #3498db;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #2980b9;
+}
+
+.btn-secondary {
+  background: #95a5a6;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background: #7f8c8d;
+}
+
+.btn-wellness {
+  background: #27ae60;
+  color: white;
+  flex-direction: column;
+  padding: 12px 8px;
+  min-height: 60px;
+}
+
+.btn-wellness:hover {
+  background: #229954;
+}
+
+.btn-wellness .icon {
+  font-size: 20px;
+}
+
+.btn-wellness span:last-child {
+  font-size: 12px;
+  text-align: center;
+}
+
+.btn-external {
+  background: #9b59b6;
+  color: white;
+  justify-content: flex-start;
+  padding: 12px 16px;
+}
+
+.btn-external:hover {
+  background: #8e44ad;
+}
+
+.btn-external .icon {
+  font-size: 18px;
+}
+
+.btn-small {
+  padding: 6px 12px;
+  font-size: 12px;
+  min-height: auto;
+}
+
+.toggle-btn.active {
+  background: #e74c3c;
+}
+
+.toggle-btn.active:hover {
+  background: #c0392b;
+}
+
+/* Modal Styles */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  width: 320px;
+  max-width: 90%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.modal-header h3 {
+  font-size: 18px;
+  color: #2c3e50;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.close-btn:hover {
+  background: #f0f0f0;
+}
+
+/* Breathing Exercise Styles */
+.breathing-container {
+  text-align: center;
+}
+
+.breathing-circle {
+  width: 120px;
+  height: 120px;
+  border: 3px solid #3498db;
+  border-radius: 50%;
+  margin: 0 auto 20px;
+  transition: transform 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(52, 152, 219, 0.1);
+}
+
+.breathing-circle.inhale {
+  transform: scale(1.3);
+  background: rgba(52, 152, 219, 0.2);
+}
+
+.breathing-circle.exhale {
+  transform: scale(0.8);
+  background: rgba(52, 152, 219, 0.05);
+}
+
+.breathing-text {
+  font-size: 16px;
+  font-weight: 500;
+  color: #2c3e50;
+  margin-bottom: 20px;
+  min-height: 24px;
+}
+
+.breathing-controls {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+/* Responsive Design */
+@media (max-width: 400px) {
+  body {
+    width: 100%;
+    min-width: 320px;
+  }
+
+  .container {
+    padding: 12px;
+  }
+
+  .section {
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+
+  .wellness-controls {
+    flex-direction: column;
+  }
+
+  .calendar-input-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .task-input-group {
+    gap: 6px;
+  }
+}
+
+@media (max-height: 600px) {
+  .container {
+    max-height: none;
+  }
+
+  body {
+    min-height: auto;
+  }
+}
+
+/* Loading States */
+.btn.loading {
+  opacity: 0.7;
+  cursor: not-allowed;
+  position: relative;
+}
+
+.btn.loading::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Accessibility */
+.btn:focus,
+.task-input:focus,
+.priority-select:focus,
+input:focus {
+  outline: 2px solid #3498db;
+  outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .section {
+    border: 2px solid #333;
+  }
+
+  .btn {
+    border: 2px solid currentColor;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .btn,
+  .breathing-circle,
+  .task-input {
+    transition: none;
+  }
+
+  .btn:hover {
+    transform: none;
+  }
+
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(0deg);
+    }
+  }
 }
