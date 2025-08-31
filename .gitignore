@@ -123,3 +123,5 @@ store-assets/processed/
 
 # Documentation build
 docs/build/
+
+.vscode\settings.json
