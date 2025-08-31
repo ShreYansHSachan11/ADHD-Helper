@@ -1,0 +1,16 @@
+{
+  "name": "focus-productivity-extension",
+  "version": "1.0.0",
+  "description": "Chrome extension for focus and productivity management",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "vitest": "^1.0.0",
+    "@vitest/ui": "^1.0.0",
+    "jsdom": "^23.0.0"
+  },
+  "type": "module"
+}
