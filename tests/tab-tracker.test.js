@@ -33,6 +33,7 @@ const mockChrome = {
   },
   runtime: {
     id: "test-extension-id",
+    sendMessage: vi.fn(),
   },
 };
 
@@ -262,12 +263,11 @@ describe("TabTracker", () => {
 
       await tabTracker.checkScreenTimeLimit(tabId, sessionTime);
 
-      expect(mockChrome.notifications.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          title: "Time for a Break!",
-          message: expect.stringContaining("break"),
-        })
-      );
+      expect(mockChrome.runtime.sendMessage).toHaveBeenCalledWith({
+        type: "SHOW_BREAK_NOTIFICATION",
+        tabId: tabId,
+        timeSpent: expect.any(Number),
+      });
     });
 
     it("should respect cooldown period for break reminders", async () => {
@@ -347,12 +347,11 @@ describe("TabTracker", () => {
 
       await tabTracker.checkFocusDeviation(currentTabId, currentUrl);
 
-      expect(mockChrome.notifications.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          title: "Stay Focused!",
-          message: expect.stringContaining("example.com"),
-        })
-      );
+      expect(mockChrome.runtime.sendMessage).toHaveBeenCalledWith({
+        type: "SHOW_FOCUS_NOTIFICATION",
+        focusUrl: focusUrl,
+        currentUrl: expect.any(String),
+      });
     });
 
     it("should not show focus reminder for same domain", async () => {

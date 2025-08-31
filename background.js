@@ -36,6 +36,9 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     // Initialize tab tracker
     tabTracker = new TabTracker();
 
+    // Initialize notification system
+    await initializeNotificationSystem();
+
     console.log("Background service worker initialized successfully");
   } catch (error) {
     console.error("Error initializing background service worker:", error);
@@ -52,6 +55,9 @@ chrome.runtime.onStartup.addListener(async () => {
     // Reinitialize components
     storageManager = new StorageManager();
     tabTracker = new TabTracker();
+
+    // Reinitialize notification system
+    await initializeNotificationSystem();
   } catch (error) {
     console.error("Error on startup:", error);
   }
@@ -83,12 +89,194 @@ async function initializeDefaultSettings() {
 }
 
 /**
+ * Notification System - Enhanced notification handling with proper timing and permissions
+ */
+
+// Notification state tracking
+let notificationState = {
+  activeNotifications: new Map(),
+  lastBreakNotificationTime: 0,
+  lastFocusNotificationTime: 0,
+  notificationPermissionGranted: false,
+};
+
+/**
+ * Initialize notification system and check permissions
+ */
+async function initializeNotificationSystem() {
+  try {
+    // Check if notifications permission is granted
+    const permission = await chrome.notifications.getPermissionLevel();
+    notificationState.notificationPermissionGranted = permission === "granted";
+
+    if (!notificationState.notificationPermissionGranted) {
+      console.warn("Notifications permission not granted");
+    }
+
+    console.log("Notification system initialized, permission:", permission);
+  } catch (error) {
+    console.error("Error initializing notification system:", error);
+  }
+}
+
+/**
+ * Create and display a notification with proper error handling
+ */
+async function createNotification(notificationId, options) {
+  try {
+    // Check permission first
+    if (!notificationState.notificationPermissionGranted) {
+      console.warn("Cannot show notification: permission not granted");
+      return false;
+    }
+
+    // Clear any existing notification with the same ID
+    if (notificationState.activeNotifications.has(notificationId)) {
+      try {
+        await chrome.notifications.clear(notificationId);
+      } catch (error) {
+        console.warn("Error clearing existing notification:", error);
+      }
+    }
+
+    // Create the notification
+    try {
+      await chrome.notifications.create(notificationId, {
+        type: "basic",
+        iconUrl: "/assets/icons/icon48.png",
+        ...options,
+      });
+    } catch (error) {
+      console.error("Failed to create notification:", error);
+      return false;
+    }
+
+    // Track the notification
+    notificationState.activeNotifications.set(notificationId, {
+      createdAt: Date.now(),
+      options: options,
+    });
+
+    // Auto-clear notification after 10 seconds if not dismissed
+    setTimeout(async () => {
+      try {
+        await chrome.notifications.clear(notificationId);
+        notificationState.activeNotifications.delete(notificationId);
+      } catch (error) {
+        // Notification might already be cleared
+      }
+    }, 10000);
+
+    return true;
+  } catch (error) {
+    console.error("Error creating notification:", error);
+    return false;
+  }
+}
+
+/**
+ * Show break reminder notification
+ */
+async function showBreakReminderNotification(tabId, timeSpent) {
+  try {
+    const now = Date.now();
+    const cooldownMs = CONSTANTS.SCREEN_TIME.NOTIFICATION_COOLDOWN_MS;
+
+    // Check cooldown period
+    if (now - notificationState.lastBreakNotificationTime < cooldownMs) {
+      console.log("Break notification on cooldown");
+      return false;
+    }
+
+    const notificationId = `break-reminder-${tabId}-${now}`;
+    const timeFormatted = HELPERS.FormatUtils.formatDuration(timeSpent);
+
+    const success = await createNotification(notificationId, {
+      title: "Time for a Break! 🕐",
+      message: `You've been on this tab for ${timeFormatted}. Consider taking a short break to rest your eyes and mind.`,
+      buttons: [{ title: "Take Break" }, { title: "Continue Working" }],
+    });
+
+    if (success) {
+      notificationState.lastBreakNotificationTime = now;
+      console.log("Break reminder notification shown for tab", tabId);
+    }
+
+    return success;
+  } catch (error) {
+    console.error("Error showing break reminder notification:", error);
+    return false;
+  }
+}
+
+/**
+ * Show focus reminder notification
+ */
+async function showFocusReminderNotification(focusUrl, currentUrl) {
+  try {
+    const now = Date.now();
+    const settings = await storageManager.get(
+      CONSTANTS.STORAGE_KEYS.FOCUS_SETTINGS
+    );
+    const cooldownMs = HELPERS.TimeUtils.minutesToMs(
+      settings?.reminderCooldownMinutes ||
+        CONSTANTS.FOCUS.REMINDER_COOLDOWN_MINUTES
+    );
+
+    // Check cooldown period
+    if (now - notificationState.lastFocusNotificationTime < cooldownMs) {
+      console.log("Focus notification on cooldown");
+      return false;
+    }
+
+    const notificationId = `focus-reminder-${now}`;
+
+    // Safely extract domain names with error handling
+    let focusDomain = "unknown";
+    let currentDomain = "unknown";
+
+    try {
+      focusDomain = new URL(focusUrl).hostname;
+    } catch (error) {
+      console.warn("Invalid focus URL:", focusUrl);
+      focusDomain = focusUrl || "unknown";
+    }
+
+    try {
+      if (currentUrl) {
+        currentDomain = new URL(currentUrl).hostname;
+      }
+    } catch (error) {
+      console.warn("Invalid current URL:", currentUrl);
+      currentDomain = currentUrl || "unknown";
+    }
+
+    const success = await createNotification(notificationId, {
+      title: "Stay Focused! 🎯",
+      message: `You switched from ${focusDomain} to ${currentDomain}. Remember to stay focused on your initial task.`,
+      buttons: [{ title: "Return to Task" }, { title: "Update Focus" }],
+    });
+
+    if (success) {
+      notificationState.lastFocusNotificationTime = now;
+      console.log("Focus reminder notification shown");
+    }
+
+    return success;
+  } catch (error) {
+    console.error("Error showing focus reminder notification:", error);
+    return false;
+  }
+}
+
+/**
  * Handle notification clicks
  */
 chrome.notifications.onClicked.addListener(async (notificationId) => {
   try {
     // Clear the notification
     await chrome.notifications.clear(notificationId);
+    notificationState.activeNotifications.delete(notificationId);
 
     // Open extension popup
     const windows = await chrome.windows.getAll({ populate: true });
@@ -115,7 +303,9 @@ chrome.notifications.onClicked.addListener(async (notificationId) => {
 chrome.notifications.onButtonClicked.addListener(
   async (notificationId, buttonIndex) => {
     try {
+      // Clear the notification
       await chrome.notifications.clear(notificationId);
+      notificationState.activeNotifications.delete(notificationId);
 
       // Handle different notification types based on button clicked
       if (notificationId.includes("break")) {
@@ -123,9 +313,10 @@ chrome.notifications.onButtonClicked.addListener(
           // "Take Break" button clicked
           if (tabTracker) {
             await tabTracker.triggerManualBreak();
+            console.log("Manual break triggered from notification");
           }
         }
-        // "Continue Working" - no action needed, just dismiss
+        // "Continue Working" (buttonIndex === 1) - no action needed, just dismiss
       } else if (notificationId.includes("focus")) {
         if (buttonIndex === 0) {
           // "Return to Task" button clicked
@@ -133,8 +324,9 @@ chrome.notifications.onButtonClicked.addListener(
           if (focusInfo && focusInfo.tabId) {
             try {
               await chrome.tabs.update(focusInfo.tabId, { active: true });
+              console.log("Returned to focus tab from notification");
             } catch (error) {
-              console.log("Focus tab no longer exists");
+              console.log("Focus tab no longer exists, cannot return");
             }
           }
         } else if (buttonIndex === 1) {
@@ -145,6 +337,7 @@ chrome.notifications.onButtonClicked.addListener(
           });
           if (tabs.length > 0 && tabTracker) {
             await tabTracker.setFocusTab(tabs[0].id, tabs[0].url);
+            console.log("Focus tab updated from notification");
           }
         }
       }
@@ -153,6 +346,55 @@ chrome.notifications.onButtonClicked.addListener(
     }
   }
 );
+
+/**
+ * Handle notification dismissal (when user closes notification)
+ */
+chrome.notifications.onClosed.addListener((notificationId, byUser) => {
+  try {
+    notificationState.activeNotifications.delete(notificationId);
+    if (byUser) {
+      console.log("Notification dismissed by user:", notificationId);
+    }
+  } catch (error) {
+    console.error("Error handling notification dismissal:", error);
+  }
+});
+
+/**
+ * Clean up expired notifications periodically
+ */
+setInterval(() => {
+  try {
+    const now = Date.now();
+    const expiredNotifications = [];
+
+    notificationState.activeNotifications.forEach((data, notificationId) => {
+      // Remove notifications older than 30 seconds
+      if (now - data.createdAt > 30000) {
+        expiredNotifications.push(notificationId);
+      }
+    });
+
+    expiredNotifications.forEach(async (notificationId) => {
+      try {
+        await chrome.notifications.clear(notificationId);
+        notificationState.activeNotifications.delete(notificationId);
+      } catch (error) {
+        // Notification might already be cleared
+      }
+    });
+
+    if (expiredNotifications.length > 0) {
+      console.log(
+        "Cleaned up expired notifications:",
+        expiredNotifications.length
+      );
+    }
+  } catch (error) {
+    console.error("Error during notification cleanup:", error);
+  }
+}, 30000); // Run every 30 seconds
 
 /**
  * Handle messages from popup and content scripts
@@ -233,6 +475,33 @@ async function handleMessage(message, sender, sendResponse) {
         sendResponse({ success: true });
         break;
 
+      case "SHOW_BREAK_NOTIFICATION":
+        const breakSuccess = await showBreakReminderNotification(
+          message.tabId,
+          message.timeSpent
+        );
+        sendResponse({ success: breakSuccess });
+        break;
+
+      case "SHOW_FOCUS_NOTIFICATION":
+        const focusSuccess = await showFocusReminderNotification(
+          message.focusUrl,
+          message.currentUrl
+        );
+        sendResponse({ success: focusSuccess });
+        break;
+
+      case "CHECK_NOTIFICATION_PERMISSION":
+        const permission = await chrome.notifications.getPermissionLevel();
+        sendResponse({
+          success: true,
+          data: {
+            permission: permission,
+            granted: permission === "granted",
+          },
+        });
+        break;
+
       default:
         sendResponse({ success: false, error: "Unknown message type" });
     }
@@ -287,6 +556,7 @@ setInterval(async () => {
   try {
     storageManager = new StorageManager();
     tabTracker = new TabTracker();
+    await initializeNotificationSystem();
   } catch (error) {
     console.error("Error during initial load:", error);
   }

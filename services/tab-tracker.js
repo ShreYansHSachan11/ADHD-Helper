@@ -505,19 +505,28 @@ class TabTracker {
           this.constants.STORAGE_KEYS.TAB_HISTORY
         )) || {};
       const tabData = tabHistory[tabId];
-      const timeSpent = tabData
-        ? this.helpers.FormatUtils.formatTimeForUI(tabData.totalTime)
-        : "some time";
 
-      await chrome.notifications.create({
-        type: "basic",
-        iconUrl: "/assets/icons/icon48.png",
-        title: "Time for a Break!",
-        message: `You've been on this tab for ${timeSpent}. Consider taking a short break.`,
-        buttons: [{ title: "Take Break" }, { title: "Continue Working" }],
-      });
+      if (!tabData) {
+        console.warn("No tab data found for break reminder");
+        return;
+      }
 
-      console.log("Break reminder shown for tab", tabId);
+      const currentSessionTime = this.currentTabStartTime
+        ? this.helpers.TimeUtils.timeDiff(this.currentTabStartTime)
+        : 0;
+      const totalTime = tabData.totalTime + currentSessionTime;
+
+      // Send message to background script to show notification
+      try {
+        await chrome.runtime.sendMessage({
+          type: "SHOW_BREAK_NOTIFICATION",
+          tabId: tabId,
+          timeSpent: totalTime,
+        });
+        console.log("Break reminder request sent for tab", tabId);
+      } catch (error) {
+        console.error("Error sending break reminder request:", error);
+      }
     } catch (error) {
       console.error("Error showing break reminder:", error);
     }
@@ -528,17 +537,31 @@ class TabTracker {
    */
   async showFocusReminder(focusUrl) {
     try {
-      const domain = new URL(focusUrl).hostname;
+      // Get current tab URL for context
+      let currentUrl = null;
+      try {
+        const tabs = await chrome.tabs.query({
+          active: true,
+          currentWindow: true,
+        });
+        if (tabs.length > 0) {
+          currentUrl = tabs[0].url;
+        }
+      } catch (error) {
+        console.warn("Could not get current tab URL for focus reminder");
+      }
 
-      await chrome.notifications.create({
-        type: "basic",
-        iconUrl: "/assets/icons/icon48.png",
-        title: "Stay Focused!",
-        message: `Remember to stay focused on ${domain}. You switched away from your initial task.`,
-        buttons: [{ title: "Return to Task" }, { title: "Update Focus" }],
-      });
-
-      console.log("Focus reminder shown for", focusUrl);
+      // Send message to background script to show notification
+      try {
+        await chrome.runtime.sendMessage({
+          type: "SHOW_FOCUS_NOTIFICATION",
+          focusUrl: focusUrl,
+          currentUrl: currentUrl,
+        });
+        console.log("Focus reminder request sent for", focusUrl);
+      } catch (error) {
+        console.error("Error sending focus reminder request:", error);
+      }
     } catch (error) {
       console.error("Error showing focus reminder:", error);
     }
