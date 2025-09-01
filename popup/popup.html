@@ -20,7 +20,7 @@
       <section class="section screen-time-section">
         <div class="section-header">
           <h2 class="section-title">Screen Time</h2>
-          <span class="current-time" id="currentTime">0 min</span>
+          <span class="current-time" id="currentTime">0m</span>
         </div>
         <div class="section-content">
           <div class="time-limit-control">
@@ -30,15 +30,21 @@
                 type="number"
                 id="timeLimitInput"
                 min="5"
-                max="120"
+                max="180"
                 value="30"
+                title="Set break reminder time (5-180 minutes)"
               />
               <span>minutes</span>
             </div>
           </div>
-          <button class="btn btn-secondary" id="takeBreakBtn">
-            Take Break Now
-          </button>
+          <div class="screen-time-controls">
+            <button class="btn btn-secondary" id="takeBreakBtn" title="Reset current session timer">
+              Take Break Now
+            </button>
+            <button class="btn btn-small" id="resetScreenTimeBtn" title="Clear all screen time data">
+              Reset Data
+            </button>
+          </div>
         </div>
       </section>
 
@@ -46,16 +52,48 @@
       <section class="section focus-section">
         <div class="section-header">
           <h2 class="section-title">Focus Tracking</h2>
-          <button class="btn btn-small" id="resetFocusBtn">Reset</button>
+          <div class="focus-status-indicator" id="focusStatusIndicator">
+            <span class="status-dot" id="focusStatusDot"></span>
+            <span class="status-text" id="focusStatusText">Not Active</span>
+          </div>
         </div>
         <div class="section-content">
           <div class="focus-tab-display">
             <span class="focus-label">Focus Tab:</span>
             <span class="focus-url" id="focusUrl">Not set</span>
           </div>
-          <button class="btn btn-secondary" id="setFocusBtn">
-            Set Current Tab as Focus
-          </button>
+          
+          <div class="focus-session-info" id="focusSessionInfo" style="display: none;">
+            <div class="session-stat">
+              <span class="stat-label">Session Time:</span>
+              <span class="stat-value" id="focusSessionTime">0m</span>
+            </div>
+            <div class="session-stat">
+              <span class="stat-label">Deviations:</span>
+              <span class="stat-value" id="focusDeviationCount">0</span>
+            </div>
+            <div class="session-stat">
+              <span class="stat-label">Last Reminder:</span>
+              <span class="stat-value" id="lastFocusReminder">Never</span>
+            </div>
+          </div>
+
+          <div class="focus-controls">
+            <button class="btn btn-secondary" id="setFocusBtn">
+              Set Current Tab as Focus
+            </button>
+            <button class="btn btn-small" id="resetFocusBtn">Reset</button>
+          </div>
+
+          <div class="focus-deviation-history" id="focusDeviationHistory" style="display: none;">
+            <h4 class="history-title">Recent Deviations</h4>
+            <div class="deviation-list" id="deviationList">
+              <!-- Deviation items will be populated here -->
+            </div>
+            <button class="btn btn-small btn-text" id="toggleHistoryBtn">
+              Show History
+            </button>
+          </div>
         </div>
       </section>
 
@@ -179,6 +217,10 @@
       </div>
     </div>
 
+    <script src="../services/storage-manager.js"></script>
+    <script src="../services/gemini-service.js"></script>
+    <script src="../utils/constants.js"></script>
+    <script src="components/task-manager.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>
