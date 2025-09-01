@@ -41,7 +41,12 @@
   - Test popup responsiveness and layout across different screen sizes
   - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 10.4_
 
-- [ ] 6. Implement screen time monitoring UI components
+- [x] 6. Implement screen time monitoring UI components
+
+
+
+
+
 
   - Add screen time display and settings controls to popup interface
   - Create time limit configuration functionality with save/load from storage
@@ -50,7 +55,12 @@
   - Test screen time UI integration with background tab tracking
   - _Requirements: 1.1, 1.2, 1.3, 1.4_
 
-- [ ] 7. Build focus tracking UI and controls
+- [x] 7. Build focus tracking UI and controls
+
+
+
+
+
 
   - Implement focus tab display and manual focus tab setting controls
   - Add focus session status indicators and reset functionality
@@ -58,7 +68,12 @@
   - Test focus tracking UI integration with background monitoring
   - _Requirements: 2.1, 2.2, 2.3, 2.4_
 
-- [ ] 8. Create Gemini API integration service
+- [x] 8. Create Gemini API integration service
+
+
+
+
+
 
   - Implement gemini-service.js with API key management and request handling
   - Add task breakdown request formatting and response parsing
@@ -67,7 +82,12 @@
   - Write tests for API integration with mock responses
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
-- [ ] 9. Build task management UI component
+- [x] 9. Build task management UI component
+
+
+
+
+
 
   - Create task-manager.js component for task input and breakdown display
   - Implement task input form with name and deadline fields

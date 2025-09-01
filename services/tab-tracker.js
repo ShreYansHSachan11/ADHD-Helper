@@ -430,11 +430,39 @@ class TabTracker {
       this.focusTabId = tabId;
       this.focusTabUrl = url;
 
+      // Reset session statistics when setting new focus tab
+      await this.resetFocusSession();
+
       await this.updateCurrentSession();
 
       console.log(`Set focus tab ${tabId}: ${url}`);
     } catch (error) {
       console.error("Error setting focus tab:", error);
+    }
+  }
+
+  /**
+   * Reset focus session statistics
+   */
+  async resetFocusSession() {
+    try {
+      const focusHistory = await this.storageManager.get('focusHistory') || {
+        deviations: [],
+        sessionDeviations: 0,
+        totalDeviations: 0
+      };
+
+      // Reset session-specific counters but keep total history
+      focusHistory.sessionDeviations = 0;
+
+      await this.storageManager.set('focusHistory', focusHistory);
+
+      // Reset reminder times
+      this.lastFocusReminderTime = 0;
+
+      console.log("Focus session statistics reset");
+    } catch (error) {
+      console.error("Error resetting focus session:", error);
     }
   }
 
@@ -466,7 +494,10 @@ class TabTracker {
         return;
       }
 
-      // Check cooldown period
+      // Record the deviation
+      await this.recordFocusDeviation(this.focusTabUrl, url);
+
+      // Check cooldown period for notifications
       const now = this.helpers.TimeUtils.now();
       const cooldownMs = this.helpers.TimeUtils.minutesToMs(
         settings.reminderCooldownMinutes
@@ -479,6 +510,41 @@ class TabTracker {
       }
     } catch (error) {
       console.error("Error checking focus deviation:", error);
+    }
+  }
+
+  /**
+   * Record a focus deviation in the history
+   */
+  async recordFocusDeviation(fromUrl, toUrl) {
+    try {
+      const focusHistory = await this.storageManager.get('focusHistory') || {
+        deviations: [],
+        sessionDeviations: 0,
+        totalDeviations: 0
+      };
+
+      // Add new deviation to history
+      const deviation = {
+        fromUrl: fromUrl,
+        toUrl: toUrl,
+        timestamp: this.helpers.TimeUtils.now()
+      };
+
+      focusHistory.deviations.push(deviation);
+      focusHistory.sessionDeviations += 1;
+      focusHistory.totalDeviations += 1;
+
+      // Keep only last 50 deviations to prevent storage bloat
+      if (focusHistory.deviations.length > 50) {
+        focusHistory.deviations = focusHistory.deviations.slice(-50);
+      }
+
+      await this.storageManager.set('focusHistory', focusHistory);
+
+      console.log(`Focus deviation recorded: ${fromUrl} → ${toUrl}`);
+    } catch (error) {
+      console.error("Error recording focus deviation:", error);
     }
   }
 
@@ -618,6 +684,14 @@ class TabTracker {
     try {
       this.focusTabId = null;
       this.focusTabUrl = null;
+      
+      // Clear focus history when resetting
+      await this.storageManager.set('focusHistory', {
+        deviations: [],
+        sessionDeviations: 0,
+        totalDeviations: 0
+      });
+
       await this.updateCurrentSession();
 
       console.log("Focus tab reset");
@@ -667,6 +741,76 @@ class TabTracker {
       url: this.focusTabUrl,
       isSet: Boolean(this.focusTabId && this.focusTabUrl),
     };
+  }
+
+  /**
+   * Get focus session statistics
+   */
+  async getFocusSessionStats() {
+    try {
+      const sessionData = await this.storageManager.get(
+        this.constants.STORAGE_KEYS.CURRENT_SESSION
+      );
+      const focusHistory = await this.storageManager.get('focusHistory') || {};
+
+      // Calculate session time since focus was set
+      const sessionStartTime = sessionData?.sessionStartTime || this.helpers.TimeUtils.now();
+      const sessionTime = this.helpers.TimeUtils.timeDiff(sessionStartTime);
+
+      // Get deviation count for current session
+      const deviationCount = focusHistory.sessionDeviations || 0;
+
+      // Check if currently on focus tab
+      let isCurrentlyOnFocus = false;
+      if (this.focusTabId && this.currentTabId) {
+        try {
+          const currentTab = await chrome.tabs.get(this.currentTabId);
+          isCurrentlyOnFocus = this.urlsMatch(currentTab.url, this.focusTabUrl);
+        } catch (error) {
+          // Tab might not exist anymore
+          isCurrentlyOnFocus = false;
+        }
+      }
+
+      return {
+        sessionTime: sessionTime,
+        deviationCount: deviationCount,
+        lastReminderTime: this.lastFocusReminderTime,
+        isCurrentlyOnFocus: isCurrentlyOnFocus,
+        focusTabSet: Boolean(this.focusTabId && this.focusTabUrl)
+      };
+    } catch (error) {
+      console.error("Error getting focus session stats:", error);
+      return {
+        sessionTime: 0,
+        deviationCount: 0,
+        lastReminderTime: 0,
+        isCurrentlyOnFocus: false,
+        focusTabSet: false
+      };
+    }
+  }
+
+  /**
+   * Get focus deviation history
+   */
+  async getFocusDeviationHistory() {
+    try {
+      const focusHistory = await this.storageManager.get('focusHistory') || {};
+      
+      return {
+        deviations: focusHistory.deviations || [],
+        sessionDeviations: focusHistory.sessionDeviations || 0,
+        totalDeviations: focusHistory.totalDeviations || 0
+      };
+    } catch (error) {
+      console.error("Error getting focus deviation history:", error);
+      return {
+        deviations: [],
+        sessionDeviations: 0,
+        totalDeviations: 0
+      };
+    }
   }
 
   /**
