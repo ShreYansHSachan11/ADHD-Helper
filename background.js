@@ -7,6 +7,7 @@
 importScripts(
   "/services/storage-manager.js",
   "/services/tab-tracker.js",
+  "/services/gemini-service.js",
   "/utils/constants.js",
   "/utils/helpers.js"
 );
@@ -14,6 +15,7 @@ importScripts(
 // Global instances
 let tabTracker = null;
 let storageManager = null;
+let geminiService = null;
 
 // Initialize service worker
 console.log("Focus Productivity Extension background service worker loaded");
@@ -35,6 +37,9 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 
     // Initialize tab tracker
     tabTracker = new TabTracker();
+
+    // Initialize Gemini service
+    geminiService = new GeminiService();
 
     // Initialize notification system
     await initializeNotificationSystem();
@@ -452,6 +457,30 @@ async function handleMessage(message, sender, sendResponse) {
         }
         break;
 
+      case "GET_FOCUS_SESSION_STATS":
+        if (tabTracker) {
+          const sessionStats = await tabTracker.getFocusSessionStats();
+          sendResponse({ success: true, data: sessionStats });
+        } else {
+          sendResponse({
+            success: false,
+            error: "Tab tracker not initialized",
+          });
+        }
+        break;
+
+      case "GET_FOCUS_DEVIATION_HISTORY":
+        if (tabTracker) {
+          const deviationHistory = await tabTracker.getFocusDeviationHistory();
+          sendResponse({ success: true, data: deviationHistory });
+        } else {
+          sendResponse({
+            success: false,
+            error: "Tab tracker not initialized",
+          });
+        }
+        break;
+
       case "TRIGGER_MANUAL_BREAK":
         if (tabTracker) {
           await tabTracker.triggerManualBreak();
@@ -472,6 +501,8 @@ async function handleMessage(message, sender, sendResponse) {
 
       case "CLEAR_TAB_HISTORY":
         await storageManager.set(CONSTANTS.STORAGE_KEYS.TAB_HISTORY, {});
+        // Also reset current session data
+        await storageManager.set(CONSTANTS.STORAGE_KEYS.CURRENT_SESSION, {});
         sendResponse({ success: true });
         break;
 
@@ -500,6 +531,42 @@ async function handleMessage(message, sender, sendResponse) {
             granted: permission === "granted",
           },
         });
+        break;
+
+      case "getTaskBreakdown":
+        if (geminiService) {
+          try {
+            const result = await geminiService.breakdownTask(
+              message.taskName,
+              message.deadline
+            );
+            if (result.success) {
+              sendResponse({
+                success: true,
+                breakdown: result.steps,
+                taskName: result.taskName,
+                deadline: result.deadline
+              });
+            } else {
+              sendResponse({
+                success: false,
+                error: result.error,
+                breakdown: result.placeholder ? result.placeholder.steps : null
+              });
+            }
+          } catch (error) {
+            console.error("Task breakdown error:", error);
+            sendResponse({
+              success: false,
+              error: "Failed to process task breakdown request"
+            });
+          }
+        } else {
+          sendResponse({
+            success: false,
+            error: "Gemini service not initialized"
+          });
+        }
         break;
 
       default:
@@ -556,6 +623,7 @@ setInterval(async () => {
   try {
     storageManager = new StorageManager();
     tabTracker = new TabTracker();
+    geminiService = new GeminiService();
     await initializeNotificationSystem();
   } catch (error) {
     console.error("Error during initial load:", error);
