@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Calendar Integration UI Demo</title>
+    <link rel="stylesheet" href="popup/popup.css" />
+    <style>
+      body {
+        width: 400px;
+        margin: 20px auto;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+      }
+      .demo-header {
+        text-align: center;
+        margin-bottom: 20px;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 8px;
+      }
+      .demo-section {
+        margin-bottom: 30px;
+        padding: 20px;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+      }
+      .demo-title {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 10px;
+        color: #2c3e50;
+      }
+      .demo-description {
+        font-size: 14px;
+        color: #666;
+        margin-bottom: 15px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="demo-header">
+      <h1>Calendar Integration UI Demo</h1>
+      <p>Test the calendar integration UI controls and functionality</p>
+    </div>
+
+    <div class="demo-section">
+      <h2 class="demo-title">Calendar Integration Controls</h2>
+      <p class="demo-description">
+        This demo shows the calendar integration UI with configuration, reminder
+        creation, and manual fallback.
+      </p>
+
+      <!-- Calendar Integration Section -->
+      <section class="section calendar-section">
+        <div class="section-header">
+          <h2 class="section-title">Calendar Reminders</h2>
+          <div class="calendar-connection-status" id="calendarConnectionStatus">
+            <span class="connection-dot" id="connectionDot"></span>
+            <span class="connection-text" id="connectionText"
+              >Not Connected</span
+            >
+          </div>
+        </div>
+        <div class="section-content">
+          <!-- Calendar Configuration Panel -->
+          <div class="calendar-config" id="calendarConfig">
+            <div class="config-header">
+              <h4>API Configuration</h4>
+              <button class="btn btn-small btn-text" id="toggleConfigBtn">
+                Show Setup
+              </button>
+            </div>
+            <div
+              class="config-content"
+              id="configContent"
+              style="display: none"
+            >
+              <div class="config-input-group">
+                <label for="apiKeyInput">Google Calendar API Key:</label>
+                <input
+                  type="password"
+                  id="apiKeyInput"
+                  placeholder="Enter your API key"
+                  class="config-input"
+                />
+              </div>
+              <div class="config-input-group">
+                <label for="accessTokenInput">OAuth Access Token:</label>
+                <input
+                  type="password"
+                  id="accessTokenInput"
+                  placeholder="Enter your access token"
+                  class="config-input"
+                />
+              </div>
+              <div class="config-actions">
+                <button class="btn btn-primary btn-small" id="saveConfigBtn">
+                  Save Configuration
+                </button>
+                <button
+                  class="btn btn-secondary btn-small"
+                  id="testConnectionBtn"
+                >
+                  Test Connection
+                </button>
+                <button class="btn btn-small" id="clearConfigBtn">Clear</button>
+              </div>
+              <div class="setup-instructions" id="setupInstructions">
+                <h5>Setup Instructions:</h5>
+                <ol>
+                  <li>
+                    Go to
+                    <a href="https://console.cloud.google.com" target="_blank"
+                      >Google Cloud Console</a
+                    >
+                  </li>
+                  <li>Create a new project or select existing project</li>
+                  <li>Enable the Google Calendar API</li>
+                  <li>Create credentials (API Key and OAuth 2.0)</li>
+                  <li>Configure OAuth consent screen</li>
+                  <li>Add your credentials above and test connection</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+
+          <!-- Task Reminder Creation Form -->
+          <div class="calendar-reminder-form" id="calendarReminderForm">
+            <div class="reminder-input-group">
+              <input
+                type="text"
+                id="reminderTaskInput"
+                placeholder="Task name"
+                class="reminder-input"
+              />
+              <input
+                type="datetime-local"
+                id="reminderDeadlineInput"
+                class="reminder-input"
+              />
+            </div>
+            <div class="priority-and-create">
+              <select id="prioritySelect" class="priority-select">
+                <option value="high">High Priority (4 reminders)</option>
+                <option value="medium" selected>
+                  Medium Priority (3 reminders)
+                </option>
+                <option value="low">Low Priority (3 reminders)</option>
+              </select>
+              <button class="btn btn-primary" id="createRemindersBtn">
+                Create Calendar Reminders
+              </button>
+            </div>
+            <div class="priority-info" id="priorityInfo">
+              <small
+                >Medium Priority: Reminders at 3 days, 1 day, and 4 hours before
+                deadline</small
+              >
+            </div>
+          </div>
+
+          <!-- Manual Reminder Fallback -->
+          <div
+            class="manual-reminder-fallback"
+            id="manualReminderFallback"
+            style="display: none"
+          >
+            <div class="fallback-header">
+              <h4>Manual Reminder Creation</h4>
+              <p>Calendar integration unavailable. Use these reminder times:</p>
+            </div>
+            <div class="manual-reminder-list" id="manualReminderList">
+              <!-- Manual reminder times will be populated here -->
+            </div>
+            <div class="fallback-actions">
+              <button class="btn btn-secondary btn-small" id="copyRemindersBtn">
+                Copy to Clipboard
+              </button>
+              <button class="btn btn-small" id="hideManualBtn">Hide</button>
+            </div>
+          </div>
+
+          <!-- Calendar Status Display -->
+          <div class="calendar-status" id="calendarStatus"></div>
+        </div>
+      </section>
+    </div>
+
+    <div class="demo-section">
+      <h2 class="demo-title">Test Instructions</h2>
+      <div class="demo-description">
+        <ol>
+          <li>
+            <strong>Configuration Test:</strong> Click "Show Setup" to reveal
+            API configuration panel
+          </li>
+          <li>
+            <strong>Priority Info Test:</strong> Change priority selection to
+            see different reminder schedules
+          </li>
+          <li>
+            <strong>Manual Fallback Test:</strong> Enter task details and click
+            "Create Calendar Reminders" (will show manual fallback since no API
+            configured)
+          </li>
+          <li>
+            <strong>Copy Test:</strong> Use "Copy to Clipboard" button to copy
+            manual reminders
+          </li>
+          <li>
+            <strong>API Test:</strong> Enter test API credentials and use "Test
+            Connection" button
+          </li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- Mock Chrome APIs for demo -->
+    <script>
+      // Mock Chrome APIs for demo
+      window.chrome = {
+        storage: {
+          local: {
+            get: async (keys) => {
+              console.log("Mock storage get:", keys);
+              return {};
+            },
+            set: async (data) => {
+              console.log("Mock storage set:", data);
+              return;
+            },
+            remove: async (keys) => {
+              console.log("Mock storage remove:", keys);
+              return;
+            },
+          },
+        },
+        runtime: {
+          sendMessage: async (message) => {
+            console.log("Mock runtime message:", message);
+            return { success: false, error: "Demo mode - no backend" };
+          },
+        },
+      };
+
+      // Mock CalendarService for demo
+      class CalendarService {
+        constructor() {
+          this.isAuthenticated = false;
+          this.apiKey = null;
+          this.accessToken = null;
+        }
+
+        async loadStoredCredentials() {
+          console.log("Loading stored credentials...");
+          this.isAuthenticated = false;
+        }
+
+        async storeCredentials(apiKey, accessToken) {
+          console.log("Storing credentials:", {
+            apiKey: "***",
+            accessToken: "***",
+          });
+          this.apiKey = apiKey;
+          this.accessToken = accessToken;
+          this.isAuthenticated = true;
+          return true;
+        }
+
+        async testConnection() {
+          console.log("Testing connection...");
+          if (!this.isAuthenticated) {
+            return { success: false, error: "Not authenticated" };
+          }
+          // Simulate success for demo
+          return { success: true, calendarName: "Demo Calendar" };
+        }
+
+        async createTaskReminders(taskName, deadline, priority) {
+          console.log("Creating task reminders:", {
+            taskName,
+            deadline,
+            priority,
+          });
+          if (!this.isAuthenticated) {
+            throw new Error("Not authenticated");
+          }
+          // Simulate success for demo
+          return {
+            success: true,
+            createdCount: 3,
+            totalRequested: 3,
+            events: [],
+          };
+        }
+
+        async clearCredentials() {
+          console.log("Clearing credentials...");
+          this.apiKey = null;
+          this.accessToken = null;
+          this.isAuthenticated = false;
+          return true;
+        }
+      }
+
+      window.CalendarService = CalendarService;
+    </script>
+
+    <!-- Load the calendar integration functionality -->
+    <script src="services/calendar-service.js"></script>
+    <script>
+      // Demo Calendar Integration Manager
+      class DemoCalendarManager {
+        constructor() {
+          this.calendarService = new CalendarService();
+          this.initializeElements();
+          this.setupEventListeners();
+          this.loadCalendarConfiguration();
+        }
+
+        initializeElements() {
+          this.connectionDot = document.getElementById("connectionDot");
+          this.connectionText = document.getElementById("connectionText");
+          this.calendarConfig = document.getElementById("calendarConfig");
+          this.toggleConfigBtn = document.getElementById("toggleConfigBtn");
+          this.configContent = document.getElementById("configContent");
+          this.apiKeyInput = document.getElementById("apiKeyInput");
+          this.accessTokenInput = document.getElementById("accessTokenInput");
+          this.saveConfigBtn = document.getElementById("saveConfigBtn");
+          this.testConnectionBtn = document.getElementById("testConnectionBtn");
+          this.clearConfigBtn = document.getElementById("clearConfigBtn");
+          this.reminderTaskInput = document.getElementById("reminderTaskInput");
+          this.reminderDeadlineInput = document.getElementById(
+            "reminderDeadlineInput"
+          );
+          this.prioritySelect = document.getElementById("prioritySelect");
+          this.priorityInfo = document.getElementById("priorityInfo");
+          this.createRemindersBtn =
+            document.getElementById("createRemindersBtn");
+          this.manualReminderFallback = document.getElementById(
+            "manualReminderFallback"
+          );
+          this.manualReminderList =
+            document.getElementById("manualReminderList");
+          this.copyRemindersBtn = document.getElementById("copyRemindersBtn");
+          this.hideManualBtn = document.getElementById("hideManualBtn");
+          this.calendarStatus = document.getElementById("calendarStatus");
+        }
+
+        setupEventListeners() {
+          this.toggleConfigBtn?.addEventListener("click", () =>
+            this.toggleCalendarConfig()
+          );
+          this.saveConfigBtn?.addEventListener("click", () =>
+            this.handleSaveCalendarConfig()
+          );
+          this.testConnectionBtn?.addEventListener("click", () =>
+            this.handleTestConnection()
+          );
+          this.clearConfigBtn?.addEventListener("click", () =>
+            this.handleClearCalendarConfig()
+          );
+          this.prioritySelect?.addEventListener("change", () =>
+            this.updatePriorityInfo()
+          );
+          this.createRemindersBtn?.addEventListener("click", () =>
+            this.handleCreateReminders()
+          );
+          this.copyRemindersBtn?.addEventListener("click", () =>
+            this.handleCopyReminders()
+          );
+          this.hideManualBtn?.addEventListener("click", () =>
+            this.hideManualReminderFallback()
+          );
+        }
+
+        async loadCalendarConfiguration() {
+          await this.calendarService.loadStoredCredentials();
+          this.updateCalendarConnectionStatus();
+          this.updatePriorityInfo();
+        }
+
+        updateCalendarConnectionStatus(connected = null, statusText = null) {
+          const isConnected =
+            connected !== null
+              ? connected
+              : this.calendarService.isAuthenticated;
+
+          this.connectionDot.classList.remove("connected", "testing");
+          if (isConnected) {
+            this.connectionDot.classList.add("connected");
+            this.connectionText.textContent = statusText || "Connected";
+          } else {
+            this.connectionText.textContent = statusText || "Not Connected";
+          }
+        }
+
+        toggleCalendarConfig() {
+          const isVisible = this.configContent.style.display === "block";
+
+          if (isVisible) {
+            this.configContent.style.display = "none";
+            this.toggleConfigBtn.textContent = "Show Setup";
+          } else {
+            this.configContent.style.display = "block";
+            this.toggleConfigBtn.textContent = "Hide Setup";
+          }
+        }
+
+        async handleSaveCalendarConfig() {
+          const apiKey = this.apiKeyInput.value.trim();
+          const accessToken = this.accessTokenInput.value.trim();
+
+          if (!apiKey || !accessToken) {
+            this.showCalendarStatus(
+              "Please enter both API key and access token",
+              "error"
+            );
+            return;
+          }
+
+          this.setButtonLoading(this.saveConfigBtn, true);
+
+          try {
+            const success = await this.calendarService.storeCredentials(
+              apiKey,
+              accessToken
+            );
+
+            if (success) {
+              this.showCalendarStatus(
+                "Configuration saved successfully!",
+                "success"
+              );
+              this.updateCalendarConnectionStatus(true, "Configured");
+              this.apiKeyInput.value = "";
+              this.accessTokenInput.value = "";
+              this.configContent.style.display = "none";
+              this.toggleConfigBtn.textContent = "Show Setup";
+            } else {
+              this.showCalendarStatus("Failed to save configuration", "error");
+            }
+          } catch (error) {
+            console.error("Failed to save calendar configuration:", error);
+            this.showCalendarStatus("Failed to save configuration", "error");
+          } finally {
+            this.setButtonLoading(this.saveConfigBtn, false);
+          }
+        }
+
+        async handleTestConnection() {
+          if (!this.calendarService.isAuthenticated) {
+            this.showCalendarStatus(
+              "Please configure API credentials first",
+              "warning"
+            );
+            return;
+          }
+
+          this.setButtonLoading(this.testConnectionBtn, true);
+          this.connectionDot.classList.add("testing");
+          this.connectionText.textContent = "Testing...";
+
+          try {
+            const result = await this.calendarService.testConnection();
+
+            if (result.success) {
+              this.updateCalendarConnectionStatus(
+                true,
+                `Connected to ${result.calendarName}`
+              );
+              this.showCalendarStatus("Connection test successful!", "success");
+            } else {
+              this.updateCalendarConnectionStatus(false, "Connection Failed");
+              this.showCalendarStatus(
+                `Connection failed: ${result.error}`,
+                "error"
+              );
+            }
+          } catch (error) {
+            console.error("Connection test failed:", error);
+            this.updateCalendarConnectionStatus(false, "Test Failed");
+            this.showCalendarStatus("Connection test failed", "error");
+          } finally {
+            this.setButtonLoading(this.testConnectionBtn, false);
+            this.connectionDot.classList.remove("testing");
+          }
+        }
+
+        async handleClearCalendarConfig() {
+          if (
+            confirm(
+              "Are you sure you want to clear the calendar configuration?"
+            )
+          ) {
+            try {
+              await this.calendarService.clearCredentials();
+              this.apiKeyInput.value = "";
+              this.accessTokenInput.value = "";
+              this.updateCalendarConnectionStatus(false, "Not Connected");
+              this.showCalendarStatus("Configuration cleared", "success");
+            } catch (error) {
+              console.error("Failed to clear calendar configuration:", error);
+              this.showCalendarStatus("Failed to clear configuration", "error");
+            }
+          }
+        }
+
+        updatePriorityInfo() {
+          const priority = this.prioritySelect.value;
+          const infoTexts = {
+            high: "High Priority: Reminders at 1 week, 3 days, 1 day, and 2 hours before deadline",
+            medium:
+              "Medium Priority: Reminders at 3 days, 1 day, and 4 hours before deadline",
+            low: "Low Priority: Reminders at 1 week, 2 days, and 8 hours before deadline",
+          };
+
+          this.priorityInfo.innerHTML = `<small>${
+            infoTexts[priority] || infoTexts.medium
+          }</small>`;
+        }
+
+        async handleCreateReminders() {
+          const taskName = this.reminderTaskInput.value.trim();
+          const deadline = this.reminderDeadlineInput.value;
+          const priority = this.prioritySelect.value;
+
+          if (!taskName || !deadline) {
+            this.showCalendarStatus(
+              "Please enter task name and deadline",
+              "error"
+            );
+            return;
+          }
+
+          if (!this.calendarService.isAuthenticated) {
+            this.showManualReminderFallback(taskName, deadline, priority);
+            return;
+          }
+
+          this.setButtonLoading(this.createRemindersBtn, true);
+          this.showCalendarStatus("Creating calendar reminders...", "loading");
+
+          try {
+            const deadlineDate = new Date(deadline);
+            const result = await this.calendarService.createTaskReminders(
+              taskName,
+              deadlineDate,
+              priority
+            );
+
+            if (result.success) {
+              this.showCalendarStatus(
+                `Successfully created ${result.createdCount} of ${result.totalRequested} reminders!`,
+                "success"
+              );
+              this.reminderTaskInput.value = "";
+              this.reminderDeadlineInput.value = "";
+            }
+          } catch (error) {
+            console.error("Failed to create reminders:", error);
+            this.showCalendarStatus(
+              `Failed to create reminders: ${error.message}`,
+              "error"
+            );
+            this.showManualReminderFallback(taskName, deadline, priority);
+          } finally {
+            this.setButtonLoading(this.createRemindersBtn, false);
+          }
+        }
+
+        showManualReminderFallback(taskName, deadline, priority) {
+          const deadlineDate = new Date(deadline);
+          const reminderTimes = this.calculateManualReminderTimes(
+            deadlineDate,
+            priority
+          );
+
+          this.manualReminderList.innerHTML = "";
+
+          reminderTimes.forEach((reminder) => {
+            const reminderItem = document.createElement("div");
+            reminderItem.className = "manual-reminder-item";
+            reminderItem.innerHTML = `
+                        <div>
+                            <div class="reminder-time">${reminder.time}</div>
+                            <div class="reminder-description">${reminder.description}</div>
+                        </div>
+                    `;
+            this.manualReminderList.appendChild(reminderItem);
+          });
+
+          this.manualReminderFallback.style.display = "block";
+          this.showCalendarStatus(
+            "Calendar integration unavailable. Manual reminders shown below.",
+            "warning"
+          );
+        }
+
+        calculateManualReminderTimes(deadline, priority) {
+          const reminderTimes = [];
+          const deadlineTime = deadline.getTime();
+
+          const intervals = {
+            week: 7 * 24 * 60 * 60 * 1000,
+            threeDays: 3 * 24 * 60 * 60 * 1000,
+            twoDays: 2 * 24 * 60 * 60 * 1000,
+            oneDay: 24 * 60 * 60 * 1000,
+            eightHours: 8 * 60 * 60 * 1000,
+            fourHours: 4 * 60 * 60 * 1000,
+            twoHours: 2 * 60 * 60 * 1000,
+          };
+
+          let reminderIntervals = [];
+
+          switch (priority.toLowerCase()) {
+            case "high":
+              reminderIntervals = [
+                { interval: intervals.week, description: "1 week before" },
+                { interval: intervals.threeDays, description: "3 days before" },
+                { interval: intervals.oneDay, description: "1 day before" },
+                { interval: intervals.twoHours, description: "2 hours before" },
+              ];
+              break;
+            case "medium":
+              reminderIntervals = [
+                { interval: intervals.threeDays, description: "3 days before" },
+                { interval: intervals.oneDay, description: "1 day before" },
+                {
+                  interval: intervals.fourHours,
+                  description: "4 hours before",
+                },
+              ];
+              break;
+            case "low":
+            default:
+              reminderIntervals = [
+                { interval: intervals.week, description: "1 week before" },
+                { interval: intervals.twoDays, description: "2 days before" },
+                {
+                  interval: intervals.eightHours,
+                  description: "8 hours before",
+                },
+              ];
+              break;
+          }
+
+          const now = new Date();
+          reminderIntervals.forEach((reminder) => {
+            const reminderTime = new Date(deadlineTime - reminder.interval);
+            if (reminderTime > now) {
+              reminderTimes.push({
+                time: reminderTime.toLocaleString(),
+                description: reminder.description,
+              });
+            }
+          });
+
+          return reminderTimes;
+        }
+
+        async handleCopyReminders() {
+          try {
+            const reminderItems = this.manualReminderList.querySelectorAll(
+              ".manual-reminder-item"
+            );
+            let reminderText = "Task Reminders:\n\n";
+
+            reminderItems.forEach((item) => {
+              const time = item.querySelector(".reminder-time").textContent;
+              const description = item.querySelector(
+                ".reminder-description"
+              ).textContent;
+              reminderText += `${time} (${description})\n`;
+            });
+
+            await navigator.clipboard.writeText(reminderText);
+            this.showCalendarStatus(
+              "Reminders copied to clipboard!",
+              "success"
+            );
+          } catch (error) {
+            console.error("Failed to copy reminders:", error);
+            this.showCalendarStatus("Failed to copy reminders", "error");
+          }
+        }
+
+        hideManualReminderFallback() {
+          this.manualReminderFallback.style.display = "none";
+        }
+
+        showCalendarStatus(message, type) {
+          this.calendarStatus.textContent = message;
+          this.calendarStatus.className = `calendar-status ${type}`;
+
+          if (type === "success" || type === "error") {
+            setTimeout(() => {
+              this.calendarStatus.style.display = "none";
+            }, 5000);
+          }
+        }
+
+        setButtonLoading(button, loading) {
+          if (loading) {
+            button.classList.add("loading");
+            button.disabled = true;
+          } else {
+            button.classList.remove("loading");
+            button.disabled = false;
+          }
+        }
+      }
+
+      // Initialize demo when page loads
+      document.addEventListener("DOMContentLoaded", () => {
+        new DemoCalendarManager();
+      });
+    </script>
+  </body>
+</html>

@@ -3,7 +3,7 @@
   "name": "Focus Productivity Extension",
   "version": "1.0.0",
   "description": "A comprehensive productivity extension with screen time monitoring, task management, and wellness features",
-  
+
   "permissions": [
     "storage",
     "tabs",
@@ -12,42 +12,39 @@
     "identity",
     "alarms"
   ],
-  
+
   "host_permissions": [
     "https://generativelanguage.googleapis.com/*",
     "https://www.googleapis.com/*"
   ],
-  
+
   "background": {
     "service_worker": "background.js"
   },
-  
+
   "action": {
     "default_popup": "popup/popup.html",
     "default_title": "Focus Productivity Extension",
     "default_icon": {
-      "16": "assets/icons/icon16.png",
-      "48": "assets/icons/icon48.png",
-      "128": "assets/icons/icon128.png"
+      "16": "assets/icons/16.ico",
+      "48": "assets/icons/48.ico",
+      "128": "assets/icons/128.ico"
     }
   },
-  
+
   "icons": {
-    "16": "assets/icons/icon16.png",
-    "48": "assets/icons/icon48.png",
-    "128": "assets/icons/icon128.png"
+    "16": "assets/icons/16.ico",
+    "48": "assets/icons/48.ico",
+    "128": "assets/icons/128.ico"
   },
-  
+
   "web_accessible_resources": [
     {
-      "resources": [
-        "external-pages/*",
-        "assets/sounds/*"
-      ],
+      "resources": ["external-pages/*", "assets/sounds/*"],
       "matches": ["<all_urls>"]
     }
   ],
-  
+
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
   }

@@ -38,10 +38,18 @@
             </div>
           </div>
           <div class="screen-time-controls">
-            <button class="btn btn-secondary" id="takeBreakBtn" title="Reset current session timer">
+            <button
+              class="btn btn-secondary"
+              id="takeBreakBtn"
+              title="Reset current session timer"
+            >
               Take Break Now
             </button>
-            <button class="btn btn-small" id="resetScreenTimeBtn" title="Clear all screen time data">
+            <button
+              class="btn btn-small"
+              id="resetScreenTimeBtn"
+              title="Clear all screen time data"
+            >
               Reset Data
             </button>
           </div>
@@ -62,8 +70,12 @@
             <span class="focus-label">Focus Tab:</span>
             <span class="focus-url" id="focusUrl">Not set</span>
           </div>
-          
-          <div class="focus-session-info" id="focusSessionInfo" style="display: none;">
+
+          <div
+            class="focus-session-info"
+            id="focusSessionInfo"
+            style="display: none"
+          >
             <div class="session-stat">
               <span class="stat-label">Session Time:</span>
               <span class="stat-value" id="focusSessionTime">0m</span>
@@ -85,7 +97,11 @@
             <button class="btn btn-small" id="resetFocusBtn">Reset</button>
           </div>
 
-          <div class="focus-deviation-history" id="focusDeviationHistory" style="display: none;">
+          <div
+            class="focus-deviation-history"
+            id="focusDeviationHistory"
+            style="display: none"
+          >
             <h4 class="history-title">Recent Deviations</h4>
             <div class="deviation-list" id="deviationList">
               <!-- Deviation items will be populated here -->
@@ -130,18 +146,137 @@
       <section class="section calendar-section">
         <div class="section-header">
           <h2 class="section-title">Calendar Reminders</h2>
+          <div class="calendar-connection-status" id="calendarConnectionStatus">
+            <span class="connection-dot" id="connectionDot"></span>
+            <span class="connection-text" id="connectionText"
+              >Not Connected</span
+            >
+          </div>
         </div>
         <div class="section-content">
-          <div class="calendar-input-group">
-            <select id="prioritySelect" class="priority-select">
-              <option value="high">High Priority</option>
-              <option value="medium" selected>Medium Priority</option>
-              <option value="low">Low Priority</option>
-            </select>
-            <button class="btn btn-primary" id="createRemindersBtn">
-              Create Reminders
-            </button>
+          <!-- Calendar Configuration Panel -->
+          <div
+            class="calendar-config"
+            id="calendarConfig"
+            style="display: none"
+          >
+            <div class="config-header">
+              <h4>API Configuration</h4>
+              <button class="btn btn-small btn-text" id="toggleConfigBtn">
+                Show Setup
+              </button>
+            </div>
+            <div
+              class="config-content"
+              id="configContent"
+              style="display: none"
+            >
+              <div class="config-input-group">
+                <label for="apiKeyInput">Google Calendar API Key:</label>
+                <input
+                  type="password"
+                  id="apiKeyInput"
+                  placeholder="Enter your API key"
+                  class="config-input"
+                />
+              </div>
+              <div class="config-input-group">
+                <label for="accessTokenInput">OAuth Access Token:</label>
+                <input
+                  type="password"
+                  id="accessTokenInput"
+                  placeholder="Enter your access token"
+                  class="config-input"
+                />
+              </div>
+              <div class="config-actions">
+                <button class="btn btn-primary btn-small" id="saveConfigBtn">
+                  Save Configuration
+                </button>
+                <button
+                  class="btn btn-secondary btn-small"
+                  id="testConnectionBtn"
+                >
+                  Test Connection
+                </button>
+                <button class="btn btn-small" id="clearConfigBtn">Clear</button>
+              </div>
+              <div class="setup-instructions" id="setupInstructions">
+                <h5>Setup Instructions:</h5>
+                <ol>
+                  <li>
+                    Go to
+                    <a href="https://console.cloud.google.com" target="_blank"
+                      >Google Cloud Console</a
+                    >
+                  </li>
+                  <li>Create a new project or select existing project</li>
+                  <li>Enable the Google Calendar API</li>
+                  <li>Create credentials (API Key and OAuth 2.0)</li>
+                  <li>Configure OAuth consent screen</li>
+                  <li>Add your credentials above and test connection</li>
+                </ol>
+              </div>
+            </div>
           </div>
+
+          <!-- Task Reminder Creation Form -->
+          <div class="calendar-reminder-form" id="calendarReminderForm">
+            <div class="reminder-input-group">
+              <input
+                type="text"
+                id="reminderTaskInput"
+                placeholder="Task name (or use task from above)"
+                class="reminder-input"
+              />
+              <input
+                type="datetime-local"
+                id="reminderDeadlineInput"
+                class="reminder-input"
+              />
+            </div>
+            <div class="priority-and-create">
+              <select id="prioritySelect" class="priority-select">
+                <option value="high">High Priority (4 reminders)</option>
+                <option value="medium" selected>
+                  Medium Priority (3 reminders)
+                </option>
+                <option value="low">Low Priority (3 reminders)</option>
+              </select>
+              <button class="btn btn-primary" id="createRemindersBtn">
+                Create Calendar Reminders
+              </button>
+            </div>
+            <div class="priority-info" id="priorityInfo">
+              <small
+                >Medium Priority: Reminders at 3 days, 1 day, and 4 hours before
+                deadline</small
+              >
+            </div>
+          </div>
+
+          <!-- Manual Reminder Fallback -->
+          <div
+            class="manual-reminder-fallback"
+            id="manualReminderFallback"
+            style="display: none"
+          >
+            <div class="fallback-header">
+              <h4>Manual Reminder Creation</h4>
+              <p>Calendar integration unavailable. Use these reminder times:</p>
+            </div>
+            <div class="manual-reminder-list" id="manualReminderList">
+              <!-- Manual reminder times will be populated here -->
+            </div>
+            <div class="fallback-actions">
+              <button class="btn btn-secondary btn-small" id="copyRemindersBtn">
+                Copy to Clipboard
+              </button>
+              <button class="btn btn-small" id="hideManualBtn">Hide</button>
+            </div>
+          </div>
+
+          <!-- Calendar Status Display -->
           <div class="calendar-status" id="calendarStatus"></div>
         </div>
       </section>
@@ -164,6 +299,32 @@
                 <span class="icon">🔊</span>
                 <span>White Noise</span>
               </button>
+              <div
+                class="audio-controls"
+                id="audioControls"
+                style="display: none"
+              >
+                <div class="volume-control">
+                  <label for="volumeSlider">Volume:</label>
+                  <input
+                    type="range"
+                    id="volumeSlider"
+                    min="0"
+                    max="100"
+                    value="50"
+                    class="volume-slider"
+                  />
+                  <span id="volumeValue">50%</span>
+                </div>
+                <button class="btn btn-small" id="nextSoundBtn">
+                  <span class="icon">🔀</span>
+                  <span>Next Sound</span>
+                </button>
+                <div class="current-sound-display">
+                  <span class="sound-label">Playing:</span>
+                  <span id="currentSoundName">None</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -219,8 +380,10 @@
 
     <script src="../services/storage-manager.js"></script>
     <script src="../services/gemini-service.js"></script>
+    <script src="../services/calendar-service.js"></script>
     <script src="../utils/constants.js"></script>
     <script src="components/task-manager.js"></script>
+    <script src="components/breathing-exercise.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>

@@ -86,7 +86,7 @@
   - Test calendar integration with different priority levels and reminder frequencies
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6_
 
-- [ ] 11. Build calendar integration UI controls
+- [x] 11. Build calendar integration UI controls
 
   - Add task reminder creation form with priority selection
   - Implement calendar integration status display and error messaging
@@ -95,7 +95,7 @@
   - Test complete calendar workflow from task input to reminder creation
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6_
 
-- [ ] 12. Create breathing exercise component
+- [x] 12. Create breathing exercise component
 
   - Implement breathing-exercise.js with animated circle and timing logic
   - Add breathing phase management (inhale, hold, exhale, hold) with customizable durations
@@ -105,17 +105,19 @@
   - Test breathing exercise timing accuracy and animation smoothness
   - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
 
-- [ ] 13. Implement white noise audio system
+- [x] 13. Implement simple white noise audio system
 
-  - Create audio-manager.js with white noise playback controls
-  - Add white noise toggle functionality with persistent state management
-  - Implement volume control and background playback continuation
-  - Create audio file loading and error handling for playback issues
-  - Add visual toggle state indicators and cleanup on browser close
-  - Test white noise functionality across popup open/close cycles
+  - Create audio-manager.js with simple white noise playback controls
+  - Implement play/pause toggle button with visual state indicators
+  - Add volume slider control with persistent volume settings
+  - Create "next random sound" button to cycle through available white noise sounds randomly
+  - Ensure all white noise audio files loop seamlessly and endlessly
+  - Add background playback continuation when popup is closed
+  - Implement audio file loading with error handling and fallback sounds
+  - Test white noise functionality across popup open/close cycles and ensure seamless looping
   - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6_
 
-- [ ] 14. Build Focus & Anxiety Management external page
+- [x] 14. Build Focus & Anxiety Management external page
 
   - Create focus-anxiety.html with comprehensive wellness resources and techniques
   - Implement focus-anxiety.js with interactive elements and usage tracking
@@ -125,7 +127,7 @@
   - Test external page loading and integration with main extension
   - _Requirements: 5.1, 5.2, 5.3, 5.4_
 
-- [ ] 15. Create ASMR and Fidgeting Tools external page
+- [x] 15. Create ASMR and Fidgeting Tools external page
 
   - Build asmr-fidget.html with interactive ASMR sounds and fidgeting elements
   - Implement asmr-fidget.js with audio controls and interactive feedback systems
@@ -135,7 +137,7 @@
   - Test ASMR page functionality and automatic audio cleanup on page close
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
-- [ ] 16. Integrate external page access in main popup
+- [x] 16. Integrate external page access in main popup
 
   - Add prominent buttons for Focus & Anxiety Management and ASMR tools in popup
   - Implement external page opening functionality with proper URL handling

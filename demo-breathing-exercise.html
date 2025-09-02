@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Breathing Exercise Demo</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        background: #f8f9fa;
+        margin: 0;
+        padding: 20px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+      }
+
+      .demo-container {
+        background: white;
+        border-radius: 8px;
+        padding: 24px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        width: 320px;
+        text-align: center;
+      }
+
+      .breathing-circle {
+        width: 120px;
+        height: 120px;
+        border: 3px solid #3498db;
+        border-radius: 50%;
+        margin: 0 auto 20px;
+        transition: transform 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(52, 152, 219, 0.1);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .breathing-circle::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 80%;
+        height: 80%;
+        background: radial-gradient(
+          circle,
+          rgba(52, 152, 219, 0.3) 0%,
+          transparent 70%
+        );
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        transition: opacity 0.3s ease;
+        opacity: 0;
+      }
+
+      .breathing-circle.inhale {
+        transform: scale(1.4);
+        background: rgba(52, 152, 219, 0.25);
+        border-color: #2980b9;
+        box-shadow: 0 0 20px rgba(52, 152, 219, 0.4);
+      }
+
+      .breathing-circle.inhale::before {
+        opacity: 1;
+      }
+
+      .breathing-circle.exhale {
+        transform: scale(0.7);
+        background: rgba(52, 152, 219, 0.05);
+        border-color: #7fb3d3;
+      }
+
+      .breathing-circle.hold {
+        transform: scale(1.1);
+        background: rgba(52, 152, 219, 0.15);
+        border-color: #3498db;
+      }
+
+      .breathing-circle.hold::before {
+        opacity: 0.5;
+      }
+
+      .breathing-text {
+        font-size: 18px;
+        font-weight: 500;
+        color: #2c3e50;
+        margin-bottom: 20px;
+        min-height: 28px;
+        transition: color 0.3s ease;
+      }
+
+      .breathing-controls {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+        margin-bottom: 20px;
+      }
+
+      .btn {
+        padding: 10px 16px;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .btn-primary {
+        background: #3498db;
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background: #2980b9;
+      }
+
+      .btn-secondary {
+        background: #95a5a6;
+        color: white;
+      }
+
+      .btn-secondary:hover {
+        background: #7f8c8d;
+      }
+
+      .pattern-controls {
+        margin-top: 20px;
+        padding: 16px;
+        background: #f8f9fa;
+        border-radius: 6px;
+        border: 1px solid #e9ecef;
+      }
+
+      .pattern-controls h4 {
+        margin: 0 0 12px 0;
+        font-size: 14px;
+        color: #2c3e50;
+      }
+
+      .pattern-buttons {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      .pattern-btn {
+        padding: 4px 8px;
+        font-size: 11px;
+        background: #e9ecef;
+        color: #495057;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .pattern-btn:hover {
+        background: #dee2e6;
+      }
+
+      .pattern-btn.active {
+        background: #3498db;
+        color: white;
+        border-color: #2980b9;
+      }
+
+      .stats {
+        margin-top: 16px;
+        padding: 12px;
+        background: #f8f9fa;
+        border-radius: 6px;
+        font-size: 12px;
+        color: #666;
+      }
+
+      @keyframes breathing-complete {
+        0% {
+          transform: scale(1);
+          box-shadow: 0 0 0 rgba(39, 174, 96, 0.7);
+        }
+        50% {
+          transform: scale(1.1);
+          box-shadow: 0 0 20px rgba(39, 174, 96, 0.7);
+        }
+        100% {
+          transform: scale(1);
+          box-shadow: 0 0 0 rgba(39, 174, 96, 0);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="demo-container">
+      <h2>Breathing Exercise Demo</h2>
+
+      <div class="breathing-circle" id="breathingCircle"></div>
+      <div class="breathing-text" id="breathingText">Click Start to begin</div>
+
+      <div class="breathing-controls">
+        <button class="btn btn-primary" id="startBreathingBtn">Start</button>
+        <button
+          class="btn btn-secondary"
+          id="stopBreathingBtn"
+          style="display: none"
+        >
+          Stop
+        </button>
+      </div>
+
+      <div class="pattern-controls">
+        <h4>Breathing Patterns</h4>
+        <div class="pattern-buttons">
+          <button class="pattern-btn active" data-pattern="4-7-8">4-7-8</button>
+          <button class="pattern-btn" data-pattern="4-4-4-4">4-4-4-4</button>
+          <button class="pattern-btn" data-pattern="6-2-6-2">6-2-6-2</button>
+          <button class="pattern-btn" data-pattern="quick">Quick</button>
+          <button class="pattern-btn" data-pattern="deep">Deep</button>
+        </div>
+      </div>
+
+      <div class="stats" id="stats">
+        Sessions: 0 | Total Time: 0m | Cycles: 0
+      </div>
+    </div>
+
+    <script>
+      // Mock Chrome APIs for demo
+      window.chrome = {
+        storage: {
+          local: {
+            get: (keys) => Promise.resolve({}),
+            set: (data) => Promise.resolve(),
+          },
+        },
+        runtime: {
+          sendMessage: (message) => Promise.resolve({ success: true }),
+        },
+      };
+    </script>
+    <script src="popup/components/breathing-exercise.js"></script>
+    <script>
+      // Initialize breathing exercise
+      const breathingExercise = new BreathingExercise();
+
+      // Pattern selection
+      document.querySelectorAll(".pattern-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          // Remove active class from all buttons
+          document
+            .querySelectorAll(".pattern-btn")
+            .forEach((b) => b.classList.remove("active"));
+          // Add active class to clicked button
+          btn.classList.add("active");
+
+          // Set the pattern
+          const pattern = btn.dataset.pattern;
+          breathingExercise.setPattern(pattern);
+
+          console.log(`Pattern set to: ${pattern}`);
+        });
+      });
+
+      // Update stats periodically
+      async function updateStats() {
+        const stats = await breathingExercise.getSessionStats();
+        const statsEl = document.getElementById("stats");
+        const totalMinutes = Math.floor(stats.totalTime / 60000);
+        statsEl.textContent = `Sessions: ${stats.totalSessions} | Total Time: ${totalMinutes}m | Cycles: ${stats.totalCycles}`;
+      }
+
+      // Update stats every 5 seconds
+      setInterval(updateStats, 5000);
+      updateStats(); // Initial update
+
+      console.log("Breathing Exercise Demo loaded successfully!");
+      console.log(
+        "Available patterns: 4-7-8 (default), 4-4-4-4, 6-2-6-2, quick, deep"
+      );
+    </script>
+  </body>
+</html>

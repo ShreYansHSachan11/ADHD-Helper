@@ -545,26 +545,104 @@ async function handleMessage(message, sender, sendResponse) {
                 success: true,
                 breakdown: result.steps,
                 taskName: result.taskName,
-                deadline: result.deadline
+                deadline: result.deadline,
               });
             } else {
               sendResponse({
                 success: false,
                 error: result.error,
-                breakdown: result.placeholder ? result.placeholder.steps : null
+                breakdown: result.placeholder ? result.placeholder.steps : null,
               });
             }
           } catch (error) {
             console.error("Task breakdown error:", error);
             sendResponse({
               success: false,
-              error: "Failed to process task breakdown request"
+              error: "Failed to process task breakdown request",
             });
           }
         } else {
           sendResponse({
             success: false,
-            error: "Gemini service not initialized"
+            error: "Gemini service not initialized",
+          });
+        }
+        break;
+
+      case "toggleWhiteNoise":
+        try {
+          if (!globalThis.audioManager) {
+            // Dynamically import AudioManager
+            const AudioManager = await import("./services/audio-manager.js");
+            globalThis.audioManager = new AudioManager.default();
+          }
+
+          const result = await globalThis.audioManager.togglePlayPause();
+          sendResponse(result);
+        } catch (error) {
+          console.error("White noise toggle error:", error);
+          sendResponse({
+            success: false,
+            error: "Failed to toggle white noise",
+          });
+        }
+        break;
+
+      case "setWhiteNoiseVolume":
+        try {
+          if (!globalThis.audioManager) {
+            const AudioManager = await import("./services/audio-manager.js");
+            globalThis.audioManager = new AudioManager.default();
+          }
+
+          const newVolume = globalThis.audioManager.setVolume(message.volume);
+          sendResponse({ success: true, volume: newVolume });
+        } catch (error) {
+          console.error("Volume set error:", error);
+          sendResponse({
+            success: false,
+            error: "Failed to set volume",
+          });
+        }
+        break;
+
+      case "nextWhiteNoiseSound":
+        try {
+          if (!globalThis.audioManager) {
+            const AudioManager = await import("./services/audio-manager.js");
+            globalThis.audioManager = new AudioManager.default();
+          }
+
+          const result = globalThis.audioManager.nextRandomSound();
+          sendResponse(result);
+        } catch (error) {
+          console.error("Sound change error:", error);
+          sendResponse({
+            success: false,
+            error: "Failed to change sound",
+          });
+        }
+        break;
+
+      case "getWhiteNoiseStatus":
+        try {
+          if (!globalThis.audioManager) {
+            const AudioManager = await import("./services/audio-manager.js");
+            globalThis.audioManager = new AudioManager.default();
+          }
+
+          sendResponse({
+            success: true,
+            active: globalThis.audioManager.isActive(),
+            volume: globalThis.audioManager.getVolume(),
+            currentSound: globalThis.audioManager.getCurrentSoundName(),
+            currentSoundIndex: globalThis.audioManager.getCurrentSoundIndex(),
+          });
+        } catch (error) {
+          console.error("Status get error:", error);
+          sendResponse({
+            success: false,
+            error: "Failed to get status",
           });
         }
         break;

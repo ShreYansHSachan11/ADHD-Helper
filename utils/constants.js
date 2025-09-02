@@ -76,10 +76,21 @@ const AUDIO = {
     MIN_VOLUME: 0,
     MAX_VOLUME: 1,
     FADE_DURATION_MS: 500,
+    SOUNDS: {
+      AIR: "assets/sounds/air-white-noise.mp3",
+      OCEAN: "assets/sounds/ocean-white-noise.mp3",
+      RAIN: "assets/sounds/rain-white-noise.mp3",
+      SHOWER: "assets/sounds/shower-white-noise.mp3",
+      TRAIN: "assets/sounds/train-white-noise.mp3",
+      WATER: "assets/sounds/water-white-noise.mp3",
+      WATERFALL: "assets/sounds/waterfall-white-noise.mp3",
+      WAVES: "assets/sounds/waves-white-noise.mp3",
+    },
+    DEFAULT_SOUND: "assets/sounds/rain-white-noise.mp3",
   },
   NOTIFICATION_SOUNDS: {
-    BREAK_REMINDER: "notification-break.mp3",
-    FOCUS_REMINDER: "notification-focus.mp3",
+    BREAK_REMINDER: "assets/sounds/notification.mp3",
+    FOCUS_REMINDER: "assets/sounds/notification.mp3",
   },
 };
 
