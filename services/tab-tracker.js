@@ -13,6 +13,13 @@ class TabTracker {
     this.lastBreakReminderTime = 0;
     this.isInitialized = false;
 
+    // Performance optimization
+    this.performanceMonitor = null;
+    this.updateQueue = [];
+    this.isProcessingQueue = false;
+    this.debounceTimeout = null;
+    this.updateThrottleMs = 1000; // Throttle updates to once per second
+
     // Import storage manager and constants
     this.storageManager = null;
     this.constants = null;
@@ -26,6 +33,22 @@ class TabTracker {
    */
   async init() {
     try {
+      // Initialize error handler if available
+      if (typeof errorHandler !== 'undefined') {
+        this.errorHandler = errorHandler;
+      }
+
+      // Initialize performance monitoring
+      try {
+        if (typeof importScripts !== "undefined") {
+          importScripts("/utils/performance-monitor.js");
+          this.performanceMonitor = new PerformanceMonitor();
+          this.performanceMonitor.startTabTrackingMonitoring();
+        }
+      } catch (error) {
+        console.warn('Failed to initialize performance monitoring:', error);
+      }
+
       // Import dependencies (they should be available in service worker context)
       if (typeof importScripts !== "undefined") {
         importScripts(
@@ -46,6 +69,19 @@ class TabTracker {
       console.log("TabTracker initialized successfully");
     } catch (error) {
       console.error("TabTracker initialization error:", error);
+      
+      if (this.errorHandler) {
+        this.errorHandler.handleExtensionError(error, 'TabTracker Init');
+      }
+      
+      // Set partial initialization to allow basic functionality
+      this.isInitialized = false;
+      
+      // Retry initialization after delay
+      setTimeout(() => {
+        console.log('Retrying TabTracker initialization...');
+        this.init();
+      }, 5000);
     }
   }
 
@@ -153,9 +189,44 @@ class TabTracker {
   }
 
   /**
-   * Handle tab activation event
+   * Handle tab activation event with performance monitoring
    */
   async handleTabActivated(tabId) {
+    const startTime = performance.now();
+    let success = false;
+    
+    try {
+      // Performance optimization: Debounce rapid tab switches
+      if (this.debounceTimeout) {
+        clearTimeout(this.debounceTimeout);
+      }
+      
+      this.debounceTimeout = setTimeout(async () => {
+        await this.processTabActivation(tabId, startTime);
+      }, 100); // 100ms debounce
+      
+    } catch (error) {
+      console.error("Error handling tab activation:", error);
+      
+      if (this.performanceMonitor) {
+        this.performanceMonitor.recordTabUpdate(startTime, performance.now(), tabId, false);
+      }
+      
+      if (this.errorHandler) {
+        // Don't show user feedback for tab access errors as they're common
+        if (error.message.includes('No tab with id')) {
+          console.log('Tab no longer exists, skipping tracking');
+        } else {
+          this.errorHandler.handleExtensionError(error, 'Tab Activation');
+        }
+      }
+    }
+  }
+
+  /**
+   * Process tab activation with performance optimization
+   */
+  async processTabActivation(tabId, startTime) {
     try {
       // Stop tracking previous tab
       if (this.currentTabId && this.currentTabId !== tabId) {
@@ -164,12 +235,38 @@ class TabTracker {
 
       // Get tab info and start tracking
       const tab = await chrome.tabs.get(tabId);
+      
+      // Check if tab is accessible
+      if (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) {
+        console.log(`Skipping restricted tab: ${tab.url}`);
+        return;
+      }
+
       await this.startTrackingTab(tabId, tab.url);
 
       // Check for focus deviation
       await this.checkFocusDeviation(tabId, tab.url);
+      
+      // Record successful performance
+      if (this.performanceMonitor) {
+        this.performanceMonitor.recordTabUpdate(startTime, performance.now(), tabId, true);
+      }
+      
     } catch (error) {
-      console.error("Error handling tab activation:", error);
+      console.error("Error processing tab activation:", error);
+      
+      if (this.performanceMonitor) {
+        this.performanceMonitor.recordTabUpdate(startTime, performance.now(), tabId, false);
+      }
+      
+      if (this.errorHandler) {
+        // Don't show user feedback for tab access errors as they're common
+        if (error.message.includes('No tab with id')) {
+          console.log('Tab no longer exists, skipping tracking');
+        } else {
+          this.errorHandler.handleExtensionError(error, 'Tab Activation');
+        }
+      }
     }
   }
 
@@ -353,9 +450,11 @@ class TabTracker {
   }
 
   /**
-   * Update tab total time
+   * Update tab total time with performance monitoring
    */
   async updateTabTime(tabId, sessionTime) {
+    const startTime = performance.now();
+    
     try {
       const tabHistory =
         (await this.storageManager.get(
@@ -366,13 +465,34 @@ class TabTracker {
         tabHistory[tabId].totalTime += sessionTime;
         tabHistory[tabId].lastActiveTime = this.helpers.TimeUtils.now();
 
+        const storageStartTime = performance.now();
         await this.storageManager.set(
           this.constants.STORAGE_KEYS.TAB_HISTORY,
           tabHistory
         );
+        
+        // Record storage performance
+        if (this.performanceMonitor) {
+          this.performanceMonitor.recordStorageOperation(
+            'write', 
+            storageStartTime, 
+            performance.now(), 
+            true
+          );
+        }
       }
     } catch (error) {
       console.error("Error updating tab time:", error);
+      
+      // Record storage error
+      if (this.performanceMonitor) {
+        this.performanceMonitor.recordStorageOperation(
+          'write', 
+          startTime, 
+          performance.now(), 
+          false
+        );
+      }
     }
   }
 

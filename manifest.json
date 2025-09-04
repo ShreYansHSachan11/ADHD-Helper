@@ -19,11 +19,11 @@
   ],
 
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background-fresh.js"
   },
 
   "action": {
-    "default_popup": "popup/popup.html",
+    "default_popup": "popup-simple.html",
     "default_title": "Focus Productivity Extension",
     "default_icon": {
       "16": "assets/icons/16.ico",
@@ -46,6 +46,6 @@
   ],
 
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'"
+    "extension_pages": "script-src 'self' 'unsafe-eval'; object-src 'self'"
   }
 }
