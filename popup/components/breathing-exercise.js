@@ -462,4 +462,6 @@ class BreathingExercise {
 // Export for use in popup
 if (typeof module !== "undefined" && module.exports) {
   module.exports = BreathingExercise;
+} else if (typeof window !== "undefined") {
+  window.BreathingExercise = BreathingExercise;
 }

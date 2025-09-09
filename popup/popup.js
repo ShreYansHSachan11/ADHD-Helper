@@ -5,13 +5,14 @@ class PopupManager {
     this.isInitialized = false;
     this.currentBreathingSession = null;
     this.whiteNoiseActive = false;
+    this.simpleAudioManager = null;
     this.taskManager = null;
     this.breathingExercise = null;
     this.errorHandler = null;
     this.lazyLoader = null;
     this.performanceMonitor = {
       initStartTime: performance.now(),
-      componentsLoadTime: new Map()
+      componentsLoadTime: new Map(),
     };
 
     // Initialize when DOM is ready
@@ -27,16 +28,23 @@ class PopupManager {
 
     try {
       // Initialize error handler
-      if (typeof errorHandler !== 'undefined') {
+      if (typeof errorHandler !== "undefined") {
         this.errorHandler = errorHandler;
       }
 
       // Initialize lazy loader for performance optimization
       try {
-        const { default: LazyLoader } = await import('../utils/lazy-loader.js');
-        this.lazyLoader = new LazyLoader();
+        // LazyLoader should be available globally since it's loaded as a script
+        if (typeof LazyLoader !== "undefined") {
+          this.lazyLoader = new LazyLoader();
+        } else {
+          console.warn("LazyLoader not available");
+          this.lazyLoader = null;
+        }
       } catch (error) {
-        console.warn('Failed to initialize lazy loader:', error);
+        console.warn("Failed to initialize lazy loader:", error);
+        // Continue without lazy loader
+        this.lazyLoader = null;
       }
 
       // Initialize UI elements
@@ -45,19 +53,12 @@ class PopupManager {
       // Performance optimization: Lazy load heavy components
       await this.initializeComponentsLazily();
 
-<<<<<<< HEAD
-      // Initialize breathing exercise component (will be initialized when modal is shown)
-      this.breathingExercise = null;
-=======
       // Preload critical components in background
       if (this.lazyLoader) {
-        this.lazyLoader.preloadCriticalComponents().catch(error => {
-          console.warn('Failed to preload critical components:', error);
+        this.lazyLoader.preloadCriticalComponents().catch((error) => {
+          console.warn("Failed to preload critical components:", error);
         });
       }
-        // Continue without breathing exercise
-      }
->>>>>>> 8e57cc2f1523ef282b279e13a396b1fbdebe7320
 
       // Set up event listeners
       this.setupEventListeners();
@@ -69,26 +70,31 @@ class PopupManager {
       this.updateUI();
 
       this.isInitialized = true;
-      
+
       // Log performance metrics
-      const totalInitTime = performance.now() - this.performanceMonitor.initStartTime;
-      console.log(`Popup initialized successfully (${totalInitTime.toFixed(2)}ms)`);
-      
+      const totalInitTime =
+        performance.now() - this.performanceMonitor.initStartTime;
+      console.log(
+        `Popup initialized successfully (${totalInitTime.toFixed(2)}ms)`
+      );
+
       // Show success feedback
       if (this.errorHandler) {
         this.errorHandler.showUserFeedback(
-          'Extension loaded successfully!',
-          'success',
+          "Extension loaded successfully!",
+          "success",
           { duration: 2000 }
         );
       }
     } catch (error) {
       console.error("Failed to initialize popup:", error);
-      
+
       if (this.errorHandler) {
-        this.errorHandler.handleExtensionError(error, 'Popup Init');
+        this.errorHandler.handleExtensionError(error, "Popup Init");
       } else {
-        this.showError("Failed to initialize extension. Please try refreshing.");
+        this.showError(
+          "Failed to initialize extension. Please try refreshing."
+        );
       }
     }
   }
@@ -99,10 +105,10 @@ class PopupManager {
   async initializeComponentsLazily() {
     // Initialize task manager lazily (only when needed)
     this.setupLazyTaskManager();
-    
+
     // Initialize breathing exercise lazily (only when accessed)
     this.setupLazyBreathingExercise();
-    
+
     // Setup lazy loading for external pages
     this.setupLazyExternalPages();
   }
@@ -111,51 +117,59 @@ class PopupManager {
    * Setup lazy loading for task manager
    */
   setupLazyTaskManager() {
-    const taskSection = document.querySelector('.task-section');
-    
+    const taskSection = document.querySelector(".task-section");
+
     if (taskSection && this.lazyLoader) {
-      this.lazyLoader.registerLazyElement(taskSection, 'task-manager');
-      
+      this.lazyLoader.registerLazyElement(taskSection, "task-manager");
+
       // Load on first interaction
-      const taskInput = document.getElementById('taskInput');
-      const taskButton = document.getElementById('getBreakdownBtn');
-      
+      const taskInput = document.getElementById("taskInput");
+      const taskButton = document.getElementById("getBreakdownBtn");
+
       const loadTaskManager = async () => {
         if (!this.taskManager) {
           const startTime = performance.now();
-          
+
           try {
-            const result = await this.lazyLoader.loadComponent('task-manager');
-            
+            const result = await this.lazyLoader.loadComponent("task-manager");
+
             if (result.success) {
               this.taskManager = result.component;
-              
+
               const loadTime = performance.now() - startTime;
-              this.performanceMonitor.componentsLoadTime.set('task-manager', loadTime);
-              
-              console.log(`Task manager loaded lazily (${loadTime.toFixed(2)}ms)`);
+              this.performanceMonitor.componentsLoadTime.set(
+                "task-manager",
+                loadTime
+              );
+
+              console.log(
+                `Task manager loaded lazily (${loadTime.toFixed(2)}ms)`
+              );
             }
           } catch (error) {
-            console.error('Failed to lazy load task manager:', error);
-            
+            console.error("Failed to lazy load task manager:", error);
+
             // Fallback: Initialize synchronously
             try {
               this.taskManager = new TaskManager();
             } catch (fallbackError) {
-              console.error('Fallback task manager init failed:', fallbackError);
+              console.error(
+                "Fallback task manager init failed:",
+                fallbackError
+              );
             }
           }
         }
       };
-      
-      taskInput?.addEventListener('focus', loadTaskManager, { once: true });
-      taskButton?.addEventListener('click', loadTaskManager, { once: true });
+
+      taskInput?.addEventListener("focus", loadTaskManager, { once: true });
+      taskButton?.addEventListener("click", loadTaskManager, { once: true });
     } else {
       // Fallback: Initialize synchronously
       try {
         this.taskManager = new TaskManager();
       } catch (error) {
-        console.error('Failed to initialize task manager:', error);
+        console.error("Failed to initialize task manager:", error);
       }
     }
   }
@@ -164,49 +178,64 @@ class PopupManager {
    * Setup lazy loading for breathing exercise
    */
   setupLazyBreathingExercise() {
-    const breathingSection = document.querySelector('.breathing-section');
-    
+    const breathingSection = document.querySelector(".breathing-section");
+
     if (breathingSection && this.lazyLoader) {
-      this.lazyLoader.registerLazyElement(breathingSection, 'breathing-exercise');
-      
+      this.lazyLoader.registerLazyElement(
+        breathingSection,
+        "breathing-exercise"
+      );
+
       // Load on first interaction
-      const breathingButton = document.getElementById('startBreathingBtn');
-      
+      const breathingButton = document.getElementById("startBreathingBtn");
+
       const loadBreathingExercise = async () => {
         if (!this.breathingExercise) {
           const startTime = performance.now();
-          
+
           try {
-            const result = await this.lazyLoader.loadComponent('breathing-exercise');
-            
+            const result = await this.lazyLoader.loadComponent(
+              "breathing-exercise"
+            );
+
             if (result.success) {
               this.breathingExercise = result.component;
-              
+
               const loadTime = performance.now() - startTime;
-              this.performanceMonitor.componentsLoadTime.set('breathing-exercise', loadTime);
-              
-              console.log(`Breathing exercise loaded lazily (${loadTime.toFixed(2)}ms)`);
+              this.performanceMonitor.componentsLoadTime.set(
+                "breathing-exercise",
+                loadTime
+              );
+
+              console.log(
+                `Breathing exercise loaded lazily (${loadTime.toFixed(2)}ms)`
+              );
             }
           } catch (error) {
-            console.error('Failed to lazy load breathing exercise:', error);
-            
+            console.error("Failed to lazy load breathing exercise:", error);
+
             // Fallback: Initialize synchronously
             try {
               this.breathingExercise = new BreathingExercise();
             } catch (fallbackError) {
-              console.error('Fallback breathing exercise init failed:', fallbackError);
+              console.error(
+                "Fallback breathing exercise init failed:",
+                fallbackError
+              );
             }
           }
         }
       };
-      
-      breathingButton?.addEventListener('click', loadBreathingExercise, { once: true });
+
+      breathingButton?.addEventListener("click", loadBreathingExercise, {
+        once: true,
+      });
     } else {
       // Fallback: Initialize synchronously
       try {
         this.breathingExercise = new BreathingExercise();
       } catch (error) {
-        console.error('Failed to initialize breathing exercise:', error);
+        console.error("Failed to initialize breathing exercise:", error);
       }
     }
   }
@@ -216,22 +245,34 @@ class PopupManager {
    */
   setupLazyExternalPages() {
     if (!this.lazyLoader) return;
-    
-    const focusAnxietyBtn = document.getElementById('focusAnxietyBtn');
-    const asmrFidgetBtn = document.getElementById('asmrFidgetBtn');
-    
+
+    const focusAnxietyBtn = document.getElementById("focusAnxietyBtn");
+    const asmrFidgetBtn = document.getElementById("asmrFidgetBtn");
+
     // Preload external pages on hover (anticipatory loading)
-    focusAnxietyBtn?.addEventListener('mouseenter', () => {
-      this.lazyLoader.loadComponent('external-page-focus-anxiety').catch(error => {
-        console.warn('Failed to preload focus-anxiety page:', error);
-      });
-    }, { once: true });
-    
-    asmrFidgetBtn?.addEventListener('mouseenter', () => {
-      this.lazyLoader.loadComponent('external-page-asmr-fidget').catch(error => {
-        console.warn('Failed to preload asmr-fidget page:', error);
-      });
-    }, { once: true });
+    focusAnxietyBtn?.addEventListener(
+      "mouseenter",
+      () => {
+        this.lazyLoader
+          .loadComponent("external-page-focus-anxiety")
+          .catch((error) => {
+            console.warn("Failed to preload focus-anxiety page:", error);
+          });
+      },
+      { once: true }
+    );
+
+    asmrFidgetBtn?.addEventListener(
+      "mouseenter",
+      () => {
+        this.lazyLoader
+          .loadComponent("external-page-asmr-fidget")
+          .catch((error) => {
+            console.warn("Failed to preload asmr-fidget page:", error);
+          });
+      },
+      { once: true }
+    );
   }
 
   initializeElements() {
@@ -427,29 +468,39 @@ class PopupManager {
 
   async loadInitialDataWithErrorHandling() {
     const loadingTasks = [
-      { name: 'Screen Time Settings', fn: () => this.loadScreenTimeSettings() },
-      { name: 'Focus Tracking Data', fn: () => this.loadFocusTrackingData() },
-      { name: 'Audio Settings', fn: () => this.loadAudioSettings() },
-      { name: 'Calendar Configuration', fn: () => this.loadCalendarConfiguration() },
-      { name: 'Current Tab Stats', fn: () => this.updateCurrentTimeDisplay() }
+      { name: "Screen Time Settings", fn: () => this.loadScreenTimeSettings() },
+      { name: "Focus Tracking Data", fn: () => this.loadFocusTrackingData() },
+      { name: "Audio Settings", fn: () => this.loadAudioSettings() },
+      {
+        name: "Calendar Configuration",
+        fn: () => this.loadCalendarConfiguration(),
+      },
+      { name: "Current Tab Stats", fn: () => this.updateCurrentTimeDisplay() },
     ];
 
     // Show loading indicator
-    const loadingId = this.showLoadingState('Loading extension data...');
+    const loadingId = this.showLoadingState("Loading extension data...");
 
     try {
       const results = await Promise.allSettled(
         loadingTasks.map(async (task, index) => {
           try {
             // Update progress
-            this.updateLoadingProgress(loadingId, (index / loadingTasks.length) * 100, `Loading ${task.name}...`);
-            
+            this.updateLoadingProgress(
+              loadingId,
+              (index / loadingTasks.length) * 100,
+              `Loading ${task.name}...`
+            );
+
             await task.fn();
             return { success: true, task: task.name };
           } catch (error) {
             console.error(`Failed to load ${task.name}:`, error);
             if (this.errorHandler) {
-              this.errorHandler.handleExtensionError(error, `Load ${task.name}`);
+              this.errorHandler.handleExtensionError(
+                error,
+                `Load ${task.name}`
+              );
             }
             return { success: false, task: task.name, error };
           }
@@ -457,25 +508,24 @@ class PopupManager {
       );
 
       // Complete progress
-      this.updateLoadingProgress(loadingId, 100, 'Loading complete');
+      this.updateLoadingProgress(loadingId, 100, "Loading complete");
 
       // Check for any failures
-      const failures = results.filter(result => 
-        result.status === 'rejected' || !result.value.success
+      const failures = results.filter(
+        (result) => result.status === "rejected" || !result.value.success
       );
 
       if (failures.length > 0) {
         console.warn(`${failures.length} data loading tasks failed`);
-        
+
         if (this.errorHandler && failures.length < loadingTasks.length) {
           this.errorHandler.showUserFeedback(
             `Extension loaded with limited functionality (${failures.length} features unavailable)`,
-            'warning',
+            "warning",
             { duration: 4000 }
           );
         }
       }
-
     } finally {
       // Hide loading indicator
       setTimeout(() => {
@@ -489,10 +539,10 @@ class PopupManager {
    */
   showLoadingState(message) {
     const loadingId = `loading-${Date.now()}`;
-    
-    const loadingEl = document.createElement('div');
+
+    const loadingEl = document.createElement("div");
     loadingEl.id = loadingId;
-    loadingEl.className = 'loading-overlay';
+    loadingEl.className = "loading-overlay";
     loadingEl.innerHTML = `
       <div class="loading-content">
         <div class="loading-spinner"></div>
@@ -505,14 +555,14 @@ class PopupManager {
         </div>
       </div>
     `;
-    
+
     document.body.appendChild(loadingEl);
-    
+
     // Animate in
     setTimeout(() => {
-      loadingEl.classList.add('visible');
+      loadingEl.classList.add("visible");
     }, 10);
-    
+
     return loadingId;
   }
 
@@ -522,19 +572,19 @@ class PopupManager {
   updateLoadingProgress(loadingId, percentage, message) {
     const loadingEl = document.getElementById(loadingId);
     if (!loadingEl) return;
-    
-    const progressFill = loadingEl.querySelector('.progress-fill');
-    const progressText = loadingEl.querySelector('.progress-text');
-    const messageEl = loadingEl.querySelector('.loading-message');
-    
+
+    const progressFill = loadingEl.querySelector(".progress-fill");
+    const progressText = loadingEl.querySelector(".progress-text");
+    const messageEl = loadingEl.querySelector(".loading-message");
+
     if (progressFill) {
       progressFill.style.width = `${Math.min(100, Math.max(0, percentage))}%`;
     }
-    
+
     if (progressText) {
       progressText.textContent = `${Math.round(percentage)}%`;
     }
-    
+
     if (messageEl && message) {
       messageEl.textContent = message;
     }
@@ -546,9 +596,9 @@ class PopupManager {
   hideLoadingState(loadingId) {
     const loadingEl = document.getElementById(loadingId);
     if (!loadingEl) return;
-    
-    loadingEl.classList.add('hiding');
-    
+
+    loadingEl.classList.add("hiding");
+
     setTimeout(() => {
       if (loadingEl.parentNode) {
         loadingEl.parentNode.removeChild(loadingEl);
@@ -558,17 +608,16 @@ class PopupManager {
 
   async loadAudioSettings() {
     try {
-      const audioResult = await chrome.storage.local.get("audioSettings");
-      const audioSettings = audioResult.audioSettings || {
-        whiteNoise: { enabled: false },
-      };
-      this.whiteNoiseActive = audioSettings.whiteNoise.enabled;
+      // Initialize simple audio manager
+      this.initSimpleAudioManager();
+
+      // Set defaults
+      this.whiteNoiseActive = false;
       this.updateWhiteNoiseButton();
 
-      // Load current audio status from background
-      await this.loadAudioStatus();
+      console.log("Audio settings loaded with simple audio manager");
     } catch (error) {
-      console.error('Failed to load audio settings:', error);
+      console.error("Failed to load audio settings:", error);
       // Set defaults
       this.whiteNoiseActive = false;
       this.updateWhiteNoiseButton();
@@ -1563,60 +1612,34 @@ class PopupManager {
   }
 
   async handleWhiteNoiseToggle() {
-    // Show loading state
-    if (this.errorHandler) {
-      this.errorHandler.setLoadingState(this.whiteNoiseBtn, true, 'Loading...');
-    }
-
     try {
-      const response = await chrome.runtime.sendMessage({
-        type: "toggleWhiteNoise",
-      });
+      // Initialize simple audio manager if not exists
+      if (!this.simpleAudioManager) {
+        this.initSimpleAudioManager();
+      }
 
-      if (response && response.success) {
-        this.whiteNoiseActive = response.active;
+      // Toggle audio
+      const result = this.simpleAudioManager.toggle();
+
+      if (result.success) {
+        this.whiteNoiseActive = result.isPlaying;
         this.updateWhiteNoiseButton();
 
-        // Show status message with enhanced feedback
-        const statusMessage = response.active
-          ? `White noise started (${response.sound || "default"})`
-          : "White noise stopped";
-        
-        if (this.errorHandler) {
-          this.errorHandler.showUserFeedback(
-            statusMessage,
-            'success',
-            { duration: 2000 }
-          );
-        } else {
-          this.showWhiteNoiseStatus(statusMessage, "success");
+        // Update sound name display
+        if (this.currentSoundName) {
+          this.currentSoundName.textContent = result.soundName;
         }
+
+        console.log(
+          `White noise ${result.isPlaying ? "started" : "stopped"}: ${
+            result.soundName
+          }`
+        );
       } else {
-        const errorMessage = response?.error || 'Unknown error occurred';
-        console.error("Failed to toggle white noise:", errorMessage);
-        
-        if (this.errorHandler) {
-          this.errorHandler.handleAudioError(
-            new Error(errorMessage),
-            'White Noise Toggle'
-          );
-        } else {
-          this.showWhiteNoiseStatus("Failed to toggle white noise", "error");
-        }
+        console.error("Failed to toggle white noise:", result.error);
       }
     } catch (error) {
       console.error("Failed to toggle white noise:", error);
-      
-      if (this.errorHandler) {
-        this.errorHandler.handleAudioError(error, 'White Noise Toggle');
-      } else {
-        this.showWhiteNoiseStatus("Failed to toggle white noise", "error");
-      }
-    } finally {
-      // Remove loading state
-      if (this.errorHandler) {
-        this.errorHandler.setLoadingState(this.whiteNoiseBtn, false);
-      }
     }
   }
 
@@ -1662,25 +1685,21 @@ class PopupManager {
 
   async loadAudioStatus() {
     try {
-      const response = await chrome.runtime.sendMessage({
-        type: "getWhiteNoiseStatus",
-      });
+      if (!this.simpleAudioManager) {
+        this.initSimpleAudioManager();
+      }
 
-      if (response.success) {
-        this.whiteNoiseActive = response.active;
-        this.updateWhiteNoiseButton();
+      // Update volume slider to default
+      if (this.volumeSlider && this.volumeValue) {
+        const volumePercent = Math.round(this.simpleAudioManager.volume * 100);
+        this.volumeSlider.value = volumePercent;
+        this.volumeValue.textContent = `${volumePercent}%`;
+      }
 
-        // Update volume slider
-        if (this.volumeSlider && this.volumeValue) {
-          const volumePercent = Math.round(response.volume * 100);
-          this.volumeSlider.value = volumePercent;
-          this.volumeValue.textContent = `${volumePercent}%`;
-        }
-
-        // Update current sound display
-        if (this.currentSoundName) {
-          this.currentSoundName.textContent = response.currentSound || "None";
-        }
+      // Update current sound display
+      if (this.currentSoundName) {
+        this.currentSoundName.textContent =
+          this.simpleAudioManager.getCurrentSound().name;
       }
     } catch (error) {
       console.error("Failed to load audio status:", error);
@@ -1689,38 +1708,46 @@ class PopupManager {
 
   async handleVolumeChange(value) {
     try {
-      const volume = parseInt(value) / 100;
-      const response = await chrome.runtime.sendMessage({
-        type: "setWhiteNoiseVolume",
-        volume: volume,
-      });
-
-      if (response.success) {
-        this.volumeValue.textContent = `${value}%`;
-      } else {
-        this.showWhiteNoiseStatus("Failed to set volume", "error");
+      if (!this.simpleAudioManager) {
+        this.initSimpleAudioManager();
       }
+
+      const volume = parseInt(value) / 100;
+      const newVolume = this.simpleAudioManager.setVolume(volume);
+      this.volumeValue.textContent = `${Math.round(newVolume * 100)}%`;
     } catch (error) {
       console.error("Failed to set volume:", error);
-      this.showWhiteNoiseStatus("Failed to set volume", "error");
+    }
+  }
+
+  initSimpleAudioManager() {
+    if (!this.simpleAudioManager) {
+      this.simpleAudioManager = new SimpleAudioManager();
+
+      // Initialize the sound name display
+      if (this.currentSoundName) {
+        this.currentSoundName.textContent =
+          this.simpleAudioManager.getCurrentSound().name;
+      }
+
+      console.log("Simple audio manager initialized");
     }
   }
 
   async handleNextSound() {
     try {
-      const response = await chrome.runtime.sendMessage({
-        type: "nextWhiteNoiseSound",
-      });
+      // Simple direct audio management in popup
+      if (!this.simpleAudioManager) {
+        this.initSimpleAudioManager();
+      }
 
-      if (response.success) {
-        this.currentSoundName.textContent = response.sound || "Unknown";
-        this.showWhiteNoiseStatus(`Switched to: ${response.sound}`, "success");
-      } else {
-        this.showWhiteNoiseStatus("Failed to change sound", "error");
+      const result = this.simpleAudioManager.nextSound();
+      if (result.success) {
+        this.currentSoundName.textContent = result.soundName;
+        console.log(`Switched to: ${result.soundName}`);
       }
     } catch (error) {
       console.error("Failed to change sound:", error);
-      this.showWhiteNoiseStatus("Failed to change sound", "error");
     }
   }
 
@@ -1740,33 +1767,33 @@ class PopupManager {
 
       // Show loading feedback
       if (this.errorHandler) {
-        this.errorHandler.showUserFeedback(
-          'Opening wellness page...',
-          'info',
-          { duration: 2000 }
-        );
+        this.errorHandler.showUserFeedback("Opening wellness page...", "info", {
+          duration: 2000,
+        });
       }
 
       // Validate permissions
-      const hasTabsPermission = await this.errorHandler?.validatePermissions(['tabs']) ?? true;
-      
+      const hasTabsPermission =
+        (await this.errorHandler?.validatePermissions(["tabs"])) ?? true;
+
       if (!hasTabsPermission) {
-        throw new Error('Missing tabs permission. Please grant permission to open external pages.');
+        throw new Error(
+          "Missing tabs permission. Please grant permission to open external pages."
+        );
       }
 
       const tab = await chrome.tabs.create({ url: urls[page] });
-      
+
       if (!tab) {
-        throw new Error('Failed to create new tab');
+        throw new Error("Failed to create new tab");
       }
 
       console.log(`Opened external page: ${page}`);
-      
     } catch (error) {
       console.error(`Failed to open external page ${page}:`, error);
-      
+
       if (this.errorHandler) {
-        this.errorHandler.handleExtensionError(error, 'External Page');
+        this.errorHandler.handleExtensionError(error, "External Page");
       } else {
         console.error(`Failed to open ${page} page:`, error.message);
       }
@@ -1812,6 +1839,103 @@ class PopupManager {
         this.hideBreathingModal();
       }
     }
+  }
+}
+
+// Simple Audio Manager for popup-only white noise
+class SimpleAudioManager {
+  constructor() {
+    this.audio = null;
+    this.isPlaying = false;
+    this.currentSoundIndex = 2; // Default to rain
+    this.volume = 0.5;
+
+    this.sounds = [
+      { name: "Air Conditioner", file: "assets/sounds/air-white-noise.mp3" },
+      { name: "Ocean Waves", file: "assets/sounds/ocean-white-noise.mp3" },
+      { name: "Rain Drops", file: "assets/sounds/rain-white-noise.mp3" },
+      { name: "Shower", file: "assets/sounds/shower-white-noise.mp3" },
+      { name: "Train Journey", file: "assets/sounds/train-white-noise.mp3" },
+      { name: "Flowing Water", file: "assets/sounds/water-white-noise.mp3" },
+      { name: "Waterfall", file: "assets/sounds/waterfall-white-noise.mp3" },
+    ];
+  }
+
+  getCurrentSound() {
+    return this.sounds[this.currentSoundIndex];
+  }
+
+  createAudio() {
+    if (this.audio) {
+      this.audio.pause();
+      this.audio = null;
+    }
+
+    const sound = this.getCurrentSound();
+    this.audio = new Audio(chrome.runtime.getURL(sound.file));
+    this.audio.loop = true;
+    this.audio.volume = this.volume;
+
+    return this.audio;
+  }
+
+  toggle() {
+    try {
+      if (this.isPlaying) {
+        // Stop audio
+        if (this.audio) {
+          this.audio.pause();
+        }
+        this.isPlaying = false;
+        return {
+          success: true,
+          isPlaying: false,
+          soundName: this.getCurrentSound().name,
+        };
+      } else {
+        // Start audio
+        this.createAudio();
+        this.audio.play();
+        this.isPlaying = true;
+        return {
+          success: true,
+          isPlaying: true,
+          soundName: this.getCurrentSound().name,
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        isPlaying: this.isPlaying,
+        soundName: this.getCurrentSound().name,
+      };
+    }
+  }
+
+  nextSound() {
+    // Cycle to next sound
+    this.currentSoundIndex = (this.currentSoundIndex + 1) % this.sounds.length;
+
+    // If currently playing, restart with new sound
+    if (this.isPlaying) {
+      this.createAudio();
+      this.audio.play();
+    }
+
+    return {
+      success: true,
+      soundName: this.getCurrentSound().name,
+      soundIndex: this.currentSoundIndex,
+    };
+  }
+
+  setVolume(volume) {
+    this.volume = Math.max(0, Math.min(1, volume));
+    if (this.audio) {
+      this.audio.volume = this.volume;
+    }
+    return this.volume;
   }
 }
 

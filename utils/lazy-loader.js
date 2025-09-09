@@ -11,9 +11,9 @@ class LazyLoader {
     this.performanceMetrics = {
       componentsLoaded: 0,
       totalLoadTime: 0,
-      averageLoadTime: 0
+      averageLoadTime: 0,
     };
-    
+
     this.initializeIntersectionObserver();
   }
 
@@ -21,14 +21,14 @@ class LazyLoader {
    * Initialize Intersection Observer for viewport-based lazy loading
    */
   initializeIntersectionObserver() {
-    if ('IntersectionObserver' in window) {
+    if ("IntersectionObserver" in window) {
       this.intersectionObserver = new IntersectionObserver(
         (entries) => {
-          entries.forEach(entry => {
+          entries.forEach((entry) => {
             if (entry.isIntersecting) {
               const element = entry.target;
               const componentName = element.dataset.lazyComponent;
-              
+
               if (componentName && !this.loadedComponents.has(componentName)) {
                 this.loadComponent(componentName, element);
               }
@@ -36,8 +36,8 @@ class LazyLoader {
           });
         },
         {
-          rootMargin: '50px', // Load 50px before element comes into view
-          threshold: 0.1
+          rootMargin: "50px", // Load 50px before element comes into view
+          threshold: 0.1,
         }
       );
     }
@@ -48,9 +48,9 @@ class LazyLoader {
    */
   registerLazyElement(element, componentName) {
     if (!element || !componentName) return;
-    
+
     element.dataset.lazyComponent = componentName;
-    
+
     if (this.intersectionObserver) {
       this.intersectionObserver.observe(element);
     }
@@ -71,26 +71,30 @@ class LazyLoader {
     }
 
     const startTime = performance.now();
-    
-    const loadPromise = this.performComponentLoad(componentName, targetElement, startTime);
+
+    const loadPromise = this.performComponentLoad(
+      componentName,
+      targetElement,
+      startTime
+    );
     this.loadingPromises.set(componentName, loadPromise);
 
     try {
       const result = await loadPromise;
       this.loadedComponents.add(componentName);
-      
+
       // Update performance metrics
       const loadTime = performance.now() - startTime;
       this.updatePerformanceMetrics(loadTime);
-      
-      console.log(`Lazy loaded component: ${componentName} (${loadTime.toFixed(2)}ms)`);
-      
+
+      console.log(
+        `Lazy loaded component: ${componentName} (${loadTime.toFixed(2)}ms)`
+      );
+
       return result;
-      
     } catch (error) {
       console.error(`Failed to lazy load component ${componentName}:`, error);
       throw error;
-      
     } finally {
       this.loadingPromises.delete(componentName);
     }
@@ -101,21 +105,21 @@ class LazyLoader {
    */
   async performComponentLoad(componentName, targetElement, startTime) {
     switch (componentName) {
-      case 'breathing-exercise':
+      case "breathing-exercise":
         return await this.loadBreathingExercise(targetElement);
-        
-      case 'task-manager':
+
+      case "task-manager":
         return await this.loadTaskManager(targetElement);
-        
-      case 'audio-manager':
+
+      case "audio-manager":
         return await this.loadAudioManager(targetElement);
-        
-      case 'external-page-focus-anxiety':
-        return await this.preloadExternalPage('focus-anxiety');
-        
-      case 'external-page-asmr-fidget':
-        return await this.preloadExternalPage('asmr-fidget');
-        
+
+      case "external-page-focus-anxiety":
+        return await this.preloadExternalPage("focus-anxiety");
+
+      case "external-page-asmr-fidget":
+        return await this.preloadExternalPage("asmr-fidget");
+
       default:
         throw new Error(`Unknown component: ${componentName}`);
     }
@@ -126,28 +130,29 @@ class LazyLoader {
    */
   async loadBreathingExercise(targetElement) {
     try {
-      // Dynamic import of breathing exercise
-      const { default: BreathingExercise } = await import('../popup/components/breathing-exercise.js');
-      
+      // Use global BreathingExercise constructor
+      if (typeof BreathingExercise === "undefined") {
+        throw new Error("BreathingExercise constructor not available");
+      }
+
       const breathingExercise = new BreathingExercise();
-      
+
       if (targetElement) {
         // Initialize in target element if provided
         breathingExercise.initializeInElement(targetElement);
       }
-      
-      return { 
-        success: true, 
+
+      return {
+        success: true,
         component: breathingExercise,
-        type: 'breathing-exercise'
+        type: "breathing-exercise",
       };
-      
     } catch (error) {
-      console.error('Failed to load breathing exercise:', error);
-      return { 
-        success: false, 
+      console.error("Failed to load breathing exercise:", error);
+      return {
+        success: false,
         error: error.message,
-        fallback: 'Basic breathing instructions available'
+        fallback: "Basic breathing instructions available",
       };
     }
   }
@@ -157,23 +162,24 @@ class LazyLoader {
    */
   async loadTaskManager(targetElement) {
     try {
-      // Dynamic import of task manager
-      const { default: TaskManager } = await import('../popup/components/task-manager.js');
-      
+      // Use global TaskManager constructor
+      if (typeof TaskManager === "undefined") {
+        throw new Error("TaskManager constructor not available");
+      }
+
       const taskManager = new TaskManager();
-      
-      return { 
-        success: true, 
+
+      return {
+        success: true,
         component: taskManager,
-        type: 'task-manager'
+        type: "task-manager",
       };
-      
     } catch (error) {
-      console.error('Failed to load task manager:', error);
-      return { 
-        success: false, 
+      console.error("Failed to load task manager:", error);
+      return {
+        success: false,
         error: error.message,
-        fallback: 'Manual task entry available'
+        fallback: "Manual task entry available",
       };
     }
   }
@@ -183,23 +189,24 @@ class LazyLoader {
    */
   async loadAudioManager(targetElement) {
     try {
-      // Dynamic import of audio manager
-      const { default: AudioManager } = await import('../services/audio-manager.js');
-      
+      // Use global AudioManager constructor
+      if (typeof AudioManager === "undefined") {
+        throw new Error("AudioManager constructor not available");
+      }
+
       const audioManager = new AudioManager();
-      
-      return { 
-        success: true, 
+
+      return {
+        success: true,
         component: audioManager,
-        type: 'audio-manager'
+        type: "audio-manager",
       };
-      
     } catch (error) {
-      console.error('Failed to load audio manager:', error);
-      return { 
-        success: false, 
+      console.error("Failed to load audio manager:", error);
+      return {
+        success: false,
         error: error.message,
-        fallback: 'Basic audio controls available'
+        fallback: "Basic audio controls available",
       };
     }
   }
@@ -210,8 +217,8 @@ class LazyLoader {
   async preloadExternalPage(pageName) {
     try {
       const urls = {
-        'focus-anxiety': 'external-pages/focus-anxiety.html',
-        'asmr-fidget': 'external-pages/asmr-fidget.html'
+        "focus-anxiety": "external-pages/focus-anxiety.html",
+        "asmr-fidget": "external-pages/asmr-fidget.html",
       };
 
       const pageUrl = urls[pageName];
@@ -221,42 +228,41 @@ class LazyLoader {
 
       // Preload the HTML content
       const response = await fetch(chrome.runtime.getURL(pageUrl));
-      
+
       if (!response.ok) {
         throw new Error(`Failed to preload ${pageName}: ${response.status}`);
       }
 
       const htmlContent = await response.text();
-      
+
       // Parse and preload linked resources
       const parser = new DOMParser();
-      const doc = parser.parseFromString(htmlContent, 'text/html');
-      
+      const doc = parser.parseFromString(htmlContent, "text/html");
+
       // Preload CSS files
       const cssLinks = doc.querySelectorAll('link[rel="stylesheet"]');
-      const cssPromises = Array.from(cssLinks).map(link => {
-        return this.preloadResource(link.href, 'style');
+      const cssPromises = Array.from(cssLinks).map((link) => {
+        return this.preloadResource(link.href, "style");
       });
 
       // Preload JavaScript files
-      const scriptTags = doc.querySelectorAll('script[src]');
-      const scriptPromises = Array.from(scriptTags).map(script => {
-        return this.preloadResource(script.src, 'script');
+      const scriptTags = doc.querySelectorAll("script[src]");
+      const scriptPromises = Array.from(scriptTags).map((script) => {
+        return this.preloadResource(script.src, "script");
       });
 
       await Promise.all([...cssPromises, ...scriptPromises]);
 
-      return { 
-        success: true, 
+      return {
+        success: true,
         page: pageName,
-        resourcesPreloaded: cssLinks.length + scriptTags.length
+        resourcesPreloaded: cssLinks.length + scriptTags.length,
       };
-      
     } catch (error) {
       console.error(`Failed to preload external page ${pageName}:`, error);
-      return { 
-        success: false, 
-        error: error.message 
+      return {
+        success: false,
+        error: error.message,
       };
     }
   }
@@ -266,23 +272,23 @@ class LazyLoader {
    */
   async preloadResource(url, type) {
     return new Promise((resolve, reject) => {
-      const link = document.createElement('link');
-      link.rel = 'preload';
+      const link = document.createElement("link");
+      link.rel = "preload";
       link.href = url;
       link.as = type;
-      
+
       link.onload = () => {
         resolve(url);
         document.head.removeChild(link); // Clean up
       };
-      
+
       link.onerror = () => {
         reject(new Error(`Failed to preload ${url}`));
         document.head.removeChild(link); // Clean up
       };
-      
+
       document.head.appendChild(link);
-      
+
       // Timeout after 5 seconds
       setTimeout(() => {
         reject(new Error(`Preload timeout for ${url}`));
@@ -299,8 +305,9 @@ class LazyLoader {
   updatePerformanceMetrics(loadTime) {
     this.performanceMetrics.componentsLoaded++;
     this.performanceMetrics.totalLoadTime += loadTime;
-    this.performanceMetrics.averageLoadTime = 
-      this.performanceMetrics.totalLoadTime / this.performanceMetrics.componentsLoaded;
+    this.performanceMetrics.averageLoadTime =
+      this.performanceMetrics.totalLoadTime /
+      this.performanceMetrics.componentsLoaded;
   }
 
   /**
@@ -310,7 +317,7 @@ class LazyLoader {
     return {
       ...this.performanceMetrics,
       loadedComponents: Array.from(this.loadedComponents),
-      currentlyLoading: Array.from(this.loadingPromises.keys())
+      currentlyLoading: Array.from(this.loadingPromises.keys()),
     };
   }
 
@@ -319,13 +326,16 @@ class LazyLoader {
    */
   async preloadCriticalComponents() {
     const criticalComponents = [
-      'audio-manager', // Most commonly used
-      'breathing-exercise' // Quick access needed
+      "audio-manager", // Most commonly used
+      "breathing-exercise", // Quick access needed
     ];
 
-    const preloadPromises = criticalComponents.map(component => 
-      this.loadComponent(component).catch(error => {
-        console.warn(`Failed to preload critical component ${component}:`, error);
+    const preloadPromises = criticalComponents.map((component) =>
+      this.loadComponent(component).catch((error) => {
+        console.warn(
+          `Failed to preload critical component ${component}:`,
+          error
+        );
       })
     );
 
@@ -339,10 +349,15 @@ class LazyLoader {
     if (this.intersectionObserver) {
       this.intersectionObserver.disconnect();
     }
-    
+
     this.loadedComponents.clear();
     this.loadingPromises.clear();
   }
 }
 
-export default LazyLoader;
+// Export for different environments
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = LazyLoader;
+} else if (typeof window !== "undefined") {
+  window.LazyLoader = LazyLoader;
+}

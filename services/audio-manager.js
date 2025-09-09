@@ -12,9 +12,9 @@ class AudioManager {
     this.audioContext = null;
     this.fallbackMode = false;
     this.loadingPromise = null;
-    
+
     // Performance optimization: Use smaller, optimized audio files
-    this.useOptimizedAudio = true;
+    this.useOptimizedAudio = false; // Disable optimized audio until all files are available
     this.audioCache = new Map();
     this.preloadedSounds = new Set();
     this.maxCacheSize = 3; // Limit cached audio elements
@@ -27,19 +27,17 @@ class AudioManager {
       "assets/sounds/train-white-noise.mp3",
       "assets/sounds/water-white-noise.mp3",
       "assets/sounds/waterfall-white-noise.mp3",
-      "assets/sounds/waves-white-noise.mp3",
     ];
 
     // Optimized audio paths (smaller files for better performance)
     this.optimizedSounds = [
       "assets/sounds/optimized/air-white-noise.mp3",
-      "assets/sounds/optimized/ocean-white-noise.mp3", 
+      "assets/sounds/optimized/ocean-white-noise.mp3",
       "assets/sounds/optimized/rain-white-noise.mp3",
       "assets/sounds/optimized/shower-white-noise.mp3",
       "assets/sounds/optimized/train-white-noise.mp3",
       "assets/sounds/optimized/water-white-noise.mp3",
       "assets/sounds/optimized/waterfall-white-noise.mp3",
-      "assets/sounds/optimized/waves-white-noise.mp3",
     ];
 
     this.soundNames = [
@@ -50,11 +48,10 @@ class AudioManager {
       "Train Journey",
       "Flowing Water",
       "Waterfall",
-      "Beach Waves",
     ];
 
     // Initialize error handler if available
-    if (typeof errorHandler !== 'undefined') {
+    if (typeof errorHandler !== "undefined") {
       this.errorHandler = errorHandler;
     }
 
@@ -65,23 +62,23 @@ class AudioManager {
     try {
       // Check browser audio support
       await this.checkAudioSupport();
-      
+
       // Load settings with error handling
       if (typeof chrome !== "undefined" && chrome.storage) {
         await this.loadSettingsWithErrorHandling();
       } else {
-        console.warn('Chrome storage not available, using defaults');
+        console.warn("Chrome storage not available, using defaults");
         this.setDefaultSettings();
       }
-      
-      console.log('AudioManager initialized successfully');
+
+      console.log("AudioManager initialized successfully");
     } catch (error) {
       console.error("Failed to initialize AudioManager:", error);
-      
+
       if (this.errorHandler) {
-        this.errorHandler.handleAudioError(error, 'Audio Manager Init');
+        this.errorHandler.handleAudioError(error, "Audio Manager Init");
       }
-      
+
       this.initializeFallbackMode();
     }
   }
@@ -91,8 +88,8 @@ class AudioManager {
    */
   async checkAudioSupport() {
     // Check if Audio constructor is available
-    if (typeof Audio === 'undefined') {
-      throw new Error('Audio playback not supported in this browser');
+    if (typeof Audio === "undefined") {
+      throw new Error("Audio playback not supported in this browser");
     }
 
     // Check if we can create audio context (for advanced features)
@@ -102,7 +99,7 @@ class AudioManager {
         this.audioContext = new AudioContext();
       }
     } catch (error) {
-      console.warn('AudioContext not available, using basic audio only');
+      console.warn("AudioContext not available, using basic audio only");
     }
 
     // Test basic audio creation
@@ -110,13 +107,16 @@ class AudioManager {
       const testAudio = new Audio();
       testAudio.volume = 0;
       testAudio.muted = true;
-      
+
       // Test if we can set source
-      testAudio.src = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT';
-      
+      testAudio.src =
+        "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT";
+
       return true;
     } catch (error) {
-      throw new Error('Basic audio functionality not available: ' + error.message);
+      throw new Error(
+        "Basic audio functionality not available: " + error.message
+      );
     }
   }
 
@@ -127,12 +127,12 @@ class AudioManager {
     try {
       await this.loadSettings();
     } catch (error) {
-      console.error('Failed to load audio settings:', error);
-      
+      console.error("Failed to load audio settings:", error);
+
       if (this.errorHandler) {
-        this.errorHandler.handleStorageError(error, 'Load Audio Settings');
+        this.errorHandler.handleStorageError(error, "Load Audio Settings");
       }
-      
+
       // Use default settings as fallback
       this.setDefaultSettings();
     }
@@ -145,8 +145,8 @@ class AudioManager {
     this.volume = 0.5;
     this.currentSoundIndex = 2; // Rain as default
     this.isPlaying = false;
-    
-    console.log('Using default audio settings');
+
+    console.log("Using default audio settings");
   }
 
   /**
@@ -155,29 +155,49 @@ class AudioManager {
   initializeFallbackMode() {
     this.fallbackMode = true;
     this.setDefaultSettings();
-    
-    console.warn('AudioManager running in fallback mode with limited functionality');
-    
-    if (this.errorHandler) {
-      this.errorHandler.showUserFeedback(
-        'Audio features running in limited mode',
-        'warning',
-        { duration: 3000 }
-      );
-    }
+
+    console.warn(
+      "AudioManager running in fallback mode with limited functionality"
+    );
+
+    // Audio features running in limited mode
   }
 
   /**
    * Performance optimization: Get the appropriate audio path
    */
   getAudioPath(soundIndex) {
+    let relativePath;
+
+    // Validate sound index
+    if (soundIndex < 0 || soundIndex >= this.availableSounds.length) {
+      console.warn(`Invalid sound index: ${soundIndex}, using default (2)`);
+      soundIndex = 2; // Default to rain
+    }
+
     // Use optimized audio if available and enabled
     if (this.useOptimizedAudio && soundIndex < this.optimizedSounds.length) {
-      return this.optimizedSounds[soundIndex];
+      relativePath = this.optimizedSounds[soundIndex];
+      console.log(`Using optimized audio path: ${relativePath}`);
+    } else {
+      // Fallback to original audio
+      relativePath = this.availableSounds[soundIndex];
+      console.log(`Using standard audio path: ${relativePath}`);
     }
-    
-    // Fallback to original audio
-    return this.availableSounds[soundIndex];
+
+    // Convert to Chrome extension URL for web accessible resources
+    if (
+      typeof chrome !== "undefined" &&
+      chrome.runtime &&
+      chrome.runtime.getURL
+    ) {
+      const fullPath = chrome.runtime.getURL(relativePath);
+      console.log(`Chrome extension URL: ${fullPath}`);
+      return fullPath;
+    }
+
+    console.log(`Direct path: ${relativePath}`);
+    return relativePath;
   }
 
   /**
@@ -191,33 +211,58 @@ class AudioManager {
     try {
       const audioPath = this.getAudioPath(soundIndex);
       const audio = new Audio();
-      
+
       // Set up for preloading
       audio.preload = "metadata"; // Load metadata only, not full audio
       audio.volume = 0;
       audio.muted = true;
-      
+
       // Create promise for load completion
       const loadPromise = new Promise((resolve, reject) => {
-        audio.addEventListener('loadedmetadata', resolve, { once: true });
-        audio.addEventListener('error', reject, { once: true });
-        
-        // Timeout after 5 seconds
-        setTimeout(() => reject(new Error('Preload timeout')), 5000);
+        const onLoad = () => {
+          cleanup();
+          resolve();
+        };
+
+        const onError = (event) => {
+          cleanup();
+          const error = new Error(`Audio load failed: ${audioPath}`);
+          error.originalEvent = event;
+          reject(error);
+        };
+
+        const onTimeout = () => {
+          cleanup();
+          reject(new Error("Preload timeout"));
+        };
+
+        const cleanup = () => {
+          audio.removeEventListener("loadedmetadata", onLoad);
+          audio.removeEventListener("canplaythrough", onLoad);
+          audio.removeEventListener("error", onError);
+          clearTimeout(timeoutId);
+        };
+
+        audio.addEventListener("loadedmetadata", onLoad, { once: true });
+        audio.addEventListener("canplaythrough", onLoad, { once: true });
+        audio.addEventListener("error", onError, { once: true });
+
+        // Timeout after 3 seconds (reduced from 5)
+        const timeoutId = setTimeout(onTimeout, 3000);
       });
 
       audio.src = audioPath;
-      
+
       await loadPromise;
-      
+
       // Cache the preloaded audio element
       this.cacheAudioElement(soundIndex, audio);
       this.preloadedSounds.add(soundIndex);
-      
+
       console.log(`Preloaded sound: ${this.soundNames[soundIndex]}`);
-      
     } catch (error) {
       console.warn(`Failed to preload sound ${soundIndex}:`, error);
+      // Don't throw - just log and continue
     }
   }
 
@@ -230,15 +275,15 @@ class AudioManager {
       // Remove oldest cached element
       const oldestKey = this.audioCache.keys().next().value;
       const oldAudio = this.audioCache.get(oldestKey);
-      
+
       if (oldAudio && oldAudio !== this.whiteNoiseAudio) {
-        oldAudio.src = ''; // Free memory
+        oldAudio.src = ""; // Free memory
       }
-      
+
       this.audioCache.delete(oldestKey);
       this.preloadedSounds.delete(oldestKey);
     }
-    
+
     this.audioCache.set(soundIndex, audioElement);
   }
 
@@ -248,14 +293,14 @@ class AudioManager {
   getCachedAudioElement(soundIndex) {
     if (this.audioCache.has(soundIndex)) {
       const cachedAudio = this.audioCache.get(soundIndex);
-      
+
       // Move to end (most recently used)
       this.audioCache.delete(soundIndex);
       this.audioCache.set(soundIndex, cachedAudio);
-      
+
       return cachedAudio;
     }
-    
+
     return null;
   }
 
@@ -263,24 +308,30 @@ class AudioManager {
    * Performance optimization: Preload default and popular sounds
    */
   async preloadPopularSounds() {
-    const popularSounds = [2, 1, 7]; // Rain, Ocean, Waves - most commonly used
-    
-    for (const soundIndex of popularSounds) {
-      await this.preloadSound(soundIndex);
-      
-      // Small delay between preloads to avoid overwhelming the browser
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
+    const popularSounds = [2, 1, 6]; // Rain, Ocean, Waterfall - most commonly used
+
+    // Use Promise.allSettled to prevent one failure from stopping others
+    const preloadPromises = popularSounds.map(async (soundIndex) => {
+      try {
+        await this.preloadSound(soundIndex);
+        // Small delay between preloads to avoid overwhelming the browser
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      } catch (error) {
+        console.warn(`Failed to preload sound ${soundIndex}:`, error);
+      }
+    });
+
+    await Promise.allSettled(preloadPromises);
   }
 
   async loadSettings() {
     if (typeof chrome === "undefined" || !chrome.storage) {
-      throw new Error('Chrome storage not available');
+      throw new Error("Chrome storage not available");
     }
 
     try {
       const result = await chrome.storage.local.get("audioSettings");
-      
+
       // Validate settings structure
       const settings = this.validateAudioSettings(result.audioSettings);
 
@@ -288,36 +339,48 @@ class AudioManager {
       this.volume = Math.max(0, Math.min(1, settings.whiteNoise.volume || 0.5));
 
       if (settings.whiteNoise.currentSound) {
-        const soundIndex = this.getSoundIndexFromKey(settings.whiteNoise.currentSound);
+        const soundIndex = this.getSoundIndexFromKey(
+          settings.whiteNoise.currentSound
+        );
         this.currentSoundIndex = soundIndex;
       } else {
         this.currentSoundIndex = 2; // Default to rain
       }
 
       // Validate sound index
-      if (this.currentSoundIndex >= this.availableSounds.length || this.currentSoundIndex < 0) {
-        console.warn('Invalid sound index, resetting to default');
+      if (
+        this.currentSoundIndex >= this.availableSounds.length ||
+        this.currentSoundIndex < 0
+      ) {
+        console.warn("Invalid sound index, resetting to default");
         this.currentSoundIndex = 2;
       }
 
       // Auto-start if previously enabled (with user gesture check)
       if (settings.whiteNoise.enabled) {
         // Don't auto-start immediately, wait for user interaction
-        console.log('Audio was previously enabled, ready to resume on user interaction');
+        console.log(
+          "Audio was previously enabled, ready to resume on user interaction"
+        );
       }
 
       // Performance optimization: Preload popular sounds in background
-      this.preloadPopularSounds().catch(error => {
-        console.warn('Failed to preload popular sounds:', error);
-      });
-      
+      // Only preload if user has previously used audio (to respect autoplay policies)
+      // Delay preloading to avoid blocking initialization
+      if (settings.whiteNoise.enabled) {
+        setTimeout(() => {
+          this.preloadPopularSounds().catch((error) => {
+            console.warn("Failed to preload popular sounds:", error);
+          });
+        }, 1000);
+      }
     } catch (error) {
-      if (error.message.includes('quota')) {
-        throw new Error('Storage quota exceeded while loading audio settings');
-      } else if (error.message.includes('corrupted')) {
-        throw new Error('Audio settings data is corrupted');
+      if (error.message.includes("quota")) {
+        throw new Error("Storage quota exceeded while loading audio settings");
+      } else if (error.message.includes("corrupted")) {
+        throw new Error("Audio settings data is corrupted");
       } else {
-        throw new Error('Failed to load audio settings: ' + error.message);
+        throw new Error("Failed to load audio settings: " + error.message);
       }
     }
   }
@@ -327,38 +390,48 @@ class AudioManager {
    */
   validateAudioSettings(settings) {
     const defaultSettings = {
-      whiteNoise: { 
-        enabled: false, 
-        volume: 0.5, 
-        currentSound: "rain" 
-      }
+      whiteNoise: {
+        enabled: false,
+        volume: 0.5,
+        currentSound: "rain",
+      },
     };
 
-    if (!settings || typeof settings !== 'object') {
+    if (!settings || typeof settings !== "object") {
       return defaultSettings;
     }
 
-    if (!settings.whiteNoise || typeof settings.whiteNoise !== 'object') {
+    if (!settings.whiteNoise || typeof settings.whiteNoise !== "object") {
       return defaultSettings;
     }
 
     // Validate volume
-    if (typeof settings.whiteNoise.volume !== 'number' || 
-        isNaN(settings.whiteNoise.volume) ||
-        settings.whiteNoise.volume < 0 || 
-        settings.whiteNoise.volume > 1) {
+    if (
+      typeof settings.whiteNoise.volume !== "number" ||
+      isNaN(settings.whiteNoise.volume) ||
+      settings.whiteNoise.volume < 0 ||
+      settings.whiteNoise.volume > 1
+    ) {
       settings.whiteNoise.volume = 0.5;
     }
 
     // Validate enabled flag
-    if (typeof settings.whiteNoise.enabled !== 'boolean') {
+    if (typeof settings.whiteNoise.enabled !== "boolean") {
       settings.whiteNoise.enabled = false;
     }
 
     // Validate current sound
-    const validSounds = ['air', 'ocean', 'rain', 'shower', 'train', 'water', 'waterfall', 'waves'];
+    const validSounds = [
+      "air",
+      "ocean",
+      "rain",
+      "shower",
+      "train",
+      "water",
+      "waterfall",
+    ];
     if (!validSounds.includes(settings.whiteNoise.currentSound)) {
-      settings.whiteNoise.currentSound = 'rain';
+      settings.whiteNoise.currentSound = "rain";
     }
 
     return settings;
@@ -376,7 +449,6 @@ class AudioManager {
       train: 4,
       water: 5,
       waterfall: 6,
-      waves: 7,
     };
 
     return soundMap[soundKey] !== undefined ? soundMap[soundKey] : 2;
@@ -385,7 +457,7 @@ class AudioManager {
   async saveSettings() {
     try {
       if (typeof chrome === "undefined" || !chrome.storage) {
-        console.warn('Chrome storage not available, cannot save settings');
+        console.warn("Chrome storage not available, cannot save settings");
         return false;
       }
 
@@ -396,17 +468,16 @@ class AudioManager {
           currentSound: this.getCurrentSound(),
         },
       };
-      
+
       await chrome.storage.local.set({ audioSettings: settings });
       return true;
-      
     } catch (error) {
       console.error("Failed to save audio settings:", error);
-      
+
       if (this.errorHandler) {
-        this.errorHandler.handleStorageError(error, 'Save Audio Settings');
+        this.errorHandler.handleStorageError(error, "Save Audio Settings");
       }
-      
+
       return false;
     }
   }
@@ -420,33 +491,38 @@ class AudioManager {
       }
 
       // Validate current sound index
-      if (this.currentSoundIndex >= this.availableSounds.length || this.currentSoundIndex < 0) {
-        console.warn('Invalid sound index, using default');
+      if (
+        this.currentSoundIndex >= this.availableSounds.length ||
+        this.currentSoundIndex < 0
+      ) {
+        console.warn("Invalid sound index, using default");
         this.currentSoundIndex = 2;
       }
 
       // Performance optimization: Try to use cached audio element first
       let audio = this.getCachedAudioElement(this.currentSoundIndex);
-      
+
       if (audio) {
         console.log(`Using cached audio: ${this.getCurrentSoundName()}`);
-        
+
         // Reset audio state for reuse
         audio.currentTime = 0;
         audio.volume = Math.max(0, Math.min(1, this.volume));
-        
+
         return audio;
       }
 
       // Create new audio element with optimized path
       const soundPath = this.getAudioPath(this.currentSoundIndex);
-      
+
       if (!soundPath) {
-        throw new Error('Sound path not found for index: ' + this.currentSoundIndex);
+        throw new Error(
+          "Sound path not found for index: " + this.currentSoundIndex
+        );
       }
 
       audio = new Audio();
-      
+
       // Set up audio properties before setting source
       audio.loop = true;
       audio.volume = Math.max(0, Math.min(1, this.volume));
@@ -457,7 +533,9 @@ class AudioManager {
       audio.addEventListener("error", (e) => {
         const errorDetails = this.getAudioErrorDetails(e);
         console.error("Audio loading error for:", soundPath, errorDetails);
-        this.handleAudioError(e);
+
+        // Don't call handleAudioError here as it can cause infinite loops
+        // Just log the error and let the play() method handle retries
       });
 
       audio.addEventListener("canplaythrough", () => {
@@ -496,14 +574,13 @@ class AudioManager {
       audio.src = soundPath;
 
       return audio;
-      
     } catch (error) {
       console.error("Failed to create audio element:", error);
-      
+
       if (this.errorHandler) {
-        this.errorHandler.handleAudioError(error, 'Create Audio Element');
+        this.errorHandler.handleAudioError(error, "Create Audio Element");
       }
-      
+
       return null;
     }
   }
@@ -513,15 +590,15 @@ class AudioManager {
    */
   getAudioErrorDetails(errorEvent) {
     if (!errorEvent.target || !errorEvent.target.error) {
-      return 'Unknown audio error';
+      return "Unknown audio error";
     }
 
     const error = errorEvent.target.error;
     const errorCodes = {
-      1: 'MEDIA_ERR_ABORTED - Audio loading was aborted',
-      2: 'MEDIA_ERR_NETWORK - Network error occurred while loading audio',
-      3: 'MEDIA_ERR_DECODE - Audio decoding error',
-      4: 'MEDIA_ERR_SRC_NOT_SUPPORTED - Audio format not supported'
+      1: "MEDIA_ERR_ABORTED - Audio loading was aborted",
+      2: "MEDIA_ERR_NETWORK - Network error occurred while loading audio",
+      3: "MEDIA_ERR_DECODE - Audio decoding error",
+      4: "MEDIA_ERR_SRC_NOT_SUPPORTED - Audio format not supported",
     };
 
     return errorCodes[error.code] || `Unknown error code: ${error.code}`;
@@ -536,52 +613,51 @@ class AudioManager {
       await audio.play();
     } catch (error) {
       console.error("Loop playback error:", error);
-      
+
       // Try to recover by recreating the audio element
       if (this.retryCount < this.maxRetries) {
         this.retryCount++;
-        console.log(`Attempting to recover audio loop (attempt ${this.retryCount})`);
-        
+        console.log(
+          `Attempting to recover audio loop (attempt ${this.retryCount})`
+        );
+
         setTimeout(() => {
-          this.play().catch(e => console.error('Recovery attempt failed:', e));
+          this.play().catch((e) =>
+            console.error("Recovery attempt failed:", e)
+          );
         }, 1000);
       } else {
-        console.error('Max retry attempts reached, stopping audio');
+        console.error("Max retry attempts reached, stopping audio");
         this.isPlaying = false;
-        
-        if (this.errorHandler) {
-          this.errorHandler.showUserFeedback(
-            'Audio playback failed after multiple attempts',
-            'error',
-            { duration: 5000 }
-          );
-        }
+
+        // Audio playback failed after multiple attempts
       }
     }
   }
 
   handleAudioError(errorEvent) {
     console.warn("Audio playback failed, attempting recovery");
-    
+
     this.retryCount++;
-    
+
     if (this.retryCount <= this.maxRetries) {
-      console.log(`Attempting recovery (${this.retryCount}/${this.maxRetries})`);
-      
+      console.log(
+        `Attempting recovery (${this.retryCount}/${this.maxRetries})`
+      );
+
       // Try next sound as recovery
       setTimeout(() => {
         this.nextRandomSound();
       }, 1000 * this.retryCount); // Increasing delay
-      
     } else {
-      console.error('Max retry attempts reached, entering fallback mode');
+      console.error("Max retry attempts reached, entering fallback mode");
       this.isPlaying = false;
       this.retryCount = 0;
-      
+
       if (this.errorHandler) {
         this.errorHandler.handleAudioError(
-          new Error('Audio playback failed after multiple attempts'), 
-          'Audio Playback'
+          new Error("Audio playback failed after multiple attempts"),
+          "Audio Playback"
         );
       }
     }
@@ -591,29 +667,38 @@ class AudioManager {
     try {
       // Check if we're in fallback mode
       if (this.fallbackMode) {
-        throw new Error('Audio manager in fallback mode - limited functionality');
+        throw new Error(
+          "Audio manager in fallback mode - limited functionality"
+        );
+      }
+
+      // Trigger preloading on first user interaction (if not already done)
+      if (this.preloadedSounds.size === 0) {
+        this.preloadPopularSounds().catch((error) => {
+          console.warn("Background preloading failed:", error);
+        });
       }
 
       // Clean up existing audio
       if (this.whiteNoiseAudio) {
         this.whiteNoiseAudio.pause();
-        this.whiteNoiseAudio.src = '';
+        this.whiteNoiseAudio.src = "";
         this.whiteNoiseAudio = null;
       }
 
       // Create new audio element
       this.whiteNoiseAudio = this.createAudioElement();
-      
+
       if (!this.whiteNoiseAudio) {
-        throw new Error('Failed to create audio element');
+        throw new Error("Failed to create audio element");
       }
 
       // Check if audio context needs to be resumed (for autoplay policy)
-      if (this.audioContext && this.audioContext.state === 'suspended') {
+      if (this.audioContext && this.audioContext.state === "suspended") {
         try {
           await this.audioContext.resume();
         } catch (error) {
-          console.warn('Could not resume audio context:', error);
+          console.warn("Could not resume audio context:", error);
         }
       }
 
@@ -621,10 +706,12 @@ class AudioManager {
       try {
         await this.whiteNoiseAudio.play();
       } catch (playError) {
-        if (playError.name === 'NotAllowedError') {
-          throw new Error('Audio blocked by browser. Please click to enable audio.');
-        } else if (playError.name === 'NotSupportedError') {
-          throw new Error('Audio format not supported by your browser.');
+        if (playError.name === "NotAllowedError") {
+          throw new Error(
+            "Audio blocked by browser. Please click to enable audio."
+          );
+        } else if (playError.name === "NotSupportedError") {
+          throw new Error("Audio format not supported by your browser.");
         } else {
           throw playError;
         }
@@ -632,21 +719,13 @@ class AudioManager {
 
       this.isPlaying = true;
       this.retryCount = 0; // Reset retry count on success
-      
+
       // Save settings (don't fail if this doesn't work)
-      this.saveSettings().catch(error => {
-        console.warn('Could not save audio settings:', error);
+      this.saveSettings().catch((error) => {
+        console.warn("Could not save audio settings:", error);
       });
 
       console.log(`White noise started: ${this.getCurrentSoundName()}`);
-      
-      if (this.errorHandler) {
-        this.errorHandler.showUserFeedback(
-          `Playing: ${this.getCurrentSoundName()}`,
-          'success',
-          { duration: 2000 }
-        );
-      }
 
       return {
         success: true,
@@ -654,24 +733,26 @@ class AudioManager {
         sound: this.getCurrentSoundName(),
         soundIndex: this.currentSoundIndex,
       };
-      
     } catch (error) {
       console.error("Failed to start white noise:", error);
       this.isPlaying = false;
-      
+
       if (this.errorHandler) {
-        const result = this.errorHandler.handleAudioError(error, 'White Noise Play');
+        const result = this.errorHandler.handleAudioError(
+          error,
+          "White Noise Play"
+        );
         return {
           success: false,
           error: result.error,
           errorType: result.errorType,
-          canRetry: result.canRetry
+          canRetry: result.canRetry,
         };
       } else {
-        return { 
-          success: false, 
+        return {
+          success: false,
           error: error.message,
-          canRetry: !error.message.includes('not supported')
+          canRetry: !error.message.includes("not supported"),
         };
       }
     }
@@ -684,38 +765,29 @@ class AudioManager {
       }
 
       this.isPlaying = false;
-      
+
       // Save settings (don't fail if this doesn't work)
-      this.saveSettings().catch(error => {
-        console.warn('Could not save audio settings:', error);
+      this.saveSettings().catch((error) => {
+        console.warn("Could not save audio settings:", error);
       });
 
       console.log("White noise paused");
-      
-      if (this.errorHandler) {
-        this.errorHandler.showUserFeedback(
-          'Audio paused',
-          'info',
-          { duration: 1500 }
-        );
-      }
 
       return { success: true, active: false };
-      
     } catch (error) {
       console.error("Failed to pause white noise:", error);
-      
+
       // Force stop even if pause failed
       this.isPlaying = false;
-      
+
       if (this.errorHandler) {
-        this.errorHandler.handleAudioError(error, 'White Noise Pause');
+        this.errorHandler.handleAudioError(error, "White Noise Pause");
       }
-      
-      return { 
-        success: false, 
+
+      return {
+        success: false,
         error: error.message,
-        active: false // Still report as inactive since we forced stop
+        active: false, // Still report as inactive since we forced stop
       };
     }
   }
@@ -776,7 +848,6 @@ class AudioManager {
       train: 4,
       water: 5,
       waterfall: 6,
-      waves: 7,
     };
 
     if (soundKey in soundMap) {
@@ -818,22 +889,12 @@ class AudioManager {
       "train",
       "water",
       "waterfall",
-      "waves",
     ];
     return soundKeys[this.currentSoundIndex] || "rain";
   }
 
   getAvailableSounds() {
-    return [
-      "air",
-      "ocean",
-      "rain",
-      "shower",
-      "train",
-      "water",
-      "waterfall",
-      "waves",
-    ];
+    return ["air", "ocean", "rain", "shower", "train", "water", "waterfall"];
   }
 
   async startWhiteNoise(soundKey) {
@@ -884,10 +945,10 @@ class AudioManager {
     this.audioCache.forEach((audio, index) => {
       if (audio && audio !== this.whiteNoiseAudio) {
         audio.pause();
-        audio.src = ''; // Free memory
+        audio.src = ""; // Free memory
       }
     });
-    
+
     this.audioCache.clear();
     this.preloadedSounds.clear();
 
@@ -905,9 +966,14 @@ class AudioManager {
       currentSoundIndex: this.currentSoundIndex,
       isPlaying: this.isPlaying,
       fallbackMode: this.fallbackMode,
-      memoryOptimized: this.useOptimizedAudio
+      memoryOptimized: this.useOptimizedAudio,
     };
   }
 }
 
-export default AudioManager;
+// Export for different environments
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = AudioManager;
+} else if (typeof window !== "undefined") {
+  window.AudioManager = AudioManager;
+}
