@@ -10,6 +10,7 @@ console.log("Focus Productivity Extension background service worker loaded");
 let tabTracker = null;
 let storageManager = null;
 let geminiService = null;
+let pomodoroService = null;
 
 // No imports - self-contained background script
 console.log("Background script loaded without imports");
@@ -39,6 +40,11 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     // Initialize Gemini service
     if (!geminiService) {
       geminiService = new GeminiService();
+    }
+
+    // Initialize Pomodoro service for background alarms
+    if (!pomodoroService) {
+      pomodoroService = new PomodoroService();
     }
 
     // Initialize notification system
@@ -81,29 +87,29 @@ async function initializeDefaultSettings() {
       screenTimeSettings: {
         limitMinutes: 30,
         enabled: true,
-        notificationsEnabled: true
+        notificationsEnabled: true,
       },
       focusSettings: {
         reminderCooldownMinutes: 5,
-        trackingEnabled: true
+        trackingEnabled: true,
       },
       breathingSettings: {
         inhaleSeconds: 4,
         holdSeconds: 4,
         exhaleSeconds: 4,
-        pauseSeconds: 2
+        pauseSeconds: 2,
       },
       audioSettings: {
         whiteNoise: {
           enabled: false,
           volume: 0.5,
-          currentSound: "rain"
-        }
+          currentSound: "rain",
+        },
       },
       tabHistory: {},
       currentSession: {},
       tasks: [],
-      apiKeys: {}
+      apiKeys: {},
     };
 
     await storageManager.setMultiple(defaultData);
@@ -243,24 +249,171 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 /**
+ * Handle Chrome alarms for Pomodoro timer
+ */
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  console.log("Alarm triggered:", alarm.name);
+
+  if (alarm.name.startsWith("pomodoro_")) {
+    await handlePomodoroAlarm(alarm);
+  }
+});
+
+/**
+ * Handle Pomodoro timer alarms
+ */
+async function handlePomodoroAlarm(alarm) {
+  try {
+    const sessionId = alarm.name.replace("pomodoro_", "");
+
+    // Get current session from storage
+    const currentSession = await storageManager.get("pomodoroCurrentSession");
+
+    if (currentSession && currentSession.id === sessionId) {
+      // Session completed
+      await completePomodoroSession(currentSession);
+    }
+  } catch (error) {
+    console.error("Error handling Pomodoro alarm:", error);
+  }
+}
+
+/**
+ * Complete a Pomodoro session
+ */
+async function completePomodoroSession(session) {
+  try {
+    // Mark session as completed
+    session.isActive = false;
+    session.completedAt = Date.now();
+    session.wasCompleted = true;
+
+    // Save to history
+    const history = (await storageManager.get("pomodoroHistory")) || [];
+    history.push(session);
+
+    // Keep only last 100 sessions
+    if (history.length > 100) {
+      history.splice(0, history.length - 100);
+    }
+
+    await storageManager.set("pomodoroHistory", history);
+
+    // Update statistics
+    await updatePomodoroStats("completed", session.type);
+
+    // Remove current session
+    await storageManager.remove("pomodoroCurrentSession");
+
+    // Show completion notification
+    const sessionTypeName = formatPomodoroSessionType(session.type);
+    await chrome.notifications.create({
+      type: "basic",
+      iconUrl: "assets/icons/48.ico",
+      title: `${sessionTypeName} Completed!`,
+      message: "Great job! Time for the next session.",
+      priority: 2,
+    });
+
+    console.log("Pomodoro session completed:", session.type);
+  } catch (error) {
+    console.error("Error completing Pomodoro session:", error);
+  }
+}
+
+/**
+ * Update Pomodoro statistics
+ */
+async function updatePomodoroStats(action, sessionType) {
+  try {
+    const today = new Date().toDateString();
+    const stats = (await storageManager.get("pomodoroStats")) || {};
+
+    if (!stats[today]) {
+      stats[today] = {
+        workSessions: 0,
+        shortBreaks: 0,
+        longBreaks: 0,
+        totalWorkTime: 0,
+        totalBreakTime: 0,
+        sessionsStarted: 0,
+        sessionsCompleted: 0,
+        sessionsStopped: 0,
+      };
+    }
+
+    const todayStats = stats[today];
+
+    if (action === "completed") {
+      todayStats.sessionsCompleted++;
+
+      // Get default durations (should match PomodoroService defaults)
+      const durations = {
+        work: 25,
+        shortBreak: 5,
+        longBreak: 15,
+      };
+
+      if (sessionType === "work") {
+        todayStats.workSessions++;
+        todayStats.totalWorkTime += durations.work;
+      } else if (sessionType === "shortBreak") {
+        todayStats.shortBreaks++;
+        todayStats.totalBreakTime += durations.shortBreak;
+      } else if (sessionType === "longBreak") {
+        todayStats.longBreaks++;
+        todayStats.totalBreakTime += durations.longBreak;
+      }
+    }
+
+    await storageManager.set("pomodoroStats", stats);
+    return todayStats;
+  } catch (error) {
+    console.error("Error updating Pomodoro stats:", error);
+    return null;
+  }
+}
+
+/**
+ * Format Pomodoro session type for display
+ */
+function formatPomodoroSessionType(type) {
+  switch (type) {
+    case "work":
+      return "Work Session";
+    case "shortBreak":
+      return "Short Break";
+    case "longBreak":
+      return "Long Break";
+    default:
+      return "Session";
+  }
+}
+
+/**
  * Handle different types of messages
  */
 async function handleMessage(message, sender, sendResponse) {
   try {
     // Validate message structure
-    if (!message || typeof message !== 'object' || !message.type) {
-      sendResponse({ success: false, error: 'Invalid message format' });
+    if (!message || typeof message !== "object" || !message.type) {
+      sendResponse({ success: false, error: "Invalid message format" });
       return;
     }
 
     switch (message.type) {
       case "GET_TAB_STATS":
         try {
-          const stats = tabTracker ? await tabTracker.getCurrentTabStats() : null;
+          const stats = tabTracker
+            ? await tabTracker.getCurrentTabStats()
+            : null;
           sendResponse({ success: true, data: stats });
         } catch (error) {
-          console.error('Error getting tab stats:', error);
-          sendResponse({ success: false, error: 'Failed to get tab statistics' });
+          console.error("Error getting tab stats:", error);
+          sendResponse({
+            success: false,
+            error: "Failed to get tab statistics",
+          });
         }
         break;
 
@@ -269,36 +422,42 @@ async function handleMessage(message, sender, sendResponse) {
           const focusInfo = tabTracker ? tabTracker.getFocusTabInfo() : null;
           sendResponse({ success: true, data: focusInfo });
         } catch (error) {
-          console.error('Error getting focus info:', error);
-          sendResponse({ success: false, error: 'Failed to get focus information' });
+          console.error("Error getting focus info:", error);
+          sendResponse({
+            success: false,
+            error: "Failed to get focus information",
+          });
         }
         break;
 
       case "SET_FOCUS_TAB":
         try {
           if (!tabTracker) {
-            throw new Error('Tab tracker not initialized');
+            throw new Error("Tab tracker not initialized");
           }
 
           const tabs = await chrome.tabs.query({
             active: true,
             currentWindow: true,
           });
-          
+
           if (tabs.length === 0) {
-            throw new Error('No active tab found');
+            throw new Error("No active tab found");
           }
 
           // Check if tab is accessible
           const tab = tabs[0];
-          if (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) {
-            throw new Error('Cannot set focus on restricted tabs');
+          if (
+            tab.url.startsWith("chrome://") ||
+            tab.url.startsWith("chrome-extension://")
+          ) {
+            throw new Error("Cannot set focus on restricted tabs");
           }
 
           await tabTracker.setFocusTab(tab.id, tab.url);
           sendResponse({ success: true });
         } catch (error) {
-          console.error('Error setting focus tab:', error);
+          console.error("Error setting focus tab:", error);
           sendResponse({ success: false, error: error.message });
         }
         break;
@@ -374,6 +533,50 @@ async function handleMessage(message, sender, sendResponse) {
             granted: permission === "granted",
           },
         });
+        break;
+
+      case "POMODORO_START_SESSION":
+        try {
+          const { type, duration } = message;
+          const sessionId = `pomodoro_${Date.now()}`;
+
+          // Create alarm for session completion
+          await chrome.alarms.create(sessionId, {
+            delayInMinutes: duration,
+          });
+
+          sendResponse({
+            success: true,
+            sessionId: sessionId,
+          });
+        } catch (error) {
+          console.error("Error starting Pomodoro session:", error);
+          sendResponse({
+            success: false,
+            error: error.message,
+          });
+        }
+        break;
+
+      case "POMODORO_STOP_SESSION":
+        try {
+          const { sessionId } = message;
+
+          // Clear the alarm
+          if (sessionId) {
+            await chrome.alarms.clear(sessionId);
+          }
+
+          sendResponse({
+            success: true,
+          });
+        } catch (error) {
+          console.error("Error stopping Pomodoro session:", error);
+          sendResponse({
+            success: false,
+            error: error.message,
+          });
+        }
         break;
 
       default:

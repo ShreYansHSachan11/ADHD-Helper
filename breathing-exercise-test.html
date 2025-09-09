@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Breathing Exercise Test</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="popup/popup.css" />
+    <style>
+      body {
+        margin: 0;
+        background: #f5f5f5;
+        font-family: "Roboto", sans-serif;
+      }
+      .test-container {
+        padding: 20px;
+        text-align: center;
+      }
+      .test-button {
+        background: #1976d2;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-size: 16px;
+        cursor: pointer;
+        margin: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="test-container">
+      <h1>Breathing Exercise Test</h1>
+      <button class="test-button" onclick="showBreathingModal()">
+        Open Breathing Exercise
+      </button>
+
+      <!-- Breathing Exercise Modal -->
+      <div class="modal" id="breathingModal" style="display: none">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Breathing Exercise</h3>
+            <button class="close-btn" onclick="closeBreathingModal()">
+              &times;
+            </button>
+          </div>
+          <div class="breathing-container">
+            <div class="breathing-circle" id="breathingCircle"></div>
+            <div class="breathing-text" id="breathingText">
+              Click Start to begin
+            </div>
+            <div class="breathing-controls">
+              <button
+                class="btn btn-primary"
+                id="startBreathingBtn"
+                onclick="startBreathing()"
+              >
+                Start
+              </button>
+              <button
+                class="btn btn-secondary"
+                id="stopBreathingBtn"
+                onclick="stopBreathing()"
+                style="display: none"
+              >
+                Stop
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let breathingInterval;
+      let currentPhase = 0;
+      const phases = ["inhale", "hold", "exhale", "pause"];
+      const phaseTexts = [
+        "Breathe in...",
+        "Hold...",
+        "Breathe out...",
+        "Pause...",
+      ];
+      const phaseDurations = [4000, 2000, 6000, 1000]; // milliseconds
+
+      function showBreathingModal() {
+        document.getElementById("breathingModal").style.display = "flex";
+      }
+
+      function closeBreathingModal() {
+        stopBreathing();
+        document.getElementById("breathingModal").style.display = "none";
+      }
+
+      function startBreathing() {
+        const circle = document.getElementById("breathingCircle");
+        const text = document.getElementById("breathingText");
+        const startBtn = document.getElementById("startBreathingBtn");
+        const stopBtn = document.getElementById("stopBreathingBtn");
+
+        startBtn.style.display = "none";
+        stopBtn.style.display = "inline-flex";
+
+        currentPhase = 0;
+        runBreathingCycle();
+
+        breathingInterval = setInterval(
+          runBreathingCycle,
+          phaseDurations.reduce((a, b) => a + b, 0)
+        );
+      }
+
+      function stopBreathing() {
+        const circle = document.getElementById("breathingCircle");
+        const text = document.getElementById("breathingText");
+        const startBtn = document.getElementById("startBreathingBtn");
+        const stopBtn = document.getElementById("stopBreathingBtn");
+
+        if (breathingInterval) {
+          clearInterval(breathingInterval);
+          breathingInterval = null;
+        }
+
+        circle.className = "breathing-circle";
+        text.textContent = "Click Start to begin";
+        text.className = "breathing-text";
+
+        startBtn.style.display = "inline-flex";
+        stopBtn.style.display = "none";
+      }
+
+      function runBreathingCycle() {
+        const circle = document.getElementById("breathingCircle");
+        const text = document.getElementById("breathingText");
+
+        phases.forEach((phase, index) => {
+          setTimeout(
+            () => {
+              circle.className = `breathing-circle ${phase}`;
+              text.className = `breathing-text ${phase}`;
+              text.textContent = phaseTexts[index];
+            },
+            phaseDurations.slice(0, index).reduce((a, b) => a + b, 0)
+          );
+        });
+      }
+
+      // Close modal when clicking outside
+      document
+        .getElementById("breathingModal")
+        .addEventListener("click", function (e) {
+          if (e.target === this) {
+            closeBreathingModal();
+          }
+        });
+    </script>
+  </body>
+</html>

@@ -60,10 +60,72 @@ class BreathingExercise {
     this.startButton = document.getElementById("startBreathingBtn");
     this.stopButton = document.getElementById("stopBreathingBtn");
 
+    console.log("Binding breathing exercise elements:");
+    console.log("Circle element:", this.circleElement);
+    console.log("Text element:", this.textElement);
+    console.log("Start button:", this.startButton);
+    console.log("Stop button:", this.stopButton);
+
     if (!this.circleElement || !this.textElement) {
       console.error("Breathing exercise elements not found");
+      console.error("Available elements with 'breathing' in ID:");
+      const allElements = document.querySelectorAll('[id*="breathing"]');
+      allElements.forEach((el) => console.log(`- ${el.id}:`, el));
       return;
     }
+
+    // Test if CSS animations work on this element
+    this.testAnimationSupport();
+
+    // Apply Chrome animation fix immediately
+    this.applyChromeAnimationFix();
+  }
+
+  testAnimationSupport() {
+    if (!this.circleElement) return;
+
+    console.log("Testing animation support...");
+
+    // Test CSS support
+    const supportsAnimation = CSS.supports("animation", "test 1s");
+    const supportsTransform = CSS.supports("transform", "scale(1.5)");
+    const supportsTransition = CSS.supports("transition", "transform 1s");
+
+    console.log("CSS Animation support:", supportsAnimation);
+    console.log("CSS Transform support:", supportsTransform);
+    console.log("CSS Transition support:", supportsTransition);
+
+    // Test a simple animation
+    const originalTransform = this.circleElement.style.transform;
+    this.circleElement.style.transition = "transform 0.5s ease";
+    this.circleElement.style.transform = "scale(1.1)";
+
+    setTimeout(() => {
+      this.circleElement.style.transform = originalTransform;
+      this.circleElement.style.transition = "";
+      console.log("Animation test completed");
+    }, 600);
+  }
+
+  applyChromeAnimationFix() {
+    if (!this.circleElement) return;
+
+    console.log("Applying Chrome animation fix...");
+
+    // Make element appear interactive to prevent Chrome from pausing animations
+    this.circleElement.style.pointerEvents = "auto";
+    this.circleElement.style.cursor = "pointer";
+    this.circleElement.style.userSelect = "none";
+
+    // Force hardware acceleration
+    this.circleElement.style.willChange = "transform, box-shadow";
+    this.circleElement.style.backfaceVisibility = "hidden";
+    this.circleElement.style.transform = "translateZ(0)";
+
+    // Force a reflow to ensure styles are applied
+    this.circleElement.offsetHeight;
+
+    console.log("Chrome animation fix applied");
   }
 
   setupEventListeners() {
@@ -123,6 +185,30 @@ class BreathingExercise {
     this.updateButtonStates();
     if (this.textElement) {
       this.textElement.textContent = "Get ready...";
+    }
+
+    // CRITICAL FIX: Force Chrome to recognize element as interactive and enable animations
+    if (this.circleElement) {
+      // Make element appear interactive to prevent Chrome from pausing animations
+      this.circleElement.style.pointerEvents = "auto";
+      this.circleElement.style.cursor = "pointer";
+      this.circleElement.style.userSelect = "none";
+
+      // Force hardware acceleration
+      this.circleElement.style.transform = "translateZ(0)";
+      this.circleElement.style.willChange = "transform, box-shadow";
+      this.circleElement.style.backfaceVisibility = "hidden";
+
+      // Trigger a tiny movement to "wake up" the animation engine
+      this.circleElement.style.transform = "translateZ(0) scale(1.001)";
+      this.circleElement.offsetHeight; // Force reflow
+      this.circleElement.style.transform = "translateZ(0)";
+
+      // Ensure the element is visible and ready for animation
+      this.circleElement.style.visibility = "visible";
+      this.circleElement.style.display = "flex";
+
+      console.log("Applied Chrome animation fix");
     }
 
     // Start the breathing cycle after a brief delay
@@ -226,33 +312,111 @@ class BreathingExercise {
   }
 
   animateCircle(phase, duration) {
-    if (!this.circleElement) return;
-
-    // Set CSS transition duration first
-    if (this.circleElement.style) {
-      this.circleElement.style.transitionDuration = `${duration}ms`;
+    if (!this.circleElement) {
+      console.error("Breathing circle element not found");
+      return;
     }
 
-    // Remove existing animation classes
-    this.circleElement.classList.remove("inhale", "exhale", "hold");
+    console.log(
+      `Animating circle for phase: ${phase}, duration: ${duration}ms`
+    );
+
+    // Remove all existing animation classes and styles
+    this.circleElement.classList.remove(
+      "inhale",
+      "exhale",
+      "hold",
+      "inhale-animation",
+      "exhale-animation",
+      "hold-animation",
+      "animate-inhale-4s",
+      "animate-inhale-7s",
+      "animate-exhale-4s",
+      "animate-exhale-8s",
+      "animate-hold-1s",
+      "animate-hold-4s",
+      "animate-hold-7s"
+    );
+    this.circleElement.style.animation = "";
+    this.circleElement.style.transitionDuration = "";
 
     // Force a reflow to ensure the class removal is processed
     this.circleElement.offsetHeight;
 
-    // Apply appropriate animation class after a small delay to ensure smooth transition
+    // Apply appropriate animation using CSS keyframes
     requestAnimationFrame(() => {
+      console.log(`Adding animation for phase: ${phase}`);
+
+      const animationDuration = `${duration}ms`;
+
+      // Force browser to recognize the element and prepare for animation
+      this.circleElement.style.display = "flex";
+      this.circleElement.style.visibility = "visible";
+
+      // Force a style recalculation
+      const computedStyle = window.getComputedStyle(this.circleElement);
+      const currentTransform = computedStyle.transform;
+      console.log(
+        "Current computed transform before animation:",
+        currentTransform
+      );
+
+      // Use CSS classes for predefined durations, fallback to inline styles for custom durations
+      const durationSeconds = Math.round(duration / 1000);
+
       switch (phase) {
         case "inhale":
+          if (durationSeconds === 4) {
+            this.circleElement.classList.add("animate-inhale-4s");
+          } else if (durationSeconds === 7) {
+            this.circleElement.classList.add("animate-inhale-7s");
+          } else {
+            this.circleElement.style.animation = `breatheIn ${animationDuration} cubic-bezier(0.4, 0, 0.6, 1) forwards`;
+          }
           this.circleElement.classList.add("inhale");
           break;
         case "exhale":
+          if (durationSeconds === 4) {
+            this.circleElement.classList.add("animate-exhale-4s");
+          } else if (durationSeconds === 8) {
+            this.circleElement.classList.add("animate-exhale-8s");
+          } else {
+            this.circleElement.style.animation = `breatheOut ${animationDuration} cubic-bezier(0.4, 0, 0.6, 1) forwards`;
+          }
           this.circleElement.classList.add("exhale");
           break;
         case "holdIn":
         case "holdOut":
+          if (durationSeconds === 1) {
+            this.circleElement.classList.add("animate-hold-1s");
+          } else if (durationSeconds === 4) {
+            this.circleElement.classList.add("animate-hold-4s");
+          } else if (durationSeconds === 7) {
+            this.circleElement.classList.add("animate-hold-7s");
+          } else {
+            this.circleElement.style.animation = `breatheHold ${animationDuration} cubic-bezier(0.4, 0, 0.6, 1) forwards`;
+          }
           this.circleElement.classList.add("hold");
           break;
       }
+
+      // Force another reflow to ensure animation starts
+      this.circleElement.offsetHeight;
+
+      // Log current state for debugging
+      console.log("Current circle classes:", this.circleElement.className);
+      console.log(
+        "Current animation style:",
+        this.circleElement.style.animation
+      );
+
+      // Verify animation is actually running
+      setTimeout(() => {
+        const animationState = window.getComputedStyle(
+          this.circleElement
+        ).animationPlayState;
+        console.log("Animation play state:", animationState);
+      }, 100);
     });
   }
 
@@ -260,9 +424,24 @@ class BreathingExercise {
     if (!this.circleElement) return;
 
     // Remove all animation classes
-    this.circleElement.classList.remove("inhale", "exhale", "hold");
+    this.circleElement.classList.remove(
+      "inhale",
+      "exhale",
+      "hold",
+      "inhale-animation",
+      "exhale-animation",
+      "hold-animation",
+      "animate-inhale-4s",
+      "animate-inhale-7s",
+      "animate-exhale-4s",
+      "animate-exhale-8s",
+      "animate-hold-1s",
+      "animate-hold-4s",
+      "animate-hold-7s"
+    );
 
-    // Reset transition duration to default
+    // Reset all animation styles
+    this.circleElement.style.animation = "";
     this.circleElement.style.transitionDuration = "";
 
     // Force a reflow to ensure changes are applied
@@ -297,7 +476,7 @@ class BreathingExercise {
 
     // Show completion animation
     if (this.circleElement) {
-      this.circleElement.style.animation = "breathing-complete 1s ease-in-out";
+      this.circleElement.style.animation = "breathingComplete 1s ease-in-out";
       setTimeout(() => {
         if (this.circleElement) {
           this.circleElement.style.animation = "";

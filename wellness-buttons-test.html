@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wellness Buttons Test</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="popup/popup.css" />
+    <style>
+      body {
+        margin: 20px;
+        background: #f5f5f5;
+      }
+      .comparison-container {
+        max-width: 800px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+      .test-section {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <h1 style="text-align: center; margin-bottom: 30px; font-family: Roboto">
+      Button Style Comparison
+    </h1>
+
+    <div class="comparison-container">
+      <!-- Wellness Tools -->
+      <div class="test-section">
+        <div class="container">
+          <section class="section wellness-section">
+            <div class="section-header">
+              <h2 class="section-title">Wellness Tools</h2>
+            </div>
+            <div class="section-content">
+              <div class="wellness-controls">
+                <button class="btn btn-wellness">
+                  <span class="icon">🫁</span>
+                  <span>Breathing Exercise</span>
+                </button>
+                <button class="btn btn-wellness">
+                  <span class="icon">🔊</span>
+                  <span>White Noise</span>
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <!-- Additional Tools -->
+      <div class="test-section">
+        <div class="container">
+          <section class="section external-pages-section">
+            <div class="section-header">
+              <h2 class="section-title">Additional Tools</h2>
+            </div>
+            <div class="section-content">
+              <div class="external-buttons">
+                <button class="btn btn-external">
+                  <span class="icon">🧘</span>
+                  <span>Focus & Anxiety Management</span>
+                </button>
+                <button class="btn btn-external">
+                  <span class="icon">🎵</span>
+                  <span>ASMR & Fidgeting Tools</span>
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

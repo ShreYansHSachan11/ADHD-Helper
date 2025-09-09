@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pomodoro Timer Demo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* Material Design 3 CSS Variables */
+      :root {
+        --md-sys-color-primary: #006a6b;
+        --md-sys-color-on-primary: #ffffff;
+        --md-sys-color-primary-container: #6ff7f8;
+        --md-sys-color-on-primary-container: #002020;
+        --md-sys-color-secondary: #4a6363;
+        --md-sys-color-on-secondary: #ffffff;
+        --md-sys-color-secondary-container: #cce8e8;
+        --md-sys-color-on-secondary-container: #051f1f;
+        --md-sys-color-surface: #fafdfb;
+        --md-sys-color-on-surface: #191c1c;
+        --md-sys-color-surface-variant: #dae5e4;
+        --md-sys-color-on-surface-variant: #3f4948;
+        --md-sys-color-outline: #6f7979;
+        --md-sys-color-outline-variant: #bec9c8;
+        --md-sys-color-error: #ba1a1a;
+        --md-sys-color-on-error: #ffffff;
+        --md-sys-color-error-container: #ffdad6;
+        --md-sys-color-on-error-container: #410002;
+        --md-sys-elevation-level1: 0px 1px 2px 0px rgba(0, 0, 0, 0.3),
+          0px 1px 3px 1px rgba(0, 0, 0, 0.15);
+        --md-sys-elevation-level2: 0px 1px 2px 0px rgba(0, 0, 0, 0.3),
+          0px 2px 6px 2px rgba(0, 0, 0, 0.15);
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Roboto", sans-serif;
+        background: var(--md-sys-color-surface);
+        color: var(--md-sys-color-on-surface);
+        padding: 20px;
+        min-height: 100vh;
+      }
+
+      .container {
+        max-width: 400px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 16px;
+        box-shadow: var(--md-sys-elevation-level2);
+        overflow: hidden;
+      }
+
+      .header {
+        background: var(--md-sys-color-primary);
+        color: var(--md-sys-color-on-primary);
+        padding: 20px;
+        text-align: center;
+      }
+
+      .header h1 {
+        font-size: 24px;
+        font-weight: 600;
+      }
+
+      .content {
+        padding: 20px;
+      }
+
+      /* Include all the Pomodoro styles from popup.css */
+      .pomodoro-timer {
+        background: var(--md-sys-color-surface);
+        border-radius: 16px;
+        padding: 20px;
+        margin-bottom: 16px;
+        box-shadow: var(--md-sys-elevation-level1);
+      }
+
+      .pomodoro-message {
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 16px;
+        font-size: 14px;
+        font-weight: 500;
+        display: none;
+      }
+
+      .pomodoro-message.success {
+        background: var(--md-sys-color-primary-container);
+        color: var(--md-sys-color-on-primary-container);
+      }
+
+      .pomodoro-message.error {
+        background: var(--md-sys-color-error-container);
+        color: var(--md-sys-color-on-error-container);
+      }
+
+      .timer-display {
+        text-align: center;
+        margin-bottom: 24px;
+      }
+
+      .session-type {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--md-sys-color-primary);
+        margin-bottom: 16px;
+      }
+
+      .timer-circle {
+        position: relative;
+        width: 160px;
+        height: 160px;
+        margin: 0 auto 16px;
+      }
+
+      .timer-circle svg {
+        width: 100%;
+        height: 100%;
+        transform: rotate(-90deg);
+      }
+
+      .timer-progress {
+        fill: none;
+        stroke: var(--md-sys-color-primary);
+        stroke-width: 6;
+        stroke-linecap: round;
+        stroke-dasharray: 283;
+        stroke-dashoffset: 283;
+        transition: stroke-dashoffset 1s ease;
+      }
+
+      .timer-circle::before {
+        content: "";
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        right: 3px;
+        bottom: 3px;
+        border: 2px solid var(--md-sys-color-outline-variant);
+        border-radius: 50%;
+        z-index: -1;
+      }
+
+      .timer-time {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--md-sys-color-on-surface);
+        font-family: "Roboto Mono", monospace;
+      }
+
+      .session-info {
+        font-size: 14px;
+        color: var(--md-sys-color-on-surface-variant);
+        margin-top: 8px;
+      }
+
+      .timer-controls {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+
+      .timer-controls .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 20px;
+        border: none;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        min-width: 100px;
+        justify-content: center;
+      }
+
+      .timer-controls .btn-primary {
+        background: var(--md-sys-color-primary);
+        color: var(--md-sys-color-on-primary);
+      }
+
+      .timer-controls .btn-primary:hover {
+        background: color-mix(in srgb, var(--md-sys-color-primary) 90%, black);
+        box-shadow: var(--md-sys-elevation-level2);
+      }
+
+      .timer-controls .btn-secondary {
+        background: var(--md-sys-color-secondary-container);
+        color: var(--md-sys-color-on-secondary-container);
+      }
+
+      .timer-controls .btn-danger {
+        background: var(--md-sys-color-error);
+        color: var(--md-sys-color-on-error);
+      }
+
+      .session-selector {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 24px;
+        background: var(--md-sys-color-surface-variant);
+        border-radius: 12px;
+        padding: 4px;
+      }
+
+      .session-btn {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        padding: 12px 8px;
+        border: none;
+        border-radius: 8px;
+        background: transparent;
+        color: var(--md-sys-color-on-surface-variant);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-size: 12px;
+      }
+
+      .session-btn:hover {
+        background: color-mix(
+          in srgb,
+          var(--md-sys-color-primary) 10%,
+          transparent
+        );
+      }
+
+      .session-btn.active {
+        background: var(--md-sys-color-primary-container);
+        color: var(--md-sys-color-on-primary-container);
+        box-shadow: var(--md-sys-elevation-level1);
+      }
+
+      .session-icon {
+        font-size: 20px;
+        margin-bottom: 2px;
+      }
+
+      .session-label {
+        font-weight: 600;
+        font-size: 11px;
+      }
+
+      .session-duration {
+        font-size: 10px;
+        opacity: 0.8;
+      }
+
+      .pomodoro-stats {
+        margin-bottom: 20px;
+      }
+
+      .pomodoro-stats h4 {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--md-sys-color-on-surface);
+        margin-bottom: 12px;
+        text-align: center;
+      }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .stat-item {
+        background: var(--md-sys-color-primary-container);
+        border-radius: 12px;
+        padding: 16px 12px;
+        text-align: center;
+      }
+
+      .stat-value {
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--md-sys-color-on-primary-container);
+        margin-bottom: 4px;
+      }
+
+      .stat-label {
+        font-size: 12px;
+        color: var(--md-sys-color-on-primary-container);
+        opacity: 0.8;
+      }
+
+      .pomodoro-settings-toggle {
+        text-align: center;
+        margin-bottom: 16px;
+      }
+
+      .pomodoro-settings-toggle .btn-link {
+        background: none;
+        border: none;
+        color: var(--md-sys-color-primary);
+        cursor: pointer;
+        font-size: 14px;
+        padding: 8px 16px;
+        border-radius: 20px;
+        transition: background 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .pomodoro-settings {
+        background: var(--md-sys-color-surface-variant);
+        border-radius: 12px;
+        padding: 20px;
+        margin-top: 16px;
+      }
+
+      .setting-group {
+        margin-bottom: 16px;
+      }
+
+      .setting-group label {
+        display: block;
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--md-sys-color-on-surface);
+        margin-bottom: 6px;
+      }
+
+      .setting-group input[type="number"] {
+        width: 100%;
+        padding: 12px 16px;
+        border: 2px solid var(--md-sys-color-outline-variant);
+        border-radius: 8px;
+        background: var(--md-sys-color-surface);
+        color: var(--md-sys-color-on-surface);
+        font-size: 14px;
+      }
+
+      .checkbox-label {
+        display: flex !important;
+        align-items: center;
+        gap: 12px;
+        cursor: pointer;
+        margin-bottom: 0 !important;
+      }
+
+      .checkbox-label input[type="checkbox"] {
+        display: none;
+      }
+
+      .checkmark {
+        width: 20px;
+        height: 20px;
+        border: 2px solid var(--md-sys-color-outline);
+        border-radius: 4px;
+        position: relative;
+        transition: all 0.2s ease;
+      }
+
+      .checkbox-label input[type="checkbox"]:checked + .checkmark {
+        background: var(--md-sys-color-primary);
+        border-color: var(--md-sys-color-primary);
+      }
+
+      .checkbox-label input[type="checkbox"]:checked + .checkmark::after {
+        content: "✓";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: var(--md-sys-color-on-primary);
+        font-size: 12px;
+        font-weight: bold;
+      }
+
+      .settings-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 20px;
+      }
+
+      .settings-actions .btn {
+        flex: 1;
+        padding: 12px 16px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .settings-actions .btn-primary {
+        background: var(--md-sys-color-primary);
+        color: var(--md-sys-color-on-primary);
+      }
+
+      .settings-actions .btn-secondary {
+        background: var(--md-sys-color-secondary-container);
+        color: var(--md-sys-color-on-secondary-container);
+      }
+
+      .debug-info {
+        background: var(--md-sys-color-surface-variant);
+        border-radius: 8px;
+        padding: 16px;
+        margin-top: 20px;
+        font-family: "Roboto Mono", monospace;
+        font-size: 12px;
+      }
+
+      .debug-info h4 {
+        margin-bottom: 8px;
+        font-family: "Roboto", sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🍅 Pomodoro Timer Demo</h1>
+      </div>
+      <div class="content">
+        <div id="pomodoroContainer">
+          <!-- Pomodoro Timer will be rendered here -->
+        </div>
+
+        <div class="debug-info">
+          <h4>Debug Information</h4>
+          <div id="debugOutput">
+            <div>Status: Initializing...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mock Chrome APIs for demo -->
+    <script>
+      // Mock Chrome APIs for demo purposes
+      window.chrome = {
+        storage: {
+          local: {
+            data: {},
+            get: function (key) {
+              return Promise.resolve(
+                key ? { [key]: this.data[key] } : this.data
+              );
+            },
+            set: function (items) {
+              Object.assign(this.data, items);
+              return Promise.resolve();
+            },
+            remove: function (keys) {
+              if (Array.isArray(keys)) {
+                keys.forEach((key) => delete this.data[key]);
+              } else {
+                delete this.data[keys];
+              }
+              return Promise.resolve();
+            },
+            clear: function () {
+              this.data = {};
+              return Promise.resolve();
+            },
+            QUOTA_BYTES: 5242880,
+          },
+        },
+        notifications: {
+          create: function (options) {
+            console.log("Notification:", options);
+            // Show browser notification if available
+            if (
+              "Notification" in window &&
+              Notification.permission === "granted"
+            ) {
+              new Notification(options.title, {
+                body: options.message,
+                icon: options.iconUrl,
+              });
+            }
+          },
+        },
+      };
+
+      // Request notification permission
+      if ("Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission();
+      }
+    </script>
+
+    <!-- Load the Pomodoro components -->
+    <script src="services/storage-manager.js"></script>
+    <script src="services/pomodoro-service.js"></script>
+    <script src="popup/components/pomodoro-timer.js"></script>
+
+    <script>
+      // Initialize the demo
+      let pomodoroTimer;
+      let debugOutput;
+
+      document.addEventListener("DOMContentLoaded", async () => {
+        debugOutput = document.getElementById("debugOutput");
+
+        try {
+          updateDebug("Initializing Pomodoro Timer...");
+
+          // Initialize the Pomodoro timer
+          pomodoroTimer = new PomodoroTimer("pomodoroContainer");
+
+          updateDebug("Pomodoro Timer initialized successfully!");
+
+          // Add some debug listeners
+          if (pomodoroTimer.pomodoroService) {
+            pomodoroTimer.pomodoroService.addEventListener((event, data) => {
+              updateDebug(`Event: ${event}`, data);
+            });
+          }
+        } catch (error) {
+          updateDebug("Error initializing:", error.message);
+          console.error("Demo initialization error:", error);
+        }
+      });
+
+      function updateDebug(message, data = null) {
+        const timestamp = new Date().toLocaleTimeString();
+        const debugLine = document.createElement("div");
+        debugLine.innerHTML = `<strong>${timestamp}:</strong> ${message}`;
+
+        if (data) {
+          const dataLine = document.createElement("div");
+          dataLine.style.marginLeft = "20px";
+          dataLine.style.color = "#666";
+          dataLine.textContent = JSON.stringify(data, null, 2);
+          debugLine.appendChild(dataLine);
+        }
+
+        debugOutput.appendChild(debugLine);
+        debugOutput.scrollTop = debugOutput.scrollHeight;
+
+        // Keep only last 10 debug messages
+        while (debugOutput.children.length > 10) {
+          debugOutput.removeChild(debugOutput.firstChild);
+        }
+      }
+
+      // Add some demo controls
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "r" && e.ctrlKey) {
+          e.preventDefault();
+          if (pomodoroTimer && pomodoroTimer.pomodoroService) {
+            pomodoroTimer.pomodoroService.resetAllData().then(() => {
+              updateDebug("All data reset");
+              location.reload();
+            });
+          }
+        }
+      });
+
+      console.log(
+        "Pomodoro Timer Demo loaded. Press Ctrl+R to reset all data."
+      );
+    </script>
+  </body>
+</html>

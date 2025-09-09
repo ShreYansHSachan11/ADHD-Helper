@@ -7,6 +7,7 @@ class PopupManager {
     this.whiteNoiseActive = false;
     this.simpleAudioManager = null;
     this.taskManager = null;
+    this.pomodoroTimer = null;
     this.breathingExercise = null;
     this.errorHandler = null;
     this.lazyLoader = null;
@@ -69,6 +70,9 @@ class PopupManager {
       // Update UI with current state
       this.updateUI();
 
+      // Load saved feature preference (updated for grid interface)
+      await this.loadSavedTab();
+
       this.isInitialized = true;
 
       // Log performance metrics
@@ -108,6 +112,8 @@ class PopupManager {
 
     // Initialize breathing exercise lazily (only when accessed)
     this.setupLazyBreathingExercise();
+
+    // Pomodoro timer will be initialized when its tab is accessed
 
     // Setup lazy loading for external pages
     this.setupLazyExternalPages();
@@ -171,6 +177,33 @@ class PopupManager {
       } catch (error) {
         console.error("Failed to initialize task manager:", error);
       }
+    }
+  }
+
+  /**
+   * Setup Pomodoro timer component
+   */
+  setupPomodoroTimer() {
+    if (this.pomodoroTimer) return; // Already initialized
+
+    try {
+      if (typeof PomodoroTimer !== "undefined") {
+        this.pomodoroTimer = new PomodoroTimer("pomodoroContainer");
+        console.log("Pomodoro timer initialized successfully");
+
+        // Update overview when Pomodoro stats change
+        if (this.pomodoroTimer.pomodoroService) {
+          this.pomodoroTimer.pomodoroService.addEventListener((event, data) => {
+            if (event === "sessionCompleted" || event === "sessionStarted") {
+              setTimeout(() => this.updateOverviewPanel(), 100);
+            }
+          });
+        }
+      } else {
+        console.warn("PomodoroTimer class not available");
+      }
+    } catch (error) {
+      console.error("Failed to initialize Pomodoro timer:", error);
     }
   }
 
@@ -276,6 +309,15 @@ class PopupManager {
   }
 
   initializeElements() {
+    // Feature navigation elements (updated for grid interface)
+    this.featureBtns = document.querySelectorAll(".feature-btn");
+    this.featurePanels = document.querySelectorAll(".feature-panel");
+    this.homePanel = document.getElementById("homePanel");
+
+    // Home panel elements
+    this.todayScreenTime = document.getElementById("todayScreenTime");
+    this.todayPomodoros = document.getElementById("todayPomodoros");
+
     // Screen Time elements
     this.currentTimeEl = document.getElementById("currentTime");
     this.timeLimitInput = document.getElementById("timeLimitInput");
@@ -339,7 +381,7 @@ class PopupManager {
 
     // Wellness elements
     this.breathingBtn = document.getElementById("breathingBtn");
-    this.whiteNoiseBtn = document.getElementById("whiteNoiseBtn");
+    this.whiteNoiseBtn = document.getElementById("whiteNoiseToggleBtn");
     this.audioControls = document.getElementById("audioControls");
     this.volumeSlider = document.getElementById("volumeSlider");
     this.volumeValue = document.getElementById("volumeValue");
@@ -350,10 +392,18 @@ class PopupManager {
     this.focusAnxietyBtn = document.getElementById("focusAnxietyBtn");
     this.asmrFidgetBtn = document.getElementById("asmrFidgetBtn");
 
+    console.log("External page elements bound:", {
+      focusAnxietyBtn: !!this.focusAnxietyBtn,
+      asmrFidgetBtn: !!this.asmrFidgetBtn,
+    });
+
     // Modal elements
     this.breathingModal = document.getElementById("breathingModal");
     this.closeBreathingBtn = document.getElementById("closeBreathingBtn");
     this.startBreathingBtn = document.getElementById("startBreathingBtn");
+    this.startBreathingModalBtn = document.getElementById(
+      "startBreathingModalBtn"
+    );
     this.stopBreathingBtn = document.getElementById("stopBreathingBtn");
     this.breathingCircle = document.getElementById("breathingCircle");
     this.breathingText = document.getElementById("breathingText");
@@ -363,6 +413,14 @@ class PopupManager {
   }
 
   setupEventListeners() {
+    // Feature navigation listeners (updated for grid interface)
+    this.featureBtns?.forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const featureId = e.currentTarget.dataset.feature;
+        this.switchToFeature(featureId);
+      });
+    });
+
     // Screen Time listeners
     this.timeLimitInput?.addEventListener("change", (e) =>
       this.handleTimeLimitChange(e)
@@ -426,6 +484,18 @@ class PopupManager {
     this.whiteNoiseBtn?.addEventListener("click", () =>
       this.handleWhiteNoiseToggle()
     );
+    const whiteNoiseBtn3 = document.getElementById("whiteNoiseBtn");
+    const whiteNoisePanel = document.getElementById("whiteNoisePanel");
+
+    if (whiteNoiseBtn3 && whiteNoisePanel) {
+      whiteNoiseBtn3.addEventListener("click", () => {
+        whiteNoisePanel.style.display =
+          whiteNoisePanel.style.display === "none" ||
+          whiteNoisePanel.style.display === ""
+            ? "block"
+            : "none";
+      });
+    }
 
     this.volumeSlider?.addEventListener("input", (e) =>
       this.handleVolumeChange(e.target.value)
@@ -434,18 +504,36 @@ class PopupManager {
     this.nextSoundBtn?.addEventListener("click", () => this.handleNextSound());
 
     // External page listeners
-    this.focusAnxietyBtn?.addEventListener("click", () =>
-      this.openExternalPage("focus-anxiety")
-    );
-    this.asmrFidgetBtn?.addEventListener("click", () =>
-      this.openExternalPage("asmr-fidget")
-    );
+    if (this.focusAnxietyBtn) {
+      this.focusAnxietyBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        console.log("Focus & Anxiety button clicked");
+        this.openExternalPage("focus-anxiety");
+      });
+      console.log("Focus & Anxiety button listener attached");
+    } else {
+      console.error("Focus & Anxiety button not found");
+    }
+
+    if (this.asmrFidgetBtn) {
+      this.asmrFidgetBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        console.log("ASMR & Fidget button clicked");
+        this.openExternalPage("asmr-fidget");
+      });
+      console.log("ASMR & Fidget button listener attached");
+    } else {
+      console.error("ASMR & Fidget button not found");
+    }
 
     // Modal listeners
     this.closeBreathingBtn?.addEventListener("click", () =>
       this.hideBreathingModal()
     );
     this.startBreathingBtn?.addEventListener("click", () =>
+      this.startBreathingExercise()
+    );
+    this.startBreathingModalBtn?.addEventListener("click", () =>
       this.startBreathingExercise()
     );
     this.stopBreathingBtn?.addEventListener("click", () =>
@@ -651,15 +739,148 @@ class PopupManager {
     // Update current time display
     this.updateCurrentTimeDisplay();
 
+    // Update overview panel
+    this.updateOverviewPanel();
+
     // Set up periodic updates
     setInterval(() => {
       this.updateCurrentTimeDisplay();
+      this.updateOverviewPanel();
     }, 1000);
 
     // Set up periodic focus tracking updates (every 5 seconds)
     setInterval(() => {
       this.loadFocusSessionStats();
     }, 5000);
+  }
+
+  /**
+   * Switch to a specific feature (updated for grid interface)
+   */
+  switchToFeature(featureId) {
+    // Update feature buttons
+    this.featureBtns?.forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.feature === featureId);
+    });
+
+    // Update feature panels with animation
+    this.featurePanels?.forEach((panel) => {
+      if (
+        panel.classList.contains("active") &&
+        panel.id !== `${featureId}Panel`
+      ) {
+        // Fade out current panel
+        panel.classList.add("switching-out");
+        setTimeout(() => {
+          panel.classList.remove("active", "switching-out");
+        }, 100);
+      }
+    });
+
+    // Show new panel or home
+    setTimeout(() => {
+      let targetPanel;
+      if (featureId) {
+        targetPanel = document.getElementById(`${featureId}Panel`);
+      } else {
+        targetPanel = this.homePanel;
+      }
+
+      if (targetPanel) {
+        targetPanel.classList.add("active");
+
+        // Initialize components when switching to their features
+        this.initializeFeatureContent(featureId);
+      }
+    }, 100);
+
+    // Save current feature preference
+    if (typeof chrome !== "undefined" && chrome.storage) {
+      chrome.storage.local
+        .set({ currentFeature: featureId || "home" })
+        .catch(console.warn);
+    }
+  }
+
+  /**
+   * Initialize content when switching to specific features
+   */
+  initializeFeatureContent(featureId) {
+    switch (featureId) {
+      case "pomodoro":
+        if (!this.pomodoroTimer && typeof PomodoroTimer !== "undefined") {
+          this.setupPomodoroTimer();
+        }
+        break;
+      case "task-breakdown":
+        if (!this.taskManager && typeof TaskManager !== "undefined") {
+          this.setupLazyTaskManager();
+        }
+        break;
+      case "breathing":
+        if (
+          !this.breathingExercise &&
+          typeof BreathingExercise !== "undefined"
+        ) {
+          this.setupLazyBreathingExercise();
+        }
+        break;
+      case "white-noise":
+        // Initialize audio manager if needed
+        this.initSimpleAudioManager();
+        break;
+    }
+  }
+
+  /**
+   * Update overview panel with current stats
+   */
+  async updateOverviewPanel() {
+    try {
+      // Update screen time overview
+      if (this.overviewCurrentTime && this.currentTimeEl) {
+        this.overviewCurrentTime.textContent = this.currentTimeEl.textContent;
+      }
+
+      // Update focus status overview
+      if (this.overviewFocusStatusDot && this.overviewFocusStatusText) {
+        const focusStatusDot = document.getElementById("focusStatusDot");
+        const focusStatusText = document.getElementById("focusStatusText");
+
+        if (focusStatusDot && focusStatusText) {
+          this.overviewFocusStatusDot.className = focusStatusDot.className;
+          this.overviewFocusStatusText.textContent =
+            focusStatusText.textContent;
+        }
+      }
+
+      // Update Pomodoro overview
+      if (this.overviewPomodoroSessions && this.pomodoroTimer) {
+        const todayStats = await this.pomodoroTimer.getTodayStats();
+        if (todayStats) {
+          this.overviewPomodoroSessions.textContent =
+            todayStats.workSessions || 0;
+        }
+      }
+    } catch (error) {
+      console.warn("Failed to update overview panel:", error);
+    }
+  }
+
+  /**
+   * Load saved tab preference
+   */
+  async loadSavedTab() {
+    try {
+      if (typeof chrome !== "undefined" && chrome.storage) {
+        const result = await chrome.storage.local.get("currentTab");
+        const savedTab = result.currentTab || "overview";
+        this.switchTab(savedTab);
+      }
+    } catch (error) {
+      console.warn("Failed to load saved tab:", error);
+      this.switchTab("overview");
+    }
   }
 
   // Screen Time Methods
@@ -1754,6 +1975,8 @@ class PopupManager {
   // External Page Methods
   async openExternalPage(page) {
     try {
+      console.log(`Attempting to open external page: ${page}`);
+
       const urls = {
         "focus-anxiety": chrome.runtime.getURL(
           "external-pages/focus-anxiety.html"
@@ -1762,42 +1985,95 @@ class PopupManager {
       };
 
       if (!urls[page]) {
-        throw new Error(`Unknown page: ${page}`);
+        console.error(`Unknown page: ${page}`);
+        this.showExternalPageStatus(`Unknown page: ${page}`, "error");
+        return;
       }
 
-      // Show loading feedback
-      if (this.errorHandler) {
-        this.errorHandler.showUserFeedback("Opening wellness page...", "info", {
-          duration: 2000,
-        });
-      }
+      console.log(`URL to open: ${urls[page]}`);
 
-      // Validate permissions
-      const hasTabsPermission =
-        (await this.errorHandler?.validatePermissions(["tabs"])) ?? true;
+      // Create new tab with the external page
+      const tab = await chrome.tabs.create({
+        url: urls[page],
+        active: true,
+      });
 
-      if (!hasTabsPermission) {
-        throw new Error(
-          "Missing tabs permission. Please grant permission to open external pages."
+      if (tab) {
+        console.log(
+          `Successfully opened external page: ${page} in tab ${tab.id}`
         );
+        this.showExternalPageStatus(`Opening ${page} page...`, "success");
+      } else {
+        console.error("Failed to create new tab");
+        this.showExternalPageStatus("Failed to open page", "error");
       }
-
-      const tab = await chrome.tabs.create({ url: urls[page] });
-
-      if (!tab) {
-        throw new Error("Failed to create new tab");
-      }
-
-      console.log(`Opened external page: ${page}`);
     } catch (error) {
       console.error(`Failed to open external page ${page}:`, error);
 
-      if (this.errorHandler) {
-        this.errorHandler.handleExtensionError(error, "External Page");
-      } else {
-        console.error(`Failed to open ${page} page:`, error.message);
+      // Fallback: try to open in same tab
+      try {
+        window.open(
+          chrome.runtime.getURL(`external-pages/${page}.html`),
+          "_blank"
+        );
+        console.log(`Fallback: opened ${page} with window.open`);
+        this.showExternalPageStatus(`Opening ${page} page...`, "success");
+      } catch (fallbackError) {
+        console.error(`Fallback also failed:`, fallbackError);
+        this.showExternalPageStatus("Failed to open page", "error");
       }
     }
+  }
+
+  // External Page Status Methods
+  showExternalPageStatus(message, type) {
+    // Create or update status display
+    let statusEl = document.getElementById("externalPageStatus");
+    if (!statusEl) {
+      statusEl = document.createElement("div");
+      statusEl.id = "externalPageStatus";
+      statusEl.className = "external-page-status";
+      statusEl.style.cssText = `
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        padding: 8px 12px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: bold;
+        z-index: 10000;
+        max-width: 200px;
+        word-wrap: break-word;
+      `;
+      document.body.appendChild(statusEl);
+    }
+
+    statusEl.textContent = message;
+    statusEl.className = `external-page-status ${type}`;
+
+    // Set colors based on type
+    if (type === "success") {
+      statusEl.style.backgroundColor = "#d4edda";
+      statusEl.style.color = "#155724";
+      statusEl.style.border = "1px solid #c3e6cb";
+    } else if (type === "error") {
+      statusEl.style.backgroundColor = "#f8d7da";
+      statusEl.style.color = "#721c24";
+      statusEl.style.border = "1px solid #f5c6cb";
+    } else {
+      statusEl.style.backgroundColor = "#d1ecf1";
+      statusEl.style.color = "#0c5460";
+      statusEl.style.border = "1px solid #bee5eb";
+    }
+
+    statusEl.style.display = "block";
+
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+      if (statusEl && statusEl.parentNode) {
+        statusEl.style.display = "none";
+      }
+    }, 3000);
   }
 
   // Settings Methods

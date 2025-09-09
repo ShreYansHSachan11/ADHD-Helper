@@ -4,6 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Focus Productivity Extension</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="popup.css" />
     <link rel="stylesheet" href="../utils/error-feedback.css" />
     <link rel="stylesheet" href="../utils/loading-styles.css" />
@@ -18,288 +24,434 @@
         </button>
       </header>
 
-      <!-- Screen Time Monitoring Section -->
-      <section class="section screen-time-section">
-        <div class="section-header">
-          <h2 class="section-title">Screen Time</h2>
-          <span class="current-time" id="currentTime">0m</span>
-        </div>
-        <div class="section-content">
-          <div class="time-limit-control">
-            <label for="timeLimitInput">Break reminder after:</label>
-            <div class="input-group">
-              <input
-                type="number"
-                id="timeLimitInput"
-                min="5"
-                max="180"
-                value="30"
-                title="Set break reminder time (5-180 minutes)"
-              />
-              <span>minutes</span>
+      <!-- Feature Grid Navigation -->
+      <nav class="feature-grid">
+        <button
+          class="feature-btn"
+          data-feature="break-reminder"
+          id="breakReminderBtn"
+        >
+          <span class="feature-icon">⏰</span>
+          <span class="feature-label">Break Reminder</span>
+        </button>
+        <button
+          class="feature-btn"
+          data-feature="focus-tracking"
+          id="focusTrackingBtn"
+        >
+          <span class="feature-icon">🎯</span>
+          <span class="feature-label">Focus Tracking</span>
+        </button>
+        <button class="feature-btn" data-feature="pomodoro" id="pomodoroBtn">
+          <span class="feature-icon">🍅</span>
+          <span class="feature-label">Pomodoro</span>
+        </button>
+        <button class="feature-btn" data-feature="breathing" id="breathingBtn">
+          <span class="feature-icon">🫁</span>
+          <span class="feature-label">Breathing Technique</span>
+        </button>
+        <button
+          class="feature-btn"
+          data-feature="task-breakdown"
+          id="taskBreakdownBtn"
+        >
+          <span class="feature-icon">📝</span>
+          <span class="feature-label">Task Breakdown</span>
+        </button>
+        <button class="feature-btn" data-feature="calendar" id="calendarBtn">
+          <span class="feature-icon">📅</span>
+          <span class="feature-label">Calendar</span>
+        </button>
+        <button
+          class="feature-btn"
+          data-feature="white-noise"
+          id="whiteNoiseBtn"
+        >
+          <span class="feature-icon">🔊</span>
+          <span class="feature-label">White Noise</span>
+        </button>
+        <a class="feature-btn"  href="../external-pages/asmr-fidget.html" target="_blank"><button class="custombtn" data-feature="asmr-toys" id="asmrToysBtn">
+          <span class="feature-icon">🎵</span>
+          <span class="feature-label">ASMR Toys</span>
+        </button></a>
+        <a class="feature-btn"  href="../external-pages/focus-anxiety.html" target="_blank"><button
+          class="custombtn"
+          data-feature="wellness-tools"
+          id="wellnessToolsBtn"
+        >
+          <span class="feature-icon">🧘</span>
+          <span class="feature-label">Wellness Tools</span>
+        </button></a>
+      </nav>
+
+      <!-- Feature Content Panels -->
+      <div class="feature-content">
+        <!-- Home Panel (Default) -->
+        <div class="feature-panel active" id="homePanel">
+          <div class="welcome-message">
+            <h2>Welcome to Focus Productivity</h2>
+            <p>
+              Select a feature above to get started with your productivity
+              journey.
+            </p>
+
+            <div class="quick-stats">
+              <div class="stat-card">
+                <div class="stat-icon">⏰</div>
+                <div class="stat-info">
+                  <div class="stat-value" id="todayScreenTime">0m</div>
+                  <div class="stat-label">Screen Time Today</div>
+                </div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-icon">🍅</div>
+                <div class="stat-info">
+                  <div class="stat-value" id="todayPomodoros">0</div>
+                  <div class="stat-label">Pomodoros Today</div>
+                </div>
+              </div>
             </div>
           </div>
-          <div class="screen-time-controls">
-            <button
-              class="btn btn-secondary"
-              id="takeBreakBtn"
-              title="Reset current session timer"
-            >
-              Take Break Now
-            </button>
-            <button
-              class="btn btn-small"
-              id="resetScreenTimeBtn"
-              title="Clear all screen time data"
-            >
-              Reset Data
-            </button>
-          </div>
         </div>
-      </section>
 
-      <!-- Focus Tracking Section -->
-      <section class="section focus-section">
-        <div class="section-header">
-          <h2 class="section-title">Focus Tracking</h2>
-          <div class="focus-status-indicator" id="focusStatusIndicator">
-            <span class="status-dot" id="focusStatusDot"></span>
-            <span class="status-text" id="focusStatusText">Not Active</span>
+        <!-- Break Reminder Panel -->
+        <div class="feature-panel" id="breakReminderPanel">
+          <div class="panel-header">
+            <h2>Break Reminder</h2>
+            <span class="current-time" id="currentTime">0m</span>
           </div>
-        </div>
-        <div class="section-content">
-          <div class="focus-tab-display">
-            <span class="focus-label">Focus Tab:</span>
-            <span class="focus-url" id="focusUrl">Not set</span>
-          </div>
-
-          <div
-            class="focus-session-info"
-            id="focusSessionInfo"
-            style="display: none"
-          >
-            <div class="session-stat">
-              <span class="stat-label">Session Time:</span>
-              <span class="stat-value" id="focusSessionTime">0m</span>
+          <div class="panel-content">
+            <div class="time-limit-control">
+              <label for="timeLimitInput">Break reminder after:</label>
+              <div class="input-group">
+                <input
+                  type="number"
+                  id="timeLimitInput"
+                  min="5"
+                  max="180"
+                  value="30"
+                  title="Set break reminder time (5-180 minutes)"
+                />
+                <span>minutes</span>
+              </div>
             </div>
-            <div class="session-stat">
-              <span class="stat-label">Deviations:</span>
-              <span class="stat-value" id="focusDeviationCount">0</span>
-            </div>
-            <div class="session-stat">
-              <span class="stat-label">Last Reminder:</span>
-              <span class="stat-value" id="lastFocusReminder">Never</span>
-            </div>
-          </div>
-
-          <div class="focus-controls">
-            <button class="btn btn-secondary" id="setFocusBtn">
-              Set Current Tab as Focus
-            </button>
-            <button class="btn btn-small" id="resetFocusBtn">Reset</button>
-          </div>
-
-          <div
-            class="focus-deviation-history"
-            id="focusDeviationHistory"
-            style="display: none"
-          >
-            <h4 class="history-title">Recent Deviations</h4>
-            <div class="deviation-list" id="deviationList">
-              <!-- Deviation items will be populated here -->
-            </div>
-            <button class="btn btn-small btn-text" id="toggleHistoryBtn">
-              Show History
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <!-- Task Management Section -->
-      <section class="section task-section">
-        <div class="section-header">
-          <h2 class="section-title">AI Task Breakdown</h2>
-        </div>
-        <div class="section-content">
-          <div class="task-input-group">
-            <input
-              type="text"
-              id="taskNameInput"
-              placeholder="Enter task name"
-              class="task-input"
-            />
-            <input
-              type="datetime-local"
-              id="taskDeadlineInput"
-              class="task-input"
-            />
-          </div>
-          <button class="btn btn-primary" id="getBreakdownBtn">
-            Get AI Breakdown
-          </button>
-          <div class="task-breakdown" id="taskBreakdown" style="display: none">
-            <h3>Task Breakdown:</h3>
-            <ul id="breakdownList"></ul>
-          </div>
-        </div>
-      </section>
-
-      <!-- Calendar Integration Section -->
-      <section class="section calendar-section">
-        <div class="section-header">
-          <h2 class="section-title">Calendar Reminders</h2>
-          <div class="calendar-connection-status" id="calendarConnectionStatus">
-            <span class="connection-dot" id="connectionDot"></span>
-            <span class="connection-text" id="connectionText"
-              >Not Connected</span
-            >
-          </div>
-        </div>
-        <div class="section-content">
-          <!-- Calendar Configuration Panel -->
-          <div
-            class="calendar-config"
-            id="calendarConfig"
-            style="display: none"
-          >
-            <div class="config-header">
-              <h4>API Configuration</h4>
-              <button class="btn btn-small btn-text" id="toggleConfigBtn">
-                Show Setup
+            <div class="screen-time-controls">
+              <button
+                class="btn btn-secondary"
+                id="takeBreakBtn"
+                title="Reset current session timer"
+              >
+                Take Break Now
+              </button>
+              <button
+                class="btn btn-small"
+                id="resetScreenTimeBtn"
+                title="Clear all screen time data"
+              >
+                Reset Data
               </button>
             </div>
+          </div>
+        </div>
+
+        <!-- Focus Tracking Panel -->
+        <div class="feature-panel" id="focusTrackingPanel">
+          <div class="panel-header">
+            <h2>Focus Tracking</h2>
+            <div class="focus-status-indicator" id="focusStatusIndicator">
+              <span class="status-dot" id="focusStatusDot"></span>
+              <span class="status-text" id="focusStatusText">Not Active</span>
+            </div>
+          </div>
+          <div class="panel-content">
+            <div class="focus-tab-display">
+              <span class="focus-label">Focus Tab:</span>
+              <span class="focus-url" id="focusUrl">Not set</span>
+            </div>
+
             <div
-              class="config-content"
-              id="configContent"
+              class="focus-session-info"
+              id="focusSessionInfo"
               style="display: none"
             >
-              <div class="config-input-group">
-                <label for="apiKeyInput">Google Calendar API Key:</label>
-                <input
-                  type="password"
-                  id="apiKeyInput"
-                  placeholder="Enter your API key"
-                  class="config-input"
-                />
+              <div class="session-stat">
+                <span class="stat-label">Session Time:</span>
+                <span class="stat-value" id="focusSessionTime">0m</span>
               </div>
-              <div class="config-input-group">
-                <label for="accessTokenInput">OAuth Access Token:</label>
-                <input
-                  type="password"
-                  id="accessTokenInput"
-                  placeholder="Enter your access token"
-                  class="config-input"
-                />
+              <div class="session-stat">
+                <span class="stat-label">Deviations:</span>
+                <span class="stat-value" id="focusDeviationCount">0</span>
               </div>
-              <div class="config-actions">
-                <button class="btn btn-primary btn-small" id="saveConfigBtn">
-                  Save Configuration
+              <div class="session-stat">
+                <span class="stat-label">Last Reminder:</span>
+                <span class="stat-value" id="lastFocusReminder">Never</span>
+              </div>
+            </div>
+
+            <div class="focus-controls">
+              <button class="btn btn-secondary" id="setFocusBtn">
+                Set Current Tab as Focus
+              </button>
+              <button class="btn btn-small" id="resetFocusBtn">Reset</button>
+            </div>
+
+            <div
+              class="focus-deviation-history"
+              id="focusDeviationHistory"
+              style="display: none"
+            >
+              <h4 class="history-title">Recent Deviations</h4>
+              <div class="deviation-list" id="deviationList">
+                <!-- Deviation items will be populated here -->
+              </div>
+              <button class="btn btn-small btn-text" id="toggleHistoryBtn">
+                Show History
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pomodoro Panel -->
+        <div class="feature-panel" id="pomodoroPanel">
+          <div class="panel-header">
+            <h2>Pomodoro Timer</h2>
+          </div>
+          <div class="panel-content">
+            <div id="pomodoroContainer">
+              <!-- Pomodoro Timer component will be rendered here -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Breathing Technique Panel -->
+        <div class="feature-panel" id="breathingPanel">
+          <div class="panel-header">
+            <h2>Breathing Technique</h2>
+          </div>
+          <div class="panel-content">
+            <div class="breathing-intro">
+              <p>
+                Take a moment to center yourself with guided breathing
+                exercises.
+              </p>
+            </div>
+            <div class="breathing-controls">
+              <button class="btn btn-primary btn-large" id="startBreathingBtn">
+                <span class="icon">🫁</span>
+                <span>Start Breathing Exercise</span>
+              </button>
+            </div>
+            <div class="breathing-options">
+              <h3>Breathing Techniques</h3>
+              <div class="technique-grid">
+                <button class="technique-btn" data-technique="4-7-8">
+                  <span class="technique-name">4-7-8 Breathing</span>
+                  <span class="technique-desc">Relaxation technique</span>
                 </button>
-                <button
-                  class="btn btn-secondary btn-small"
-                  id="testConnectionBtn"
-                >
-                  Test Connection
+                <button class="technique-btn" data-technique="box">
+                  <span class="technique-name">Box Breathing</span>
+                  <span class="technique-desc">Focus and calm</span>
                 </button>
-                <button class="btn btn-small" id="clearConfigBtn">Clear</button>
-              </div>
-              <div class="setup-instructions" id="setupInstructions">
-                <h5>Setup Instructions:</h5>
-                <ol>
-                  <li>
-                    Go to
-                    <a href="https://console.cloud.google.com" target="_blank"
-                      >Google Cloud Console</a
-                    >
-                  </li>
-                  <li>Create a new project or select existing project</li>
-                  <li>Enable the Google Calendar API</li>
-                  <li>Create credentials (API Key and OAuth 2.0)</li>
-                  <li>Configure OAuth consent screen</li>
-                  <li>Add your credentials above and test connection</li>
-                </ol>
               </div>
             </div>
           </div>
+        </div>
 
-          <!-- Task Reminder Creation Form -->
-          <div class="calendar-reminder-form" id="calendarReminderForm">
-            <div class="reminder-input-group">
+        <!-- Task Breakdown Panel -->
+        <div class="feature-panel" id="taskBreakdownPanel">
+          <div class="panel-header">
+            <h2>AI Task Breakdown</h2>
+          </div>
+          <div class="panel-content">
+            <div class="task-input-group">
               <input
                 type="text"
-                id="reminderTaskInput"
-                placeholder="Task name (or use task from above)"
-                class="reminder-input"
+                id="taskNameInput"
+                placeholder="Enter task name"
+                class="task-input"
               />
               <input
                 type="datetime-local"
-                id="reminderDeadlineInput"
-                class="reminder-input"
+                id="taskDeadlineInput"
+                class="task-input"
               />
             </div>
-            <div class="priority-and-create">
-              <select id="prioritySelect" class="priority-select">
-                <option value="high">High Priority (4 reminders)</option>
-                <option value="medium" selected>
-                  Medium Priority (3 reminders)
-                </option>
-                <option value="low">Low Priority (3 reminders)</option>
-              </select>
-              <button class="btn btn-primary" id="createRemindersBtn">
-                Create Calendar Reminders
-              </button>
+            <button class="btn btn-primary" id="getBreakdownBtn">
+              Get AI Breakdown
+            </button>
+            <div
+              class="task-breakdown"
+              id="taskBreakdown"
+              style="display: none"
+            >
+              <h3>Task Breakdown:</h3>
+              <ul id="breakdownList"></ul>
             </div>
-            <div class="priority-info" id="priorityInfo">
-              <small
-                >Medium Priority: Reminders at 3 days, 1 day, and 4 hours before
-                deadline</small
+          </div>
+        </div>
+
+        <!-- Calendar Panel -->
+        <div class="feature-panel" id="calendarPanel">
+          <div class="panel-header">
+            <h2>Calendar Integration</h2>
+            <div
+              class="calendar-connection-status"
+              id="calendarConnectionStatus"
+            >
+              <span class="connection-dot" id="connectionDot"></span>
+              <span class="connection-text" id="connectionText"
+                >Not Connected</span
               >
             </div>
           </div>
+          <div class="panel-content">
+            <!-- Calendar Configuration Panel -->
+            <div
+              class="calendar-config"
+              id="calendarConfig"
+              style="display: none"
+            >
+              <div class="config-header">
+                <h4>API Configuration</h4>
+                <button class="btn btn-small btn-text" id="toggleConfigBtn">
+                  Show Setup
+                </button>
+              </div>
+              <div
+                class="config-content"
+                id="configContent"
+                style="display: none"
+              >
+                <div class="config-input-group">
+                  <label for="apiKeyInput">Google Calendar API Key:</label>
+                  <input
+                    type="password"
+                    id="apiKeyInput"
+                    placeholder="Enter your API key"
+                    class="config-input"
+                  />
+                </div>
+                <div class="config-input-group">
+                  <label for="accessTokenInput">OAuth Access Token:</label>
+                  <input
+                    type="password"
+                    id="accessTokenInput"
+                    placeholder="Enter your access token"
+                    class="config-input"
+                  />
+                </div>
+                <div class="config-actions">
+                  <button class="btn btn-primary btn-small" id="saveConfigBtn">
+                    Save Configuration
+                  </button>
+                  <button
+                    class="btn btn-secondary btn-small"
+                    id="testConnectionBtn"
+                  >
+                    Test Connection
+                  </button>
+                  <button class="btn btn-small" id="clearConfigBtn">
+                    Clear
+                  </button>
+                </div>
+                <div class="setup-instructions" id="setupInstructions">
+                  <h5>Setup Instructions:</h5>
+                  <ol>
+                    <li>
+                      Go to
+                      <a href="https://console.cloud.google.com" target="_blank"
+                        >Google Cloud Console</a
+                      >
+                    </li>
+                    <li>Create a new project or select existing project</li>
+                    <li>Enable the Google Calendar API</li>
+                    <li>Create credentials (API Key and OAuth 2.0)</li>
+                    <li>Configure OAuth consent screen</li>
+                    <li>Add your credentials above and test connection</li>
+                  </ol>
+                </div>
+              </div>
+            </div>
 
-          <!-- Manual Reminder Fallback -->
-          <div
-            class="manual-reminder-fallback"
-            id="manualReminderFallback"
-            style="display: none"
-          >
-            <div class="fallback-header">
-              <h4>Manual Reminder Creation</h4>
-              <p>Calendar integration unavailable. Use these reminder times:</p>
+            <!-- Task Reminder Creation Form -->
+            <div class="calendar-reminder-form" id="calendarReminderForm">
+              <div class="reminder-input-group">
+                <input
+                  type="text"
+                  id="reminderTaskInput"
+                  placeholder="Task name (or use task from above)"
+                  class="reminder-input"
+                />
+                <input
+                  type="datetime-local"
+                  id="reminderDeadlineInput"
+                  class="reminder-input"
+                />
+              </div>
+              <div class="priority-and-create">
+                <select id="prioritySelect" class="priority-select">
+                  <option value="high">High Priority (4 reminders)</option>
+                  <option value="medium" selected>
+                    Medium Priority (3 reminders)
+                  </option>
+                  <option value="low">Low Priority (3 reminders)</option>
+                </select>
+                <button class="btn btn-primary" id="createRemindersBtn">
+                  Create Calendar Reminders
+                </button>
+              </div>
+              <div class="priority-info" id="priorityInfo">
+                <small
+                  >Medium Priority: Reminders at 3 days, 1 day, and 4 hours
+                  before deadline</small
+                >
+              </div>
             </div>
-            <div class="manual-reminder-list" id="manualReminderList">
-              <!-- Manual reminder times will be populated here -->
+
+            <!-- Manual Reminder Fallback -->
+            <div
+              class="manual-reminder-fallback"
+              id="manualReminderFallback"
+              style="display: none"
+            >
+              <div class="fallback-header">
+                <h4>Manual Reminder Creation</h4>
+                <p>
+                  Calendar integration unavailable. Use these reminder times:
+                </p>
+              </div>
+              <div class="manual-reminder-list" id="manualReminderList">
+                <!-- Manual reminder times will be populated here -->
+              </div>
+              <div class="fallback-actions">
+                <button
+                  class="btn btn-secondary btn-small"
+                  id="copyRemindersBtn"
+                >
+                  Copy to Clipboard
+                </button>
+                <button class="btn btn-small" id="hideManualBtn">Hide</button>
+              </div>
             </div>
-            <div class="fallback-actions">
-              <button class="btn btn-secondary btn-small" id="copyRemindersBtn">
-                Copy to Clipboard
-              </button>
-              <button class="btn btn-small" id="hideManualBtn">Hide</button>
-            </div>
+
+            <!-- Calendar Status Display -->
+            <div class="calendar-status" id="calendarStatus"></div>
           </div>
-
-          <!-- Calendar Status Display -->
-          <div class="calendar-status" id="calendarStatus"></div>
         </div>
-      </section>
 
-      <!-- Wellness Tools Section -->
-      <section class="section wellness-section">
-        <div class="section-header">
-          <h2 class="section-title">Wellness Tools</h2>
-        </div>
-        <div class="section-content">
-          <div class="wellness-controls">
-            <div class="breathing-control">
-              <button class="btn btn-wellness" id="breathingBtn">
-                <span class="icon">🫁</span>
-                <span>Breathing Exercise</span>
-              </button>
-            </div>
+        <!-- White Noise Panel -->
+        <div class="feature-panel" id="whiteNoisePanel">
+          <div class="panel-header">
+            <h2>White Noise</h2>
+          </div>
+          <div class="panel-content">
             <div class="audio-control">
-              <button class="btn btn-wellness toggle-btn" id="whiteNoiseBtn">
+              <button
+                class="btn btn-wellness toggle-btn btn-large"
+                id="whiteNoiseToggleBtn"
+              >
                 <span class="icon">🔊</span>
-                <span>White Noise</span>
+                <span>Toggle White Noise</span>
               </button>
               <div
                 class="audio-controls"
@@ -316,7 +468,7 @@
                     value="50"
                     class="volume-slider"
                   />
-                  <span id="volumeValue">50%</span>
+                  <span id="volumeValue" class="volume-value">50%</span>
                 </div>
                 <button class="btn btn-small" id="nextSoundBtn">
                   <span class="icon">🔀</span>
@@ -324,33 +476,16 @@
                 </button>
                 <div class="current-sound-display">
                   <span class="sound-label">Playing:</span>
-                  <span id="currentSoundName">None</span>
+                  <span id="currentSoundName" class="sound-name">None</span>
                 </div>
               </div>
             </div>
+
+            
           </div>
         </div>
-      </section>
 
-      <!-- External Pages Section -->
-      <section class="section external-pages-section">
-        <div class="section-header">
-          <h2 class="section-title">Additional Tools</h2>
-        </div>
-        <div class="section-content">
-          <div class="external-buttons">
-            <button class="btn btn-external" id="focusAnxietyBtn">
-              <span class="icon">🧘</span>
-              <span>Focus & Anxiety Management</span>
-            </button>
-            <button class="btn btn-external" id="asmrFidgetBtn">
-              <span class="icon">🎵</span>
-              <span>ASMR & Fidgeting Tools</span>
-            </button>
-          </div>
-        </div>
-      </section>
-
+     
       <!-- Breathing Exercise Modal -->
       <div class="modal" id="breathingModal" style="display: none">
         <div class="modal-content">
@@ -364,7 +499,7 @@
               Click Start to begin
             </div>
             <div class="breathing-controls">
-              <button class="btn btn-primary" id="startBreathingBtn">
+              <button class="btn btn-primary" id="startBreathingModalBtn">
                 Start
               </button>
               <button
@@ -384,11 +519,12 @@
     <script src="../utils/lazy-loader.js"></script>
     <script src="../utils/accessibility.js"></script>
     <script src="../services/storage-manager.js"></script>
-    <script src="../services/audio-manager.js"></script>
+    <script src="../services/pomodoro-service.js"></script>
     <script src="../services/gemini-service.js"></script>
     <script src="../services/calendar-service.js"></script>
     <script src="../utils/constants.js"></script>
     <script src="components/task-manager.js"></script>
+    <script src="components/pomodoro-timer.js"></script>
     <script src="components/breathing-exercise.js"></script>
     <script src="popup.js"></script>
   </body>
