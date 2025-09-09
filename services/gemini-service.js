@@ -41,6 +41,11 @@ class GeminiService {
    */
   async init() {
     try {
+      // Initialize error handler
+      if (typeof errorHandler !== 'undefined') {
+        this.errorHandler = errorHandler;
+      }
+
       // Initialize storage manager
       if (typeof StorageManager !== 'undefined') {
         this.storageManager = new StorageManager();
@@ -51,7 +56,11 @@ class GeminiService {
       // Load API key from storage
       await this.loadApiKey();
     } catch (error) {
-      console.error('GeminiService initialization error:', error);
+      if (this.errorHandler) {
+        this.errorHandler.handleExtensionError(error, 'GeminiService Init');
+      } else {
+        console.error('GeminiService initialization error:', error);
+      }
     }
   }
 
@@ -221,7 +230,7 @@ Format your response as a numbered list of actionable steps. Do not include expl
   }
 
   /**
-   * Make HTTP request to Gemini API with retry logic
+   * Make HTTP request to Gemini API with enhanced error handling
    * @param {Object} payload - Request payload
    * @returns {Promise<Object>} - API response
    */
@@ -232,80 +241,89 @@ Format your response as a numbered list of actionable steps. Do not include expl
 
     const url = `${this.baseUrl}?key=${this.apiKey}`;
     
-    for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
-          signal: controller.signal
-        });
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      });
 
-        clearTimeout(timeoutId);
+      clearTimeout(timeoutId);
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-          
-          try {
-            const errorData = JSON.parse(errorText);
-            if (errorData.error && errorData.error.message) {
-              errorMessage = errorData.error.message;
-            }
-          } catch (parseError) {
-            // Use default error message if parsing fails
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        
+        try {
+          const errorData = JSON.parse(errorText);
+          if (errorData.error && errorData.error.message) {
+            errorMessage = errorData.error.message;
           }
-
-          // Handle specific error cases
-          if (response.status === 401) {
-            throw new Error('Invalid API key. Please check your Gemini API key configuration.');
-          } else if (response.status === 429) {
-            if (attempt < this.maxRetries) {
-              // Rate limited, wait before retry
-              await this.delay(this.rateLimitDelay * attempt);
-              continue;
-            }
-            throw new Error('Rate limit exceeded. Please try again later.');
-          } else if (response.status >= 500) {
-            if (attempt < this.maxRetries) {
-              // Server error, retry with exponential backoff
-              await this.delay(1000 * Math.pow(2, attempt - 1));
-              continue;
-            }
-            throw new Error('Gemini API server error. Please try again later.');
-          }
-
-          throw new Error(errorMessage);
+        } catch (parseError) {
+          // Use default error message if parsing fails
         }
 
-        const data = await response.json();
-        return data;
-
-      } catch (error) {
-        if (error.name === 'AbortError') {
-          if (attempt < this.maxRetries) {
-            continue;
-          }
-          throw new Error('Request timeout. Please check your network connection.');
-        }
-
-        if (attempt === this.maxRetries) {
+        // Create specific error types for better handling
+        if (response.status === 401) {
+          const error = new Error('Invalid API key. Please check your Gemini API key configuration.');
+          error.name = 'AuthenticationError';
+          error.status = 401;
+          throw error;
+        } else if (response.status === 429) {
+          const error = new Error('Rate limit exceeded. Please try again later.');
+          error.name = 'RateLimitError';
+          error.status = 429;
+          throw error;
+        } else if (response.status >= 500) {
+          const error = new Error('Gemini API server error. Please try again later.');
+          error.name = 'ServerError';
+          error.status = response.status;
+          throw error;
+        } else if (response.status === 400) {
+          const error = new Error(`Invalid request: ${errorMessage}`);
+          error.name = 'ValidationError';
+          error.status = 400;
           throw error;
         }
 
-        // Network error, retry with delay
-        if (error.message.includes('fetch')) {
-          await this.delay(1000 * attempt);
-          continue;
-        }
-
+        const error = new Error(errorMessage);
+        error.status = response.status;
         throw error;
       }
+
+      const data = await response.json();
+      
+      // Validate response structure
+      if (!data || typeof data !== 'object') {
+        throw new Error('Invalid response format from Gemini API');
+      }
+
+      return data;
+
+    } catch (error) {
+      clearTimeout(timeoutId);
+      
+      if (error.name === 'AbortError') {
+        const timeoutError = new Error('Request timeout. Please check your network connection.');
+        timeoutError.name = 'TimeoutError';
+        throw timeoutError;
+      }
+
+      // Network errors
+      if (error.message.includes('fetch') || error.name === 'TypeError') {
+        const networkError = new Error('Network error. Please check your internet connection.');
+        networkError.name = 'NetworkError';
+        throw networkError;
+      }
+
+      // Re-throw with preserved error information
+      throw error;
     }
   }
 
@@ -319,19 +337,60 @@ Format your response as a numbered list of actionable steps. Do not include expl
     try {
       // Validate inputs
       if (!taskName || typeof taskName !== 'string' || taskName.trim().length === 0) {
-        throw new Error('Task name is required');
+        const error = new Error('Task name is required');
+        if (this.errorHandler) {
+          return this.errorHandler.handleApiError(error, 'Task Breakdown', {
+            showToUser: true,
+            allowRetry: false,
+            fallbackMessage: 'Please enter a task name'
+          });
+        }
+        throw error;
       }
 
       if (taskName.length > this.constants.TASKS.MAX_TASK_NAME_LENGTH) {
-        throw new Error(`Task name too long (max ${this.constants.TASKS.MAX_TASK_NAME_LENGTH} characters)`);
+        const error = new Error(`Task name too long (max ${this.constants.TASKS.MAX_TASK_NAME_LENGTH} characters)`);
+        if (this.errorHandler) {
+          return this.errorHandler.handleApiError(error, 'Task Breakdown', {
+            showToUser: true,
+            allowRetry: false,
+            fallbackMessage: 'Task name is too long. Please shorten it.'
+          });
+        }
+        throw error;
       }
 
       if (!deadline) {
-        throw new Error('Deadline is required');
+        const error = new Error('Deadline is required');
+        if (this.errorHandler) {
+          return this.errorHandler.handleApiError(error, 'Task Breakdown', {
+            showToUser: true,
+            allowRetry: false,
+            fallbackMessage: 'Please enter a deadline'
+          });
+        }
+        throw error;
       }
 
       // Check if API is configured
       if (!this.isConfigured()) {
+        if (this.errorHandler) {
+          this.errorHandler.showUserFeedback(
+            'Gemini API key not configured. Using generic breakdown.',
+            'warning',
+            {
+              context: 'Task Breakdown',
+              actions: [{
+                label: 'Configure API',
+                handler: () => {
+                  // Open settings or show configuration UI
+                  console.log('Open API configuration');
+                }
+              }]
+            }
+          );
+        }
+        
         return {
           success: false,
           error: 'API key not configured',
@@ -339,34 +398,60 @@ Format your response as a numbered list of actionable steps. Do not include expl
         };
       }
 
-      // Format request
-      const requestPayload = this.formatTaskBreakdownRequest(taskName.trim(), deadline);
+      // Use retry mechanism for API request
+      const operation = async () => {
+        // Format request
+        const requestPayload = this.formatTaskBreakdownRequest(taskName.trim(), deadline);
 
-      // Make API request
-      const response = await this.makeApiRequest(requestPayload);
+        // Make API request
+        const response = await this.makeApiRequest(requestPayload);
 
-      // Parse response
-      const steps = this.parseTaskBreakdownResponse(response);
+        // Parse response
+        const steps = this.parseTaskBreakdownResponse(response);
 
-      if (steps.length === 0) {
-        throw new Error('No actionable steps found in API response');
+        if (steps.length === 0) {
+          throw new Error('No actionable steps found in API response');
+        }
+
+        return {
+          success: true,
+          steps: steps,
+          taskName: taskName.trim(),
+          deadline: deadline
+        };
+      };
+
+      // Use retry mechanism if error handler is available
+      if (this.errorHandler) {
+        return await this.errorHandler.withRetry(operation, {
+          maxRetries: 2,
+          context: 'Task Breakdown',
+          baseDelay: 1000
+        });
+      } else {
+        return await operation();
       }
 
-      return {
-        success: true,
-        steps: steps,
-        taskName: taskName.trim(),
-        deadline: deadline
-      };
-
     } catch (error) {
-      console.error('Task breakdown error:', error);
-      
-      return {
-        success: false,
-        error: error.message,
-        placeholder: this.getPlaceholderBreakdown(taskName)
-      };
+      if (this.errorHandler) {
+        const result = this.errorHandler.handleApiError(error, 'Task Breakdown', {
+          showToUser: true,
+          allowRetry: true,
+          fallbackMessage: 'Failed to generate task breakdown'
+        });
+        
+        // Always provide placeholder for task breakdown failures
+        result.placeholder = this.getPlaceholderBreakdown(taskName);
+        return result;
+      } else {
+        console.error('Task breakdown error:', error);
+        
+        return {
+          success: false,
+          error: error.message,
+          placeholder: this.getPlaceholderBreakdown(taskName)
+        };
+      }
     }
   }
 

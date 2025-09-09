@@ -19,6 +19,11 @@ class CalendarService {
    */
   async loadStoredCredentials() {
     try {
+      // Initialize error handler if available
+      if (typeof errorHandler !== 'undefined') {
+        this.errorHandler = errorHandler;
+      }
+
       const result = await chrome.storage.local.get([
         "calendarApiKey",
         "calendarAccessToken",
@@ -27,7 +32,11 @@ class CalendarService {
       this.accessToken = result.calendarAccessToken || null;
       this.isAuthenticated = !!(this.apiKey && this.accessToken);
     } catch (error) {
-      console.error("Error loading calendar credentials:", error);
+      if (this.errorHandler) {
+        this.errorHandler.handleStorageError(error, 'loadCredentials');
+      } else {
+        console.error("Error loading calendar credentials:", error);
+      }
       this.isAuthenticated = false;
     }
   }
@@ -109,9 +118,9 @@ class CalendarService {
    */
   async createCalendarEvent(eventData) {
     if (!this.isAuthenticated) {
-      throw new Error(
-        "Calendar API not authenticated. Please configure API access."
-      );
+      const error = new Error("Calendar API not authenticated. Please configure API access.");
+      error.name = 'AuthenticationError';
+      throw error;
     }
 
     const event = {
@@ -137,6 +146,9 @@ class CalendarService {
     };
 
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
       const response = await fetch(
         `${this.baseUrl}/calendars/primary/events?key=${this.apiKey}`,
         {
@@ -146,21 +158,76 @@ class CalendarService {
             "Content-Type": "application/json",
           },
           body: JSON.stringify(event),
+          signal: controller.signal
         }
       );
 
+      clearTimeout(timeoutId);
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(
-          `Calendar API error: ${
-            errorData.error?.message || response.statusText
-          }`
-        );
+        const errorText = await response.text();
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        
+        try {
+          const errorData = JSON.parse(errorText);
+          if (errorData.error && errorData.error.message) {
+            errorMessage = errorData.error.message;
+          }
+        } catch (parseError) {
+          // Use default error message if parsing fails
+        }
+
+        // Create specific error types
+        if (response.status === 401) {
+          const error = new Error('Calendar API authentication failed. Please reconfigure your credentials.');
+          error.name = 'AuthenticationError';
+          error.status = 401;
+          throw error;
+        } else if (response.status === 403) {
+          const error = new Error('Calendar API access denied. Please check your permissions.');
+          error.name = 'PermissionError';
+          error.status = 403;
+          throw error;
+        } else if (response.status === 429) {
+          const error = new Error('Calendar API rate limit exceeded. Please try again later.');
+          error.name = 'RateLimitError';
+          error.status = 429;
+          throw error;
+        } else if (response.status >= 500) {
+          const error = new Error('Calendar API server error. Please try again later.');
+          error.name = 'ServerError';
+          error.status = response.status;
+          throw error;
+        }
+
+        const error = new Error(`Calendar API error: ${errorMessage}`);
+        error.status = response.status;
+        throw error;
       }
 
-      return await response.json();
+      const result = await response.json();
+      
+      // Validate response
+      if (!result || !result.id) {
+        throw new Error('Invalid response from Calendar API');
+      }
+
+      return result;
     } catch (error) {
-      console.error("Error creating calendar event:", error);
+      if (error.name === 'AbortError') {
+        const timeoutError = new Error('Calendar API request timed out. Please try again.');
+        timeoutError.name = 'TimeoutError';
+        throw timeoutError;
+      }
+
+      // Network errors
+      if (error.message.includes('fetch') || error.name === 'TypeError') {
+        const networkError = new Error('Network error. Please check your internet connection.');
+        networkError.name = 'NetworkError';
+        throw networkError;
+      }
+
+      // Re-throw with preserved error information
       throw error;
     }
   }
@@ -174,26 +241,90 @@ class CalendarService {
    */
   async createTaskReminders(taskName, deadline, priority) {
     try {
+      // Validate inputs
+      if (!taskName || typeof taskName !== 'string' || taskName.trim().length === 0) {
+        const error = new Error('Task name is required');
+        if (this.errorHandler) {
+          return this.errorHandler.handleApiError(error, 'Calendar Reminders', {
+            showToUser: true,
+            allowRetry: false,
+            fallbackMessage: 'Please enter a task name'
+          });
+        }
+        throw error;
+      }
+
+      if (!deadline || !(deadline instanceof Date) || isNaN(deadline.getTime())) {
+        const error = new Error('Valid deadline is required');
+        if (this.errorHandler) {
+          return this.errorHandler.handleApiError(error, 'Calendar Reminders', {
+            showToUser: true,
+            allowRetry: false,
+            fallbackMessage: 'Please enter a valid deadline'
+          });
+        }
+        throw error;
+      }
+
       if (!this.isAuthenticated) {
-        throw new Error(
-          "Calendar API not configured. Please set up API access in settings."
-        );
+        const error = new Error('Calendar API not configured. Please set up API access in settings.');
+        if (this.errorHandler) {
+          this.errorHandler.showUserFeedback(
+            'Calendar API not configured. Please set up your Google Calendar integration.',
+            'warning',
+            {
+              context: 'Calendar Reminders',
+              persistent: true,
+              actions: [{
+                label: 'Setup Calendar',
+                handler: () => {
+                  // Open calendar configuration
+                  console.log('Open calendar configuration');
+                }
+              }]
+            }
+          );
+          
+          return {
+            success: false,
+            error: 'Calendar API not configured',
+            needsSetup: true,
+            fallbackReminders: this.generateFallbackReminders(taskName, deadline, priority)
+          };
+        }
+        throw error;
       }
 
       const reminderTimes = this.calculateReminderTimes(deadline, priority);
 
       if (reminderTimes.length === 0) {
-        throw new Error(
-          "All reminder times are in the past. Please check the task deadline."
-        );
+        const error = new Error('All reminder times are in the past. Please check the task deadline.');
+        if (this.errorHandler) {
+          return this.errorHandler.handleApiError(error, 'Calendar Reminders', {
+            showToUser: true,
+            allowRetry: false,
+            fallbackMessage: 'Deadline is too close. Please choose a future deadline.'
+          });
+        }
+        throw error;
       }
 
       const createdEvents = [];
+      const failedEvents = [];
       const priorityLabels = {
         high: "High Priority",
         medium: "Medium Priority",
         low: "Low Priority",
       };
+
+      // Show progress feedback
+      if (this.errorHandler) {
+        this.errorHandler.showUserFeedback(
+          `Creating ${reminderTimes.length} calendar reminders...`,
+          'info',
+          { duration: 2000 }
+        );
+      }
 
       for (let i = 0; i < reminderTimes.length; i++) {
         const reminderTime = reminderTimes[i];
@@ -215,25 +346,67 @@ class CalendarService {
           createdEvents.push(event);
         } catch (eventError) {
           console.error(`Error creating reminder ${i + 1}:`, eventError);
-          // Continue with other reminders even if one fails
+          failedEvents.push({ index: i + 1, error: eventError.message });
+          
+          // Don't show individual error for each failed event to avoid spam
+          // Will show summary at the end
         }
       }
 
       if (createdEvents.length === 0) {
-        throw new Error(
-          "Failed to create any calendar reminders. Please check your calendar API configuration."
-        );
+        const error = new Error('Failed to create any calendar reminders. Please check your calendar API configuration.');
+        if (this.errorHandler) {
+          const result = this.errorHandler.handleApiError(error, 'Calendar Reminders', {
+            showToUser: true,
+            allowRetry: true,
+            fallbackMessage: 'Failed to create calendar reminders'
+          });
+          
+          result.fallbackReminders = this.generateFallbackReminders(taskName, deadline, priority);
+          return result;
+        }
+        throw error;
+      }
+
+      // Show success/partial success feedback
+      if (this.errorHandler) {
+        if (failedEvents.length === 0) {
+          this.errorHandler.showUserFeedback(
+            `Successfully created ${createdEvents.length} calendar reminders!`,
+            'success',
+            { duration: 3000 }
+          );
+        } else {
+          this.errorHandler.showUserFeedback(
+            `Created ${createdEvents.length} of ${reminderTimes.length} reminders. ${failedEvents.length} failed.`,
+            'warning',
+            { duration: 4000 }
+          );
+        }
       }
 
       return {
         success: true,
         createdCount: createdEvents.length,
         totalRequested: reminderTimes.length,
+        failedCount: failedEvents.length,
         events: createdEvents,
+        failures: failedEvents
       };
     } catch (error) {
-      console.error("Error creating task reminders:", error);
-      throw error;
+      if (this.errorHandler) {
+        const result = this.errorHandler.handleApiError(error, 'Calendar Reminders', {
+          showToUser: true,
+          allowRetry: true,
+          fallbackMessage: 'Failed to create calendar reminders'
+        });
+        
+        result.fallbackReminders = this.generateFallbackReminders(taskName, deadline, priority);
+        return result;
+      } else {
+        console.error("Error creating task reminders:", error);
+        throw error;
+      }
     }
   }
 
@@ -319,6 +492,40 @@ class CalendarService {
       console.error("Error clearing calendar credentials:", error);
       return false;
     }
+  }
+
+  /**
+   * Generate fallback reminders when API is not available
+   * @param {string} taskName - Name of the task
+   * @param {Date} deadline - Task deadline
+   * @param {string} priority - Task priority
+   * @returns {Object} Fallback reminders object
+   */
+  generateFallbackReminders(taskName, deadline, priority) {
+    const reminderTimes = this.calculateReminderTimes(deadline, priority);
+    
+    const fallbackReminders = reminderTimes.map((time, index) => {
+      const timeUntilDeadline = this.getTimeUntilDeadline(time, deadline);
+      return {
+        time: time.toLocaleString(),
+        message: `Reminder ${index + 1}: ${taskName}`,
+        description: `Task: ${taskName}\nDeadline: ${deadline.toLocaleString()}\nTime until deadline: ${timeUntilDeadline}`,
+        priority: priority
+      };
+    });
+
+    return {
+      taskName,
+      deadline: deadline.toLocaleString(),
+      priority,
+      reminders: fallbackReminders,
+      instructions: [
+        "Calendar integration is not available. Please manually create these reminders:",
+        "1. Open your calendar application",
+        "2. Create events for each reminder time listed below",
+        "3. Set appropriate notifications for each event"
+      ]
+    };
   }
 
   /**

@@ -5,7 +5,19 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:unit": "vitest run --testNamePattern=\"^(?!.*Integration|.*End-to-End|.*Performance|.*Cross-Platform).*\"",
+    "test:integration": "vitest run --testNamePattern=\"Integration|popup-background\"",
+    "test:e2e": "vitest run --testNamePattern=\"End-to-End|workflows\"",
+    "test:performance": "vitest run --testNamePattern=\"Performance|performance\"",
+    "test:compatibility": "vitest run --testNamePattern=\"Cross-Platform|compatibility\"",
+    "test:comprehensive": "vitest run --reporter=verbose",
+    "test:ci": "vitest run --reporter=junit --outputFile=test-results.xml",
+    "build": "node build.js",
+    "build:dev": "node build.js --dev",
+    "package": "npm run build && echo 'Extension packaged successfully!'",
+    "clean": "rimraf dist *.zip",
+    "validate": "node -e \"console.log('Validating extension...'); require('./build.js')\""
   },
   "devDependencies": {
     "vitest": "^1.0.0",

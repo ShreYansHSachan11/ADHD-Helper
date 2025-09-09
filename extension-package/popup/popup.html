@@ -1,0 +1,121 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Focus Productivity Extension</title><link rel="stylesheet" href="popup-bundle.css" /></head><body><div class="container"><header class="header"><h1 class="title">Focus Productivity</h1><button class="settings-btn" id="settingsBtn" aria-label="Settings">
+          ⚙️
+        </button></header><section class="section screen-time-section"><div class="section-header"><h2 class="section-title">Screen Time</h2><span class="current-time" id="currentTime">0m</span></div><div class="section-content"><div class="time-limit-control"><label for="timeLimitInput">Break reminder after:</label><div class="input-group"><input
+                type="number"
+                id="timeLimitInput"
+                min="5"
+                max="180"
+                value="30"
+                title="Set break reminder time (5-180 minutes)"
+              /><span>minutes</span></div></div><div class="screen-time-controls"><button
+              class="btn btn-secondary"
+              id="takeBreakBtn"
+              title="Reset current session timer"
+            >
+              Take Break Now
+            </button><button
+              class="btn btn-small"
+              id="resetScreenTimeBtn"
+              title="Clear all screen time data"
+            >
+              Reset Data
+            </button></div></div></section><section class="section focus-section"><div class="section-header"><h2 class="section-title">Focus Tracking</h2><div class="focus-status-indicator" id="focusStatusIndicator"><span class="status-dot" id="focusStatusDot"></span><span class="status-text" id="focusStatusText">Not Active</span></div></div><div class="section-content"><div class="focus-tab-display"><span class="focus-label">Focus Tab:</span><span class="focus-url" id="focusUrl">Not set</span></div><div
+            class="focus-session-info"
+            id="focusSessionInfo"
+            style="display: none"
+          ><div class="session-stat"><span class="stat-label">Session Time:</span><span class="stat-value" id="focusSessionTime">0m</span></div><div class="session-stat"><span class="stat-label">Deviations:</span><span class="stat-value" id="focusDeviationCount">0</span></div><div class="session-stat"><span class="stat-label">Last Reminder:</span><span class="stat-value" id="lastFocusReminder">Never</span></div></div><div class="focus-controls"><button class="btn btn-secondary" id="setFocusBtn">
+              Set Current Tab as Focus
+            </button><button class="btn btn-small" id="resetFocusBtn">Reset</button></div><div
+            class="focus-deviation-history"
+            id="focusDeviationHistory"
+            style="display: none"
+          ><h4 class="history-title">Recent Deviations</h4><div class="deviation-list" id="deviationList"></div><button class="btn btn-small btn-text" id="toggleHistoryBtn">
+              Show History
+            </button></div></div></section><section class="section task-section"><div class="section-header"><h2 class="section-title">AI Task Breakdown</h2></div><div class="section-content"><div class="task-input-group"><input
+              type="text"
+              id="taskNameInput"
+              placeholder="Enter task name"
+              class="task-input"
+            /><input
+              type="datetime-local"
+              id="taskDeadlineInput"
+              class="task-input"
+            /></div><button class="btn btn-primary" id="getBreakdownBtn">
+            Get AI Breakdown
+          </button><div class="task-breakdown" id="taskBreakdown" style="display: none"><h3>Task Breakdown:</h3><ul id="breakdownList"></ul></div></div></section><section class="section calendar-section"><div class="section-header"><h2 class="section-title">Calendar Reminders</h2><div class="calendar-connection-status" id="calendarConnectionStatus"><span class="connection-dot" id="connectionDot"></span><span class="connection-text" id="connectionText"
+              >Not Connected</span
+            ></div></div><div class="section-content"><div
+            class="calendar-config"
+            id="calendarConfig"
+            style="display: none"
+          ><div class="config-header"><h4>API Configuration</h4><button class="btn btn-small btn-text" id="toggleConfigBtn">
+                Show Setup
+              </button></div><div
+              class="config-content"
+              id="configContent"
+              style="display: none"
+            ><div class="config-input-group"><label for="apiKeyInput">Google Calendar API Key:</label><input
+                  type="password"
+                  id="apiKeyInput"
+                  placeholder="Enter your API key"
+                  class="config-input"
+                /></div><div class="config-input-group"><label for="accessTokenInput">OAuth Access Token:</label><input
+                  type="password"
+                  id="accessTokenInput"
+                  placeholder="Enter your access token"
+                  class="config-input"
+                /></div><div class="config-actions"><button class="btn btn-primary btn-small" id="saveConfigBtn">
+                  Save Configuration
+                </button><button
+                  class="btn btn-secondary btn-small"
+                  id="testConnectionBtn"
+                >
+                  Test Connection
+                </button><button class="btn btn-small" id="clearConfigBtn">Clear</button></div><div class="setup-instructions" id="setupInstructions"><h5>Setup Instructions:</h5><ol><li>
+                    Go to
+                    <a href="https://console.cloud.google.com" target="_blank"
+                      >Google Cloud Console</a
+                    ></li><li>Create a new project or select existing project</li><li>Enable the Google Calendar API</li><li>Create credentials (API Key and OAuth 2.0)</li><li>Configure OAuth consent screen</li><li>Add your credentials above and test connection</li></ol></div></div></div><div class="calendar-reminder-form" id="calendarReminderForm"><div class="reminder-input-group"><input
+                type="text"
+                id="reminderTaskInput"
+                placeholder="Task name (or use task from above)"
+                class="reminder-input"
+              /><input
+                type="datetime-local"
+                id="reminderDeadlineInput"
+                class="reminder-input"
+              /></div><div class="priority-and-create"><select id="prioritySelect" class="priority-select"><option value="high">High Priority (4 reminders)</option><option value="medium" selected>
+                  Medium Priority (3 reminders)
+                </option><option value="low">Low Priority (3 reminders)</option></select><button class="btn btn-primary" id="createRemindersBtn">
+                Create Calendar Reminders
+              </button></div><div class="priority-info" id="priorityInfo"><small
+                >Medium Priority: Reminders at 3 days, 1 day, and 4 hours before
+                deadline</small
+              ></div></div><div
+            class="manual-reminder-fallback"
+            id="manualReminderFallback"
+            style="display: none"
+          ><div class="fallback-header"><h4>Manual Reminder Creation</h4><p>Calendar integration unavailable. Use these reminder times:</p></div><div class="manual-reminder-list" id="manualReminderList"></div><div class="fallback-actions"><button class="btn btn-secondary btn-small" id="copyRemindersBtn">
+                Copy to Clipboard
+              </button><button class="btn btn-small" id="hideManualBtn">Hide</button></div></div><div class="calendar-status" id="calendarStatus"></div></div></section><section class="section wellness-section"><div class="section-header"><h2 class="section-title">Wellness Tools</h2></div><div class="section-content"><div class="wellness-controls"><div class="breathing-control"><button class="btn btn-wellness" id="breathingBtn"><span class="icon">🫁</span><span>Breathing Exercise</span></button></div><div class="audio-control"><button class="btn btn-wellness toggle-btn" id="whiteNoiseBtn"><span class="icon">🔊</span><span>White Noise</span></button><div
+                class="audio-controls"
+                id="audioControls"
+                style="display: none"
+              ><div class="volume-control"><label for="volumeSlider">Volume:</label><input
+                    type="range"
+                    id="volumeSlider"
+                    min="0"
+                    max="100"
+                    value="50"
+                    class="volume-slider"
+                  /><span id="volumeValue">50%</span></div><button class="btn btn-small" id="nextSoundBtn"><span class="icon">🔀</span><span>Next Sound</span></button><div class="current-sound-display"><span class="sound-label">Playing:</span><span id="currentSoundName">None</span></div></div></div></div></div></section><section class="section external-pages-section"><div class="section-header"><h2 class="section-title">Additional Tools</h2></div><div class="section-content"><div class="external-buttons"><button class="btn btn-external" id="focusAnxietyBtn"><span class="icon">🧘</span><span>Focus & Anxiety Management</span></button><button class="btn btn-external" id="asmrFidgetBtn"><span class="icon">🎵</span><span>ASMR & Fidgeting Tools</span></button></div></div></section><div class="modal" id="breathingModal" style="display: none"><div class="modal-content"><div class="modal-header"><h3>Breathing Exercise</h3><button class="close-btn" id="closeBreathingBtn">&times;</button></div><div class="breathing-container"><div class="breathing-circle" id="breathingCircle"></div><div class="breathing-text" id="breathingText">
+              Click Start to begin
+            </div><div class="breathing-controls"><button class="btn btn-primary" id="startBreathingBtn">
+                Start
+              </button><button
+                class="btn btn-secondary"
+                id="stopBreathingBtn"
+                style="display: none"
+              >
+                Stop
+              </button></div></div></div></div></div><script src="../utils/error-handler.js"></script><script src="../utils/accessibility.js"></script><script src="../services/storage-manager.js"></script><script src="../services/gemini-service.js"></script><script src="../services/calendar-service.js"></script><script src="../utils/constants.js"></script><script src="components/task-manager.js"></script><script src="components/breathing-exercise.js"></script><script src="popup.js"></script></body></html>

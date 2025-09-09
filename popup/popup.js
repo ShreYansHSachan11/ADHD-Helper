@@ -7,6 +7,12 @@ class PopupManager {
     this.whiteNoiseActive = false;
     this.taskManager = null;
     this.breathingExercise = null;
+    this.errorHandler = null;
+    this.lazyLoader = null;
+    this.performanceMonitor = {
+      initStartTime: performance.now(),
+      componentsLoadTime: new Map()
+    };
 
     // Initialize when DOM is ready
     if (document.readyState === "loading") {
@@ -20,30 +26,212 @@ class PopupManager {
     if (this.isInitialized) return;
 
     try {
+      // Initialize error handler
+      if (typeof errorHandler !== 'undefined') {
+        this.errorHandler = errorHandler;
+      }
+
+      // Initialize lazy loader for performance optimization
+      try {
+        const { default: LazyLoader } = await import('../utils/lazy-loader.js');
+        this.lazyLoader = new LazyLoader();
+      } catch (error) {
+        console.warn('Failed to initialize lazy loader:', error);
+      }
+
       // Initialize UI elements
       this.initializeElements();
 
-      // Initialize task manager component
-      this.taskManager = new TaskManager();
+      // Performance optimization: Lazy load heavy components
+      await this.initializeComponentsLazily();
 
+<<<<<<< HEAD
       // Initialize breathing exercise component (will be initialized when modal is shown)
       this.breathingExercise = null;
+=======
+      // Preload critical components in background
+      if (this.lazyLoader) {
+        this.lazyLoader.preloadCriticalComponents().catch(error => {
+          console.warn('Failed to preload critical components:', error);
+        });
+      }
+        // Continue without breathing exercise
+      }
+>>>>>>> 8e57cc2f1523ef282b279e13a396b1fbdebe7320
 
       // Set up event listeners
       this.setupEventListeners();
 
-      // Load initial data
-      await this.loadInitialData();
+      // Load initial data with error handling
+      await this.loadInitialDataWithErrorHandling();
 
       // Update UI with current state
       this.updateUI();
 
       this.isInitialized = true;
-      console.log("Popup initialized successfully");
+      
+      // Log performance metrics
+      const totalInitTime = performance.now() - this.performanceMonitor.initStartTime;
+      console.log(`Popup initialized successfully (${totalInitTime.toFixed(2)}ms)`);
+      
+      // Show success feedback
+      if (this.errorHandler) {
+        this.errorHandler.showUserFeedback(
+          'Extension loaded successfully!',
+          'success',
+          { duration: 2000 }
+        );
+      }
     } catch (error) {
       console.error("Failed to initialize popup:", error);
-      this.showError("Failed to initialize extension. Please try refreshing.");
+      
+      if (this.errorHandler) {
+        this.errorHandler.handleExtensionError(error, 'Popup Init');
+      } else {
+        this.showError("Failed to initialize extension. Please try refreshing.");
+      }
     }
+  }
+
+  /**
+   * Performance optimization: Initialize components lazily
+   */
+  async initializeComponentsLazily() {
+    // Initialize task manager lazily (only when needed)
+    this.setupLazyTaskManager();
+    
+    // Initialize breathing exercise lazily (only when accessed)
+    this.setupLazyBreathingExercise();
+    
+    // Setup lazy loading for external pages
+    this.setupLazyExternalPages();
+  }
+
+  /**
+   * Setup lazy loading for task manager
+   */
+  setupLazyTaskManager() {
+    const taskSection = document.querySelector('.task-section');
+    
+    if (taskSection && this.lazyLoader) {
+      this.lazyLoader.registerLazyElement(taskSection, 'task-manager');
+      
+      // Load on first interaction
+      const taskInput = document.getElementById('taskInput');
+      const taskButton = document.getElementById('getBreakdownBtn');
+      
+      const loadTaskManager = async () => {
+        if (!this.taskManager) {
+          const startTime = performance.now();
+          
+          try {
+            const result = await this.lazyLoader.loadComponent('task-manager');
+            
+            if (result.success) {
+              this.taskManager = result.component;
+              
+              const loadTime = performance.now() - startTime;
+              this.performanceMonitor.componentsLoadTime.set('task-manager', loadTime);
+              
+              console.log(`Task manager loaded lazily (${loadTime.toFixed(2)}ms)`);
+            }
+          } catch (error) {
+            console.error('Failed to lazy load task manager:', error);
+            
+            // Fallback: Initialize synchronously
+            try {
+              this.taskManager = new TaskManager();
+            } catch (fallbackError) {
+              console.error('Fallback task manager init failed:', fallbackError);
+            }
+          }
+        }
+      };
+      
+      taskInput?.addEventListener('focus', loadTaskManager, { once: true });
+      taskButton?.addEventListener('click', loadTaskManager, { once: true });
+    } else {
+      // Fallback: Initialize synchronously
+      try {
+        this.taskManager = new TaskManager();
+      } catch (error) {
+        console.error('Failed to initialize task manager:', error);
+      }
+    }
+  }
+
+  /**
+   * Setup lazy loading for breathing exercise
+   */
+  setupLazyBreathingExercise() {
+    const breathingSection = document.querySelector('.breathing-section');
+    
+    if (breathingSection && this.lazyLoader) {
+      this.lazyLoader.registerLazyElement(breathingSection, 'breathing-exercise');
+      
+      // Load on first interaction
+      const breathingButton = document.getElementById('startBreathingBtn');
+      
+      const loadBreathingExercise = async () => {
+        if (!this.breathingExercise) {
+          const startTime = performance.now();
+          
+          try {
+            const result = await this.lazyLoader.loadComponent('breathing-exercise');
+            
+            if (result.success) {
+              this.breathingExercise = result.component;
+              
+              const loadTime = performance.now() - startTime;
+              this.performanceMonitor.componentsLoadTime.set('breathing-exercise', loadTime);
+              
+              console.log(`Breathing exercise loaded lazily (${loadTime.toFixed(2)}ms)`);
+            }
+          } catch (error) {
+            console.error('Failed to lazy load breathing exercise:', error);
+            
+            // Fallback: Initialize synchronously
+            try {
+              this.breathingExercise = new BreathingExercise();
+            } catch (fallbackError) {
+              console.error('Fallback breathing exercise init failed:', fallbackError);
+            }
+          }
+        }
+      };
+      
+      breathingButton?.addEventListener('click', loadBreathingExercise, { once: true });
+    } else {
+      // Fallback: Initialize synchronously
+      try {
+        this.breathingExercise = new BreathingExercise();
+      } catch (error) {
+        console.error('Failed to initialize breathing exercise:', error);
+      }
+    }
+  }
+
+  /**
+   * Setup lazy loading for external pages
+   */
+  setupLazyExternalPages() {
+    if (!this.lazyLoader) return;
+    
+    const focusAnxietyBtn = document.getElementById('focusAnxietyBtn');
+    const asmrFidgetBtn = document.getElementById('asmrFidgetBtn');
+    
+    // Preload external pages on hover (anticipatory loading)
+    focusAnxietyBtn?.addEventListener('mouseenter', () => {
+      this.lazyLoader.loadComponent('external-page-focus-anxiety').catch(error => {
+        console.warn('Failed to preload focus-anxiety page:', error);
+      });
+    }, { once: true });
+    
+    asmrFidgetBtn?.addEventListener('mouseenter', () => {
+      this.lazyLoader.loadComponent('external-page-asmr-fidget').catch(error => {
+        console.warn('Failed to preload asmr-fidget page:', error);
+      });
+    }, { once: true });
   }
 
   initializeElements() {
@@ -237,15 +425,139 @@ class PopupManager {
     document.addEventListener("keydown", (e) => this.handleKeydown(e));
   }
 
-  async loadInitialData() {
+  async loadInitialDataWithErrorHandling() {
+    const loadingTasks = [
+      { name: 'Screen Time Settings', fn: () => this.loadScreenTimeSettings() },
+      { name: 'Focus Tracking Data', fn: () => this.loadFocusTrackingData() },
+      { name: 'Audio Settings', fn: () => this.loadAudioSettings() },
+      { name: 'Calendar Configuration', fn: () => this.loadCalendarConfiguration() },
+      { name: 'Current Tab Stats', fn: () => this.updateCurrentTimeDisplay() }
+    ];
+
+    // Show loading indicator
+    const loadingId = this.showLoadingState('Loading extension data...');
+
     try {
-      // Load screen time settings
-      await this.loadScreenTimeSettings();
+      const results = await Promise.allSettled(
+        loadingTasks.map(async (task, index) => {
+          try {
+            // Update progress
+            this.updateLoadingProgress(loadingId, (index / loadingTasks.length) * 100, `Loading ${task.name}...`);
+            
+            await task.fn();
+            return { success: true, task: task.name };
+          } catch (error) {
+            console.error(`Failed to load ${task.name}:`, error);
+            if (this.errorHandler) {
+              this.errorHandler.handleExtensionError(error, `Load ${task.name}`);
+            }
+            return { success: false, task: task.name, error };
+          }
+        })
+      );
 
-      // Load focus tab information and session data
-      await this.loadFocusTrackingData();
+      // Complete progress
+      this.updateLoadingProgress(loadingId, 100, 'Loading complete');
 
-      // Load audio settings
+      // Check for any failures
+      const failures = results.filter(result => 
+        result.status === 'rejected' || !result.value.success
+      );
+
+      if (failures.length > 0) {
+        console.warn(`${failures.length} data loading tasks failed`);
+        
+        if (this.errorHandler && failures.length < loadingTasks.length) {
+          this.errorHandler.showUserFeedback(
+            `Extension loaded with limited functionality (${failures.length} features unavailable)`,
+            'warning',
+            { duration: 4000 }
+          );
+        }
+      }
+
+    } finally {
+      // Hide loading indicator
+      setTimeout(() => {
+        this.hideLoadingState(loadingId);
+      }, 500);
+    }
+  }
+
+  /**
+   * Show loading state with progress indicator
+   */
+  showLoadingState(message) {
+    const loadingId = `loading-${Date.now()}`;
+    
+    const loadingEl = document.createElement('div');
+    loadingEl.id = loadingId;
+    loadingEl.className = 'loading-overlay';
+    loadingEl.innerHTML = `
+      <div class="loading-content">
+        <div class="loading-spinner"></div>
+        <div class="loading-message">${message}</div>
+        <div class="loading-progress">
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: 0%"></div>
+          </div>
+          <div class="progress-text">0%</div>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(loadingEl);
+    
+    // Animate in
+    setTimeout(() => {
+      loadingEl.classList.add('visible');
+    }, 10);
+    
+    return loadingId;
+  }
+
+  /**
+   * Update loading progress
+   */
+  updateLoadingProgress(loadingId, percentage, message) {
+    const loadingEl = document.getElementById(loadingId);
+    if (!loadingEl) return;
+    
+    const progressFill = loadingEl.querySelector('.progress-fill');
+    const progressText = loadingEl.querySelector('.progress-text');
+    const messageEl = loadingEl.querySelector('.loading-message');
+    
+    if (progressFill) {
+      progressFill.style.width = `${Math.min(100, Math.max(0, percentage))}%`;
+    }
+    
+    if (progressText) {
+      progressText.textContent = `${Math.round(percentage)}%`;
+    }
+    
+    if (messageEl && message) {
+      messageEl.textContent = message;
+    }
+  }
+
+  /**
+   * Hide loading state
+   */
+  hideLoadingState(loadingId) {
+    const loadingEl = document.getElementById(loadingId);
+    if (!loadingEl) return;
+    
+    loadingEl.classList.add('hiding');
+    
+    setTimeout(() => {
+      if (loadingEl.parentNode) {
+        loadingEl.parentNode.removeChild(loadingEl);
+      }
+    }, 300);
+  }
+
+  async loadAudioSettings() {
+    try {
       const audioResult = await chrome.storage.local.get("audioSettings");
       const audioSettings = audioResult.audioSettings || {
         whiteNoise: { enabled: false },
@@ -255,6 +567,25 @@ class PopupManager {
 
       // Load current audio status from background
       await this.loadAudioStatus();
+    } catch (error) {
+      console.error('Failed to load audio settings:', error);
+      // Set defaults
+      this.whiteNoiseActive = false;
+      this.updateWhiteNoiseButton();
+      throw error;
+    }
+  }
+
+  async loadInitialData() {
+    try {
+      // Load screen time settings
+      await this.loadScreenTimeSettings();
+
+      // Load focus tab information and session data
+      await this.loadFocusTrackingData();
+
+      // Load audio settings
+      await this.loadAudioSettings();
 
       // Load calendar configuration and check connection
       await this.loadCalendarConfiguration();
@@ -263,6 +594,7 @@ class PopupManager {
       await this.updateCurrentTimeDisplay();
     } catch (error) {
       console.error("Failed to load initial data:", error);
+      throw error;
     }
   }
 
@@ -1231,26 +1563,60 @@ class PopupManager {
   }
 
   async handleWhiteNoiseToggle() {
+    // Show loading state
+    if (this.errorHandler) {
+      this.errorHandler.setLoadingState(this.whiteNoiseBtn, true, 'Loading...');
+    }
+
     try {
       const response = await chrome.runtime.sendMessage({
         type: "toggleWhiteNoise",
       });
 
-      if (response.success) {
+      if (response && response.success) {
         this.whiteNoiseActive = response.active;
         this.updateWhiteNoiseButton();
 
-        // Show status message
+        // Show status message with enhanced feedback
         const statusMessage = response.active
           ? `White noise started (${response.sound || "default"})`
           : "White noise stopped";
-        this.showWhiteNoiseStatus(statusMessage, "success");
+        
+        if (this.errorHandler) {
+          this.errorHandler.showUserFeedback(
+            statusMessage,
+            'success',
+            { duration: 2000 }
+          );
+        } else {
+          this.showWhiteNoiseStatus(statusMessage, "success");
+        }
       } else {
-        this.showWhiteNoiseStatus("Failed to toggle white noise", "error");
+        const errorMessage = response?.error || 'Unknown error occurred';
+        console.error("Failed to toggle white noise:", errorMessage);
+        
+        if (this.errorHandler) {
+          this.errorHandler.handleAudioError(
+            new Error(errorMessage),
+            'White Noise Toggle'
+          );
+        } else {
+          this.showWhiteNoiseStatus("Failed to toggle white noise", "error");
+        }
       }
     } catch (error) {
       console.error("Failed to toggle white noise:", error);
-      this.showWhiteNoiseStatus("Failed to toggle white noise", "error");
+      
+      if (this.errorHandler) {
+        this.errorHandler.handleAudioError(error, 'White Noise Toggle');
+      } else {
+        this.showWhiteNoiseStatus("Failed to toggle white noise", "error");
+      }
+    } finally {
+      // Remove loading state
+      if (this.errorHandler) {
+        this.errorHandler.setLoadingState(this.whiteNoiseBtn, false);
+      }
     }
   }
 
@@ -1359,16 +1725,51 @@ class PopupManager {
   }
 
   // External Page Methods
-  openExternalPage(page) {
-    const urls = {
-      "focus-anxiety": chrome.runtime.getURL(
-        "external-pages/focus-anxiety.html"
-      ),
-      "asmr-fidget": chrome.runtime.getURL("external-pages/asmr-fidget.html"),
-    };
+  async openExternalPage(page) {
+    try {
+      const urls = {
+        "focus-anxiety": chrome.runtime.getURL(
+          "external-pages/focus-anxiety.html"
+        ),
+        "asmr-fidget": chrome.runtime.getURL("external-pages/asmr-fidget.html"),
+      };
 
-    if (urls[page]) {
-      chrome.tabs.create({ url: urls[page] });
+      if (!urls[page]) {
+        throw new Error(`Unknown page: ${page}`);
+      }
+
+      // Show loading feedback
+      if (this.errorHandler) {
+        this.errorHandler.showUserFeedback(
+          'Opening wellness page...',
+          'info',
+          { duration: 2000 }
+        );
+      }
+
+      // Validate permissions
+      const hasTabsPermission = await this.errorHandler?.validatePermissions(['tabs']) ?? true;
+      
+      if (!hasTabsPermission) {
+        throw new Error('Missing tabs permission. Please grant permission to open external pages.');
+      }
+
+      const tab = await chrome.tabs.create({ url: urls[page] });
+      
+      if (!tab) {
+        throw new Error('Failed to create new tab');
+      }
+
+      console.log(`Opened external page: ${page}`);
+      
+    } catch (error) {
+      console.error(`Failed to open external page ${page}:`, error);
+      
+      if (this.errorHandler) {
+        this.errorHandler.handleExtensionError(error, 'External Page');
+      } else {
+        console.error(`Failed to open ${page} page:`, error.message);
+      }
     }
   }
 

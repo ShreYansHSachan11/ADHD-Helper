@@ -3,22 +3,16 @@
  * Handles tab tracking, notifications, and persistent background functionality
  */
 
-// Import required modules
-importScripts(
-  "/services/storage-manager.js",
-  "/services/tab-tracker.js",
-  "/services/gemini-service.js",
-  "/utils/constants.js",
-  "/utils/helpers.js"
-);
+// Initialize service worker
+console.log("Focus Productivity Extension background service worker loaded");
 
 // Global instances
 let tabTracker = null;
 let storageManager = null;
 let geminiService = null;
 
-// Initialize service worker
-console.log("Focus Productivity Extension background service worker loaded");
+// No imports - self-contained background script
+console.log("Background script loaded without imports");
 
 /**
  * Extension installation and startup
@@ -28,7 +22,9 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 
   try {
     // Initialize storage manager
-    storageManager = new StorageManager();
+    if (!storageManager) {
+      storageManager = new StorageManager();
+    }
 
     // Initialize default settings if this is a fresh install
     if (details.reason === "install") {
@@ -36,10 +32,14 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     }
 
     // Initialize tab tracker
-    tabTracker = new TabTracker();
+    if (!tabTracker) {
+      tabTracker = new TabTracker();
+    }
 
     // Initialize Gemini service
-    geminiService = new GeminiService();
+    if (!geminiService) {
+      geminiService = new GeminiService();
+    }
 
     // Initialize notification system
     await initializeNotificationSystem();
@@ -57,9 +57,13 @@ chrome.runtime.onStartup.addListener(async () => {
   console.log("Browser startup detected");
 
   try {
-    // Reinitialize components
-    storageManager = new StorageManager();
-    tabTracker = new TabTracker();
+    // Reinitialize components if needed
+    if (!storageManager) {
+      storageManager = new StorageManager();
+    }
+    if (!tabTracker) {
+      tabTracker = new TabTracker();
+    }
 
     // Reinitialize notification system
     await initializeNotificationSystem();
@@ -74,16 +78,32 @@ chrome.runtime.onStartup.addListener(async () => {
 async function initializeDefaultSettings() {
   try {
     const defaultData = {
-      [CONSTANTS.STORAGE_KEYS.SCREEN_TIME_SETTINGS]:
-        CONSTANTS.DEFAULT_SETTINGS.screenTime,
-      [CONSTANTS.STORAGE_KEYS.FOCUS_SETTINGS]: CONSTANTS.DEFAULT_SETTINGS.focus,
-      [CONSTANTS.STORAGE_KEYS.BREATHING_SETTINGS]:
-        CONSTANTS.DEFAULT_SETTINGS.breathing,
-      [CONSTANTS.STORAGE_KEYS.AUDIO_SETTINGS]: CONSTANTS.DEFAULT_SETTINGS.audio,
-      [CONSTANTS.STORAGE_KEYS.TAB_HISTORY]: {},
-      [CONSTANTS.STORAGE_KEYS.CURRENT_SESSION]: {},
-      [CONSTANTS.STORAGE_KEYS.TASKS]: [],
-      [CONSTANTS.STORAGE_KEYS.API_KEYS]: {},
+      screenTimeSettings: {
+        limitMinutes: 30,
+        enabled: true,
+        notificationsEnabled: true
+      },
+      focusSettings: {
+        reminderCooldownMinutes: 5,
+        trackingEnabled: true
+      },
+      breathingSettings: {
+        inhaleSeconds: 4,
+        holdSeconds: 4,
+        exhaleSeconds: 4,
+        pauseSeconds: 2
+      },
+      audioSettings: {
+        whiteNoise: {
+          enabled: false,
+          volume: 0.5,
+          currentSound: "rain"
+        }
+      },
+      tabHistory: {},
+      currentSession: {},
+      tasks: [],
+      apiKeys: {}
     };
 
     await storageManager.setMultiple(defaultData);
@@ -94,7 +114,7 @@ async function initializeDefaultSettings() {
 }
 
 /**
- * Notification System - Enhanced notification handling with proper timing and permissions
+ * Notification System
  */
 
 // Notification state tracking
@@ -148,7 +168,7 @@ async function createNotification(notificationId, options) {
     try {
       await chrome.notifications.create(notificationId, {
         type: "basic",
-        iconUrl: "/assets/icons/icon48.png",
+        iconUrl: "/assets/icons/48.ico",
         ...options,
       });
     } catch (error) {
@@ -185,7 +205,7 @@ async function createNotification(notificationId, options) {
 async function showBreakReminderNotification(tabId, timeSpent) {
   try {
     const now = Date.now();
-    const cooldownMs = CONSTANTS.SCREEN_TIME.NOTIFICATION_COOLDOWN_MS;
+    const cooldownMs = 5 * 60 * 1000; // 5 minutes
 
     // Check cooldown period
     if (now - notificationState.lastBreakNotificationTime < cooldownMs) {
@@ -194,7 +214,7 @@ async function showBreakReminderNotification(tabId, timeSpent) {
     }
 
     const notificationId = `break-reminder-${tabId}-${now}`;
-    const timeFormatted = HELPERS.FormatUtils.formatDuration(timeSpent);
+    const timeFormatted = Math.floor(timeSpent / (1000 * 60)) + " minutes";
 
     const success = await createNotification(notificationId, {
       title: "Time for a Break! 🕐",
@@ -215,193 +235,6 @@ async function showBreakReminderNotification(tabId, timeSpent) {
 }
 
 /**
- * Show focus reminder notification
- */
-async function showFocusReminderNotification(focusUrl, currentUrl) {
-  try {
-    const now = Date.now();
-    const settings = await storageManager.get(
-      CONSTANTS.STORAGE_KEYS.FOCUS_SETTINGS
-    );
-    const cooldownMs = HELPERS.TimeUtils.minutesToMs(
-      settings?.reminderCooldownMinutes ||
-        CONSTANTS.FOCUS.REMINDER_COOLDOWN_MINUTES
-    );
-
-    // Check cooldown period
-    if (now - notificationState.lastFocusNotificationTime < cooldownMs) {
-      console.log("Focus notification on cooldown");
-      return false;
-    }
-
-    const notificationId = `focus-reminder-${now}`;
-
-    // Safely extract domain names with error handling
-    let focusDomain = "unknown";
-    let currentDomain = "unknown";
-
-    try {
-      focusDomain = new URL(focusUrl).hostname;
-    } catch (error) {
-      console.warn("Invalid focus URL:", focusUrl);
-      focusDomain = focusUrl || "unknown";
-    }
-
-    try {
-      if (currentUrl) {
-        currentDomain = new URL(currentUrl).hostname;
-      }
-    } catch (error) {
-      console.warn("Invalid current URL:", currentUrl);
-      currentDomain = currentUrl || "unknown";
-    }
-
-    const success = await createNotification(notificationId, {
-      title: "Stay Focused! 🎯",
-      message: `You switched from ${focusDomain} to ${currentDomain}. Remember to stay focused on your initial task.`,
-      buttons: [{ title: "Return to Task" }, { title: "Update Focus" }],
-    });
-
-    if (success) {
-      notificationState.lastFocusNotificationTime = now;
-      console.log("Focus reminder notification shown");
-    }
-
-    return success;
-  } catch (error) {
-    console.error("Error showing focus reminder notification:", error);
-    return false;
-  }
-}
-
-/**
- * Handle notification clicks
- */
-chrome.notifications.onClicked.addListener(async (notificationId) => {
-  try {
-    // Clear the notification
-    await chrome.notifications.clear(notificationId);
-    notificationState.activeNotifications.delete(notificationId);
-
-    // Open extension popup
-    const windows = await chrome.windows.getAll({ populate: true });
-    const extensionWindow = windows.find(
-      (window) =>
-        window.tabs &&
-        window.tabs.some(
-          (tab) => tab.url && tab.url.includes(chrome.runtime.id)
-        )
-    );
-
-    if (!extensionWindow) {
-      // Open popup if not already open
-      await chrome.action.openPopup();
-    }
-  } catch (error) {
-    console.error("Error handling notification click:", error);
-  }
-});
-
-/**
- * Handle notification button clicks
- */
-chrome.notifications.onButtonClicked.addListener(
-  async (notificationId, buttonIndex) => {
-    try {
-      // Clear the notification
-      await chrome.notifications.clear(notificationId);
-      notificationState.activeNotifications.delete(notificationId);
-
-      // Handle different notification types based on button clicked
-      if (notificationId.includes("break")) {
-        if (buttonIndex === 0) {
-          // "Take Break" button clicked
-          if (tabTracker) {
-            await tabTracker.triggerManualBreak();
-            console.log("Manual break triggered from notification");
-          }
-        }
-        // "Continue Working" (buttonIndex === 1) - no action needed, just dismiss
-      } else if (notificationId.includes("focus")) {
-        if (buttonIndex === 0) {
-          // "Return to Task" button clicked
-          const focusInfo = tabTracker ? tabTracker.getFocusTabInfo() : null;
-          if (focusInfo && focusInfo.tabId) {
-            try {
-              await chrome.tabs.update(focusInfo.tabId, { active: true });
-              console.log("Returned to focus tab from notification");
-            } catch (error) {
-              console.log("Focus tab no longer exists, cannot return");
-            }
-          }
-        } else if (buttonIndex === 1) {
-          // "Update Focus" button clicked - set current tab as new focus
-          const tabs = await chrome.tabs.query({
-            active: true,
-            currentWindow: true,
-          });
-          if (tabs.length > 0 && tabTracker) {
-            await tabTracker.setFocusTab(tabs[0].id, tabs[0].url);
-            console.log("Focus tab updated from notification");
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Error handling notification button click:", error);
-    }
-  }
-);
-
-/**
- * Handle notification dismissal (when user closes notification)
- */
-chrome.notifications.onClosed.addListener((notificationId, byUser) => {
-  try {
-    notificationState.activeNotifications.delete(notificationId);
-    if (byUser) {
-      console.log("Notification dismissed by user:", notificationId);
-    }
-  } catch (error) {
-    console.error("Error handling notification dismissal:", error);
-  }
-});
-
-/**
- * Clean up expired notifications periodically
- */
-setInterval(() => {
-  try {
-    const now = Date.now();
-    const expiredNotifications = [];
-
-    notificationState.activeNotifications.forEach((data, notificationId) => {
-      // Remove notifications older than 30 seconds
-      if (now - data.createdAt > 30000) {
-        expiredNotifications.push(notificationId);
-      }
-    });
-
-    expiredNotifications.forEach(async (notificationId) => {
-      try {
-        await chrome.notifications.clear(notificationId);
-        notificationState.activeNotifications.delete(notificationId);
-      } catch (error) {
-        // Notification might already be cleared
-      }
-    });
-
-    if (expiredNotifications.length > 0) {
-      console.log(
-        "Cleaned up expired notifications:",
-        expiredNotifications.length
-      );
-    }
-  } catch (error) {
-    console.error("Error during notification cleanup:", error);
-  }
-}, 30000); // Run every 30 seconds
-
-/**
  * Handle messages from popup and content scripts
  */
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -414,34 +247,59 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
  */
 async function handleMessage(message, sender, sendResponse) {
   try {
+    // Validate message structure
+    if (!message || typeof message !== 'object' || !message.type) {
+      sendResponse({ success: false, error: 'Invalid message format' });
+      return;
+    }
+
     switch (message.type) {
       case "GET_TAB_STATS":
-        const stats = tabTracker ? await tabTracker.getCurrentTabStats() : null;
-        sendResponse({ success: true, data: stats });
+        try {
+          const stats = tabTracker ? await tabTracker.getCurrentTabStats() : null;
+          sendResponse({ success: true, data: stats });
+        } catch (error) {
+          console.error('Error getting tab stats:', error);
+          sendResponse({ success: false, error: 'Failed to get tab statistics' });
+        }
         break;
 
       case "GET_FOCUS_INFO":
-        const focusInfo = tabTracker ? tabTracker.getFocusTabInfo() : null;
-        sendResponse({ success: true, data: focusInfo });
+        try {
+          const focusInfo = tabTracker ? tabTracker.getFocusTabInfo() : null;
+          sendResponse({ success: true, data: focusInfo });
+        } catch (error) {
+          console.error('Error getting focus info:', error);
+          sendResponse({ success: false, error: 'Failed to get focus information' });
+        }
         break;
 
       case "SET_FOCUS_TAB":
-        if (tabTracker) {
+        try {
+          if (!tabTracker) {
+            throw new Error('Tab tracker not initialized');
+          }
+
           const tabs = await chrome.tabs.query({
             active: true,
             currentWindow: true,
           });
-          if (tabs.length > 0) {
-            await tabTracker.setFocusTab(tabs[0].id, tabs[0].url);
-            sendResponse({ success: true });
-          } else {
-            sendResponse({ success: false, error: "No active tab found" });
+          
+          if (tabs.length === 0) {
+            throw new Error('No active tab found');
           }
-        } else {
-          sendResponse({
-            success: false,
-            error: "Tab tracker not initialized",
-          });
+
+          // Check if tab is accessible
+          const tab = tabs[0];
+          if (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) {
+            throw new Error('Cannot set focus on restricted tabs');
+          }
+
+          await tabTracker.setFocusTab(tab.id, tab.url);
+          sendResponse({ success: true });
+        } catch (error) {
+          console.error('Error setting focus tab:', error);
+          sendResponse({ success: false, error: error.message });
         }
         break;
 
@@ -493,16 +351,9 @@ async function handleMessage(message, sender, sendResponse) {
         }
         break;
 
-      case "GET_ALL_TAB_HISTORY":
-        const tabHistory =
-          (await storageManager.get(CONSTANTS.STORAGE_KEYS.TAB_HISTORY)) || {};
-        sendResponse({ success: true, data: tabHistory });
-        break;
-
       case "CLEAR_TAB_HISTORY":
-        await storageManager.set(CONSTANTS.STORAGE_KEYS.TAB_HISTORY, {});
-        // Also reset current session data
-        await storageManager.set(CONSTANTS.STORAGE_KEYS.CURRENT_SESSION, {});
+        await storageManager.set("tabHistory", {});
+        await storageManager.set("currentSession", {});
         sendResponse({ success: true });
         break;
 
@@ -512,14 +363,6 @@ async function handleMessage(message, sender, sendResponse) {
           message.timeSpent
         );
         sendResponse({ success: breakSuccess });
-        break;
-
-      case "SHOW_FOCUS_NOTIFICATION":
-        const focusSuccess = await showFocusReminderNotification(
-          message.focusUrl,
-          message.currentUrl
-        );
-        sendResponse({ success: focusSuccess });
         break;
 
       case "CHECK_NOTIFICATION_PERMISSION":
@@ -533,120 +376,6 @@ async function handleMessage(message, sender, sendResponse) {
         });
         break;
 
-      case "getTaskBreakdown":
-        if (geminiService) {
-          try {
-            const result = await geminiService.breakdownTask(
-              message.taskName,
-              message.deadline
-            );
-            if (result.success) {
-              sendResponse({
-                success: true,
-                breakdown: result.steps,
-                taskName: result.taskName,
-                deadline: result.deadline,
-              });
-            } else {
-              sendResponse({
-                success: false,
-                error: result.error,
-                breakdown: result.placeholder ? result.placeholder.steps : null,
-              });
-            }
-          } catch (error) {
-            console.error("Task breakdown error:", error);
-            sendResponse({
-              success: false,
-              error: "Failed to process task breakdown request",
-            });
-          }
-        } else {
-          sendResponse({
-            success: false,
-            error: "Gemini service not initialized",
-          });
-        }
-        break;
-
-      case "toggleWhiteNoise":
-        try {
-          if (!globalThis.audioManager) {
-            // Dynamically import AudioManager
-            const AudioManager = await import("./services/audio-manager.js");
-            globalThis.audioManager = new AudioManager.default();
-          }
-
-          const result = await globalThis.audioManager.togglePlayPause();
-          sendResponse(result);
-        } catch (error) {
-          console.error("White noise toggle error:", error);
-          sendResponse({
-            success: false,
-            error: "Failed to toggle white noise",
-          });
-        }
-        break;
-
-      case "setWhiteNoiseVolume":
-        try {
-          if (!globalThis.audioManager) {
-            const AudioManager = await import("./services/audio-manager.js");
-            globalThis.audioManager = new AudioManager.default();
-          }
-
-          const newVolume = globalThis.audioManager.setVolume(message.volume);
-          sendResponse({ success: true, volume: newVolume });
-        } catch (error) {
-          console.error("Volume set error:", error);
-          sendResponse({
-            success: false,
-            error: "Failed to set volume",
-          });
-        }
-        break;
-
-      case "nextWhiteNoiseSound":
-        try {
-          if (!globalThis.audioManager) {
-            const AudioManager = await import("./services/audio-manager.js");
-            globalThis.audioManager = new AudioManager.default();
-          }
-
-          const result = globalThis.audioManager.nextRandomSound();
-          sendResponse(result);
-        } catch (error) {
-          console.error("Sound change error:", error);
-          sendResponse({
-            success: false,
-            error: "Failed to change sound",
-          });
-        }
-        break;
-
-      case "getWhiteNoiseStatus":
-        try {
-          if (!globalThis.audioManager) {
-            const AudioManager = await import("./services/audio-manager.js");
-            globalThis.audioManager = new AudioManager.default();
-          }
-
-          sendResponse({
-            success: true,
-            active: globalThis.audioManager.isActive(),
-            volume: globalThis.audioManager.getVolume(),
-            currentSound: globalThis.audioManager.getCurrentSoundName(),
-            currentSoundIndex: globalThis.audioManager.getCurrentSoundIndex(),
-          });
-        } catch (error) {
-          console.error("Status get error:", error);
-          sendResponse({
-            success: false,
-            error: "Failed to get status",
-          });
-        }
-        break;
-
       default:
         sendResponse({ success: false, error: "Unknown message type" });
     }
@@ -657,52 +386,80 @@ async function handleMessage(message, sender, sendResponse) {
 }
 
 /**
- * Handle extension context invalidation
+ * Handle notification clicks
  */
-chrome.runtime.onSuspend.addListener(() => {
-  console.log("Service worker suspending");
+chrome.notifications.onClicked.addListener(async (notificationId) => {
+  try {
+    // Clear the notification
+    await chrome.notifications.clear(notificationId);
+    notificationState.activeNotifications.delete(notificationId);
 
-  // Save any pending data
-  if (tabTracker && tabTracker.currentTabId) {
-    tabTracker.stopTrackingTab(tabTracker.currentTabId).catch(console.error);
+    // Open extension popup
+    try {
+      await chrome.action.openPopup();
+    } catch (error) {
+      console.log("Could not open popup:", error);
+    }
+  } catch (error) {
+    console.error("Error handling notification click:", error);
   }
 });
 
 /**
- * Periodic cleanup and maintenance
+ * Handle notification button clicks
  */
-setInterval(async () => {
-  try {
-    // Clean up old tab history entries (older than 7 days)
-    const tabHistory =
-      (await storageManager.get(CONSTANTS.STORAGE_KEYS.TAB_HISTORY)) || {};
-    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    let cleaned = false;
+chrome.notifications.onButtonClicked.addListener(
+  async (notificationId, buttonIndex) => {
+    try {
+      // Clear the notification
+      await chrome.notifications.clear(notificationId);
+      notificationState.activeNotifications.delete(notificationId);
 
-    Object.keys(tabHistory).forEach((tabId) => {
-      const tabData = tabHistory[tabId];
-      if (tabData.lastActiveTime < sevenDaysAgo) {
-        delete tabHistory[tabId];
-        cleaned = true;
+      // Handle different notification types based on button clicked
+      if (notificationId.includes("break")) {
+        if (buttonIndex === 0) {
+          // "Take Break" button clicked
+          if (tabTracker) {
+            await tabTracker.triggerManualBreak();
+            console.log("Manual break triggered from notification");
+          }
+        }
+        // "Continue Working" (buttonIndex === 1) - no action needed, just dismiss
       }
-    });
+    } catch (error) {
+      console.error("Error handling notification button click:", error);
+    }
+  }
+);
 
-    if (cleaned) {
-      await storageManager.set(CONSTANTS.STORAGE_KEYS.TAB_HISTORY, tabHistory);
-      console.log("Cleaned up old tab history entries");
+/**
+ * Handle notification dismissal (when user closes notification)
+ */
+chrome.notifications.onClosed.addListener((notificationId, byUser) => {
+  try {
+    notificationState.activeNotifications.delete(notificationId);
+    if (byUser) {
+      console.log("Notification dismissed by user:", notificationId);
     }
   } catch (error) {
-    console.error("Error during periodic cleanup:", error);
+    console.error("Error handling notification dismissal:", error);
   }
-}, 60 * 60 * 1000); // Run every hour
+});
 
 // Initialize when service worker loads
 (async () => {
   try {
-    storageManager = new StorageManager();
-    tabTracker = new TabTracker();
-    geminiService = new GeminiService();
+    if (!storageManager) {
+      storageManager = new StorageManager();
+    }
+    if (!tabTracker) {
+      tabTracker = new TabTracker();
+    }
+    if (!geminiService) {
+      geminiService = new GeminiService();
+    }
     await initializeNotificationSystem();
+    console.log("Service worker initialization complete");
   } catch (error) {
     console.error("Error during initial load:", error);
   }
