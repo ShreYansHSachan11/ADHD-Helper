@@ -26,8 +26,8 @@ class PopupManager {
       // Initialize task manager component
       this.taskManager = new TaskManager();
 
-      // Initialize breathing exercise component
-      this.breathingExercise = new BreathingExercise();
+      // Initialize breathing exercise component (will be initialized when modal is shown)
+      this.breathingExercise = null;
 
       // Set up event listeners
       this.setupEventListeners();
@@ -1156,6 +1156,15 @@ class PopupManager {
   showBreathingModal() {
     this.breathingModal.style.display = "flex";
 
+    // Initialize breathing exercise component if not already done
+    if (!this.breathingExercise) {
+      console.log("Initializing breathing exercise component");
+      this.breathingExercise = new BreathingExercise();
+    } else {
+      // Re-bind elements in case they weren't accessible before
+      this.breathingExercise.bindElements();
+    }
+
     // Reset the breathing exercise component state
     if (this.breathingExercise && this.breathingExercise.isActive) {
       this.breathingExercise.stopExercise();
@@ -1175,10 +1184,15 @@ class PopupManager {
   }
 
   startBreathingExercise() {
+    if (!this.breathingExercise) {
+      console.log("Initializing breathing exercise component on start");
+      this.breathingExercise = new BreathingExercise();
+    }
+
     if (this.breathingExercise) {
       this.breathingExercise.startExercise();
     } else {
-      console.error("Breathing exercise component not initialized");
+      console.error("Failed to initialize breathing exercise component");
       this.showBreathingStatus("Failed to start breathing exercise", "error");
     }
   }

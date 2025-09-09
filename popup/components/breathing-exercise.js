@@ -228,34 +228,45 @@ class BreathingExercise {
   animateCircle(phase, duration) {
     if (!this.circleElement) return;
 
-    // Remove existing animation classes
-    this.circleElement.classList.remove("inhale", "exhale", "hold");
-
-    // Apply appropriate animation class
-    switch (phase) {
-      case "inhale":
-        this.circleElement.classList.add("inhale");
-        break;
-      case "exhale":
-        this.circleElement.classList.add("exhale");
-        break;
-      case "holdIn":
-      case "holdOut":
-        this.circleElement.classList.add("hold");
-        break;
-    }
-
-    // Set CSS transition duration
+    // Set CSS transition duration first
     if (this.circleElement.style) {
       this.circleElement.style.transitionDuration = `${duration}ms`;
     }
+
+    // Remove existing animation classes
+    this.circleElement.classList.remove("inhale", "exhale", "hold");
+
+    // Force a reflow to ensure the class removal is processed
+    this.circleElement.offsetHeight;
+
+    // Apply appropriate animation class after a small delay to ensure smooth transition
+    requestAnimationFrame(() => {
+      switch (phase) {
+        case "inhale":
+          this.circleElement.classList.add("inhale");
+          break;
+        case "exhale":
+          this.circleElement.classList.add("exhale");
+          break;
+        case "holdIn":
+        case "holdOut":
+          this.circleElement.classList.add("hold");
+          break;
+      }
+    });
   }
 
   resetCircleAnimation() {
     if (!this.circleElement) return;
 
+    // Remove all animation classes
     this.circleElement.classList.remove("inhale", "exhale", "hold");
-    this.circleElement.style.transitionDuration = "0.3s";
+
+    // Reset transition duration to default
+    this.circleElement.style.transitionDuration = "";
+
+    // Force a reflow to ensure changes are applied
+    this.circleElement.offsetHeight;
 
     // Reset text styling
     if (this.textElement && this.textElement.classList) {
