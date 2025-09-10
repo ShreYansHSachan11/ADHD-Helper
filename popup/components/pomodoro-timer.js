@@ -70,15 +70,15 @@ class PomodoroTimer {
         <div class="timer-controls">
           <button class="btn btn-primary" id="pomodoroStartBtn">
             <span class="btn-icon">▶</span>
-            <span class="btn-text">Start</span>
+            <span class="btn-text" style="color:white;">Start</span>
           </button>
           <button class="btn btn-secondary" id="pomodoroPauseBtn" style="display: none;">
             <span class="btn-icon">⏸</span>
-            <span class="btn-text">Pause</span>
+            <span class="btn-text" style="color:white;">Pause</span>
           </button>
           <button class="btn btn-danger" id="pomodoroStopBtn" style="display: none;">
             <span class="btn-icon">⏹</span>
-            <span class="btn-text">Stop</span>
+            <span class="btn-text" style="color:red;">Stop</span>
           </button>
         </div>
 

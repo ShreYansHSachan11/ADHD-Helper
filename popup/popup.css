@@ -1,10 +1,37 @@
 /* Material Design 3 CSS for Focus Productivity Extension */
 
 /* Reset and Base Styles */
+.skip-link {
+  display: none;
+}
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+}
+#main-content {
+  overflow-y: scroll; /* always show vertical scrollbar */
+  scrollbar-width: thin; /* Firefox: thin scrollbar */
+  scrollbar-color: #000 #888; /* Firefox: black thumb | darker grey track */
+}
+
+/* For Chrome, Edge, Safari */
+#main-content::-webkit-scrollbar {
+  width: 6px; /* thin scrollbar */
+}
+
+#main-content::-webkit-scrollbar-track {
+  background: #888; /* darker grey background */
+}
+
+#main-content::-webkit-scrollbar-thumb {
+  background-color: #000; /* black thumb */
+  border-radius: 3px;
+}
+.transpbtn {
+  all: unset;
+  color: transparent;
+  background-color: transparent;
 }
 a {
   text-decoration: none;
@@ -1661,7 +1688,7 @@ input:focus-visible,
 /* Feature Content */
 .feature-content {
   position: relative;
-  min-height: 400px;
+  min-height: auto;
 }
 
 .feature-panel {
@@ -2316,4 +2343,7 @@ input:focus-visible,
   box-shadow: none;
   padding: 0;
   margin: 0;
+}
+.feature-content {
+  height: max-content;
 }
