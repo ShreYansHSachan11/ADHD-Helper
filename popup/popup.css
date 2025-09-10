@@ -91,7 +91,7 @@ body {
   color: var(--md-sys-color-on-surface);
   background: var(--md-sys-color-surface);
   width: 380px;
-  min-height: 600px;
+  min-height: auto;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
