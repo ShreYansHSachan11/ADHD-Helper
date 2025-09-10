@@ -3,28 +3,43 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Fidget Toys</title>
+    <title>ASMR Fidget Toys</title>
     <link rel="stylesheet" href="asmr-fidget.css" />
   </head>
   <body>
-    <header>
-      <h1>fidget toys</h1>
-    </header>
+    <h1>Fidget Toys</h1>
 
-    <main class="grid-container">
+    <div class="grid-container">
+      <!-- First grid: Spinner -->
       <div class="grid-item">
-        <img src="toy1.jpg" alt="Fidget Toy 1" />
+        <div class="grid-title">Spin It!</div>
+        <img
+          id="fidgetSpinner"
+          src="../assets/images/Fidget.png"
+          alt="Fidget Spinner"
+        />
       </div>
-      <div class="grid-item">
-        <img src="toy2.jpg" alt="Fidget Toy 2" />
+
+      <!-- Second grid: Keyboard keys -->
+      <div class="grid-item keys-grid">
+        <div class="grid-title">Tap Tap</div>
+        <img class="fidgetKey" src="../assets/images/key.png" alt="Key" />
+        <img class="fidgetKey" src="../assets/images/key.png" alt="Key" />
+        <img class="fidgetKey" src="../assets/images/key.png" alt="Key" />
+        <img class="fidgetKey" src="../assets/images/key.png" alt="Key" />
       </div>
-      <div class="grid-item">
-        <img src="toy3.jpg" alt="Fidget Toy 3" />
+
+      <!-- Third grid: Switch -->
+      <div class="grid-item switch-grid">
+        <div class="grid-title">Flip It</div>
+        <img id="fidgetSwitch" src="../assets/images/switch.png" alt="Switch" />
       </div>
-      <div class="grid-item">
-        <img src="toy4.jpg" alt="Fidget Toy 4" />
+
+      <!-- Fourth grid: Bubbles -->
+      <div class="grid-item bubble-grid" id="bubbleGrid">
+        <div class="grid-title">Pop!</div>
       </div>
-    </main>
+    </div>
 
     <script src="asmr-fidget.js"></script>
   </body>
