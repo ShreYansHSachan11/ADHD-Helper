@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Focus Productivity Extension",
+  "name": "Nudge",
   "version": "1.0.0",
   "description": "A comprehensive productivity extension with screen time monitoring, task management, and wellness features",
 
@@ -24,18 +24,18 @@
 
   "action": {
     "default_popup": "popup/popup.html",
-    "default_title": "Focus Productivity Extension",
+    "default_title": "Nudge",
     "default_icon": {
-      "16": "assets/icons/16.ico",
-      "48": "assets/icons/48.ico",
-      "128": "assets/icons/128.ico"
+      "16": "./assets/icons/16.ico",
+      "48": "./assets/icons/48.ico",
+      "128": "./assets/icons/128.ico"
     }
   },
 
   "icons": {
-    "16": "assets/icons/16.ico",
-    "48": "assets/icons/48.ico",
-    "128": "assets/icons/128.ico"
+    "16": "./assets/icons/16.ico",
+    "48": "./assets/icons/48.ico",
+    "128": "./assets/icons/128.ico"
   },
 
   "web_accessible_resources": [
