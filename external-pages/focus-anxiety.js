@@ -1,432 +1,398 @@
-/**
- * Focus and Anxiety Management Page
- * Provides wellness tools and techniques with comprehensive error handling
- */
+/* ------------------ SOUND ------------------ */
+const popSound = new Audio("../assets/sounds/pop.mp3");
 
-class FocusAnxietyManager {
-  constructor() {
-    this.errorHandler = null;
-    this.isInitialized = false;
-    this.activeTools = new Set();
-    
-    this.init();
-  }
+/* ------------------ DATA POOL ------------------ */
+const ITEMS = [
+  "Table",
+  "Chair",
+  "Sofa",
+  "Bed",
+  "Pillow",
+  "Blanket",
+  "Window",
+  "Door",
+  "Lamp",
+  "Mirror",
+  "Clock",
+  "Fan",
+  "Light bulb",
+  "Remote",
+  "Television",
+  "Phone",
+  "Laptop",
+  "Keyboard",
+  "Mouse",
+  "Book",
+  "Pen",
+  "Paper",
+  "Cup",
+  "Plate",
+  "Spoon",
+  "Fork",
+  "Knife",
+  "Bottle",
+  "Glass",
+  "Bag",
+  "Shirt",
+  "Pants",
+  "Jacket",
+  "Hat",
+  "Shoes",
+  "Socks",
+  "Scarf",
+  "Belt",
+  "Gloves",
+  "Watch",
+  "Ring",
+  "Earrings",
+  "Glasses",
+  "Bowl",
+  "Mug",
+  "Pan",
+  "Pot",
+  "Fridge",
+  "Oven",
+  "Toaster",
+  "Cutting board",
+  "Apple",
+  "Banana",
+  "Orange",
+  "Bread",
+  "Milk",
+  "Cheese",
+  "Tree",
+  "Leaf",
+  "Flower",
+  "Grass",
+  "Rock",
+  "Bench",
+  "Bike",
+  "Car",
+  "Road",
+  "Fence",
+  "Ball",
+  "Backpack",
+  "Key",
+  "Wallet",
+  "Umbrella",
+  "Brush",
+  "Comb",
+  "Toothbrush",
+  "Towel",
+  "Soap",
+  "Bottle cap",
+  "Candle",
+  "Camera",
+  "Toy",
+  "Headphones",
+  "Earbuds",
+];
 
-  /**
-   * Initialize the focus and anxiety management page
-   */
-  async init() {
-    try {
-      // Initialize error handler
-      if (typeof errorHandler !== 'undefined') {
-        this.errorHandler = errorHandler;
-      }
+/* ------------------ ELEMENTS ------------------ */
+const memoryOptionBtn = document.getElementById("memoryOption");
+const anxietyOptionBtn = document.getElementById("anxietyOption");
 
-      // Set up error handling for the page
-      this.setupGlobalErrorHandling();
+const memoryModal = document.getElementById("memoryModal");
+const anxietyModal = document.getElementById("anxietyModal");
 
-      // Initialize page components
-      await this.initializeComponents();
+const closeButtons = document.querySelectorAll("[data-close]");
 
-      // Set up event listeners
-      this.setupEventListeners();
+const startMemoryBtn = document.getElementById("startMemoryBtn");
+const restartMemoryBtn = document.getElementById("restartMemoryBtn");
+const memoryBoard = document.getElementById("memoryBoard");
+const timerEl = document.getElementById("timer");
 
-      // Track page usage
-      this.trackPageUsage();
+const startAnxietyBtn = document.getElementById("startAnxietyBtn");
+const restartAnxietyBtn = document.getElementById("restartAnxietyBtn");
+const bubbleContainer = document.getElementById("bubbleContainer");
+const groundingPrompt = document.getElementById("groundingPrompt");
 
-      this.isInitialized = true;
-      console.log('Focus & Anxiety Management page initialized successfully');
+/* ------------------ MODAL LOGIC ------------------ */
+function openModal(modal) {
+  modal.style.display = "flex";
+  modal.setAttribute("aria-hidden", "false");
+}
+function closeModal(modal) {
+  modal.style.display = "none";
+  modal.setAttribute("aria-hidden", "true");
+}
 
-      if (this.errorHandler) {
-        this.errorHandler.showUserFeedback(
-          'Wellness tools loaded successfully',
-          'success',
-          { duration: 2000 }
-        );
-      }
+// link openers
+memoryOptionBtn.addEventListener("click", () => {
+  openModal(memoryModal);
+});
+anxietyOptionBtn.addEventListener("click", () => {
+  openModal(anxietyModal);
+});
 
-    } catch (error) {
-      console.error('Failed to initialize Focus & Anxiety Management page:', error);
-      
-      if (this.errorHandler) {
-        this.errorHandler.handleExtensionError(error, 'Focus Anxiety Page Init');
-      }
-      
-      this.initializeFallbackMode();
-    }
-  }
+// close buttons
+closeButtons.forEach((btn) => {
+  btn.addEventListener("click", (e) => {
+    const id = btn.dataset.close;
+    if (id === "memoryModal") stopMemoryTimer();
+    closeModal(document.getElementById(id));
+  });
+});
 
-  /**
-   * Set up global error handling for the page
-   */
-  setupGlobalErrorHandling() {
-    // Handle unhandled promise rejections
-    window.addEventListener('unhandledrejection', (event) => {
-      console.error('Unhandled promise rejection in Focus & Anxiety page:', event.reason);
-      
-      if (this.errorHandler) {
-        this.errorHandler.handleExtensionError(event.reason, 'Focus Anxiety Page');
-      }
-      
-      event.preventDefault();
-    });
+/* ------------------ MEMORY GAME ------------------ */
+const EMOJIS = ["🍎", "🍌", "🍇", "🍓", "🍒", "🍍", "🍉", "🍋"];
+let pairs = EMOJIS.length;
+let totalCards = pairs * 2;
 
-    // Handle general errors
-    window.addEventListener('error', (event) => {
-      console.error('Error in Focus & Anxiety page:', event.error);
-      
-      if (this.errorHandler) {
-        this.errorHandler.handleExtensionError(event.error, 'Focus Anxiety Page');
-      }
-    });
+let memoryState = {
+  board: [],
+  first: null,
+  second: null,
+  matchedPairs: 0,
+  lock: false,
+  timerId: null,
+  startTime: null,
+  elapsed: 0,
+};
 
-    // Handle page visibility changes
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) {
-        this.handlePageHidden();
-      } else {
-        this.handlePageVisible();
-      }
-    });
+function shuffleArray(arr) {
+  return arr.slice().sort(() => Math.random() - 0.5);
+}
 
-    // Handle page unload
-    window.addEventListener('beforeunload', () => {
-      this.cleanup();
-    });
-  }
+function buildMemoryBoard() {
+  const doubled = shuffleArray([...EMOJIS, ...EMOJIS]);
+  memoryState.board = doubled;
+  memoryBoard.innerHTML = "";
+  memoryState.matchedPairs = 0;
+  memoryState.first = null;
+  memoryState.second = null;
+  memoryState.lock = true;
+  totalCards = doubled.length;
 
-  /**
-   * Initialize page components with error handling
-   */
-  async initializeComponents() {
-    const components = [
-      { name: 'Breathing Exercises', fn: () => this.initializeBreathingExercises() },
-      { name: 'Meditation Tools', fn: () => this.initializeMeditationTools() },
-      { name: 'Focus Techniques', fn: () => this.initializeFocusTechniques() },
-      { name: 'Anxiety Management', fn: () => this.initializeAnxietyManagement() },
-      { name: 'Progress Tracking', fn: () => this.initializeProgressTracking() }
-    ];
+  doubled.forEach((emoji, idx) => {
+    const card = document.createElement("div");
+    card.className = "memory-card";
+    card.dataset.index = idx;
 
-    for (const component of components) {
-      try {
-        await component.fn();
-      } catch (error) {
-        console.error(`Failed to initialize ${component.name}:`, error);
-        
-        if (this.errorHandler) {
-          this.errorHandler.showUserFeedback(
-            `${component.name} unavailable`,
-            'warning',
-            { duration: 3000 }
-          );
-        }
-      }
-    }
-  }
+    const inner = document.createElement("div");
+    inner.className = "card-inner";
+    inner.setAttribute("data-value", emoji);
 
-  /**
-   * Initialize breathing exercises component
-   */
-  initializeBreathingExercises() {
-    // Placeholder for breathing exercises
-    console.log('Breathing exercises component initialized');
-  }
+    const front = document.createElement("div");
+    front.className = "card-face front";
+    front.textContent = "?";
 
-  /**
-   * Initialize meditation tools component
-   */
-  initializeMeditationTools() {
-    // Placeholder for meditation tools
-    console.log('Meditation tools component initialized');
-  }
+    const back = document.createElement("div");
+    back.className = "card-face back";
+    back.textContent = emoji;
 
-  /**
-   * Initialize focus techniques component
-   */
-  initializeFocusTechniques() {
-    // Placeholder for focus techniques
-    console.log('Focus techniques component initialized');
-  }
+    inner.appendChild(front);
+    inner.appendChild(back);
+    card.appendChild(inner);
 
-  /**
-   * Initialize anxiety management component
-   */
-  initializeAnxietyManagement() {
-    // Placeholder for anxiety management
-    console.log('Anxiety management component initialized');
-  }
+    card.addEventListener("click", () => onMemoryCardClick(card, inner));
 
-  /**
-   * Initialize progress tracking component
-   */
-  initializeProgressTracking() {
-    // Placeholder for progress tracking
-    console.log('Progress tracking component initialized');
-  }
+    memoryBoard.appendChild(card);
+  });
 
-  /**
-   * Set up event listeners with error handling
-   */
-  setupEventListeners() {
-    try {
-      // Add event listeners for interactive elements
-      document.addEventListener('click', (event) => {
-        this.handleClick(event);
-      });
-
-      document.addEventListener('keydown', (event) => {
-        this.handleKeydown(event);
-      });
-
-    } catch (error) {
-      console.error('Failed to set up event listeners:', error);
-    }
-  }
-
-  /**
-   * Handle click events with error handling
-   */
-  handleClick(event) {
-    try {
-      // Handle tool interactions
-      if (event.target.matches('.wellness-tool')) {
-        this.activateWellnessTool(event.target);
-      }
-    } catch (error) {
-      console.error('Error handling click:', error);
-      
-      if (this.errorHandler) {
-        this.errorHandler.showUserFeedback(
-          'Tool interaction failed',
-          'error',
-          { duration: 3000 }
-        );
-      }
-    }
-  }
-
-  /**
-   * Handle keyboard events
-   */
-  handleKeydown(event) {
-    try {
-      // Handle keyboard shortcuts
-      if (event.key === 'Escape') {
-        this.deactivateAllTools();
-      }
-    } catch (error) {
-      console.error('Error handling keydown:', error);
-    }
-  }
-
-  /**
-   * Activate a wellness tool with error handling
-   */
-  activateWellnessTool(toolElement) {
-    try {
-      const toolType = toolElement.dataset.tool;
-      
-      if (!toolType) {
-        throw new Error('Tool type not specified');
-      }
-
-      this.activeTools.add(toolType);
-      toolElement.classList.add('active');
-
-      // Track tool usage
-      this.trackToolUsage(toolType);
-
-      console.log(`Activated wellness tool: ${toolType}`);
-
-    } catch (error) {
-      console.error('Failed to activate wellness tool:', error);
-      
-      if (this.errorHandler) {
-        this.errorHandler.showUserFeedback(
-          'Failed to activate tool',
-          'error',
-          { duration: 3000 }
-        );
-      }
-    }
-  }
-
-  /**
-   * Deactivate all active tools
-   */
-  deactivateAllTools() {
-    try {
-      this.activeTools.clear();
-      
-      document.querySelectorAll('.wellness-tool.active').forEach(tool => {
-        tool.classList.remove('active');
-      });
-
-      console.log('All wellness tools deactivated');
-
-    } catch (error) {
-      console.error('Error deactivating tools:', error);
-    }
-  }
-
-  /**
-   * Track page usage for insights
-   */
-  trackPageUsage() {
-    try {
-      const usage = {
-        timestamp: Date.now(),
-        page: 'focus-anxiety',
-        sessionId: this.generateSessionId()
-      };
-
-      // Store usage data (if storage is available)
-      if (typeof chrome !== 'undefined' && chrome.storage) {
-        chrome.storage.local.get('wellnessUsage').then(result => {
-          const usageData = result.wellnessUsage || [];
-          usageData.push(usage);
-          
-          // Keep only last 100 entries
-          const limitedData = usageData.slice(-100);
-          
-          chrome.storage.local.set({ wellnessUsage: limitedData });
-        }).catch(error => {
-          console.warn('Could not save usage data:', error);
-        });
-      }
-
-    } catch (error) {
-      console.warn('Could not track page usage:', error);
-    }
-  }
-
-  /**
-   * Track individual tool usage
-   */
-  trackToolUsage(toolType) {
-    try {
-      const toolUsage = {
-        timestamp: Date.now(),
-        tool: toolType,
-        page: 'focus-anxiety'
-      };
-
-      if (typeof chrome !== 'undefined' && chrome.storage) {
-        chrome.storage.local.get('toolUsage').then(result => {
-          const usageData = result.toolUsage || [];
-          usageData.push(toolUsage);
-          
-          // Keep only last 200 entries
-          const limitedData = usageData.slice(-200);
-          
-          chrome.storage.local.set({ toolUsage: limitedData });
-        }).catch(error => {
-          console.warn('Could not save tool usage data:', error);
-        });
-      }
-
-    } catch (error) {
-      console.warn('Could not track tool usage:', error);
-    }
-  }
-
-  /**
-   * Handle page becoming hidden
-   */
-  handlePageHidden() {
-    try {
-      // Pause any active tools or timers
-      this.pauseActiveTools();
-      
-      console.log('Focus & Anxiety page hidden, pausing tools');
-
-    } catch (error) {
-      console.error('Error handling page hidden:', error);
-    }
-  }
-
-  /**
-   * Handle page becoming visible
-   */
-  handlePageVisible() {
-    try {
-      // Resume any paused tools
-      this.resumeActiveTools();
-      
-      console.log('Focus & Anxiety page visible, resuming tools');
-
-    } catch (error) {
-      console.error('Error handling page visible:', error);
-    }
-  }
-
-  /**
-   * Pause active tools
-   */
-  pauseActiveTools() {
-    // Placeholder for pausing active tools
-    console.log('Pausing active wellness tools');
-  }
-
-  /**
-   * Resume active tools
-   */
-  resumeActiveTools() {
-    // Placeholder for resuming active tools
-    console.log('Resuming active wellness tools');
-  }
-
-  /**
-   * Initialize fallback mode when full initialization fails
-   */
-  initializeFallbackMode() {
-    console.warn('Focus & Anxiety Management page running in fallback mode');
-    
-    // Create basic error message
-    const errorMessage = document.createElement('div');
-    errorMessage.className = 'fallback-message';
-    errorMessage.innerHTML = `
-      <h2>Limited Functionality</h2>
-      <p>Some wellness tools may not be available due to technical issues.</p>
-      <p>Please try refreshing the page or contact support if the problem persists.</p>
-    `;
-    
-    document.body.insertBefore(errorMessage, document.body.firstChild);
-  }
-
-  /**
-   * Generate unique session ID
-   */
-  generateSessionId() {
-    return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-  }
-
-  /**
-   * Clean up resources when page is unloaded
-   */
-  cleanup() {
-    try {
-      // Deactivate all tools
-      this.deactivateAllTools();
-      
-      // Clear any timers or intervals
-      // (placeholder for actual cleanup)
-      
-      console.log('Focus & Anxiety page cleanup completed');
-
-    } catch (error) {
-      console.error('Error during cleanup:', error);
-    }
+  if (window.innerWidth < 520) {
+    memoryBoard.style.gridTemplateColumns = "repeat(2, 120px)";
+  } else {
+    memoryBoard.style.gridTemplateColumns = "repeat(4, 120px)";
   }
 }
 
-// Initialize the focus and anxiety manager when page loads
-document.addEventListener('DOMContentLoaded', () => {
-  try {
-    window.focusAnxietyManager = new FocusAnxietyManager();
-  } catch (error) {
-    console.error('Failed to initialize Focus & Anxiety Management page:', error);
+function revealAllThenHide(ms = 2000) {
+  const inners = memoryBoard.querySelectorAll(".card-inner");
+  inners.forEach((i) => i.classList.add("flipped"));
+  setTimeout(() => {
+    inners.forEach((i) => i.classList.remove("flipped"));
+    memoryState.lock = false;
+    startMemoryTimer();
+    restartMemoryBtn.style.display = "inline-block";
+    startMemoryBtn.style.display = "none";
+  }, ms);
+}
+
+function onMemoryCardClick(cardElem, innerElem) {
+  if (memoryState.lock) return;
+  if (innerElem.classList.contains("flipped")) return;
+  innerElem.classList.add("flipped");
+
+  if (!memoryState.first) {
+    memoryState.first = innerElem;
+    return;
+  }
+  memoryState.second = innerElem;
+  memoryState.lock = true;
+
+  const val1 = memoryState.first.dataset.value;
+  const val2 = memoryState.second.dataset.value;
+
+  if (val1 === val2) {
+    memoryState.matchedPairs += 1;
+    memoryState.first.classList.add("matched");
+    memoryState.second.classList.add("matched");
+    memoryState.first = null;
+    memoryState.second = null;
+    memoryState.lock = false;
+
+    if (memoryState.matchedPairs === pairs) {
+      stopMemoryTimer();
+      setTimeout(() => {
+        alert(`Nice! You completed the memory game in ${memoryState.elapsed}s`);
+      }, 250);
+    }
+  } else {
+    setTimeout(() => {
+      memoryState.first.classList.remove("flipped");
+      memoryState.second.classList.remove("flipped");
+      memoryState.first = null;
+      memoryState.second = null;
+      memoryState.lock = false;
+    }, 800);
+  }
+}
+
+function startMemoryTimer() {
+  stopMemoryTimer();
+  memoryState.startTime = Date.now();
+  memoryState.elapsed = 0;
+  timerEl.textContent = `Time: 0s`;
+  memoryState.timerId = setInterval(() => {
+    memoryState.elapsed = Math.floor(
+      (Date.now() - memoryState.startTime) / 1000
+    );
+    timerEl.textContent = `Time: ${memoryState.elapsed}s`;
+  }, 1000);
+}
+
+function stopMemoryTimer() {
+  if (memoryState.timerId) clearInterval(memoryState.timerId);
+  memoryState.timerId = null;
+}
+
+startMemoryBtn.addEventListener("click", () => {
+  pairs = EMOJIS.length;
+  buildMemoryBoard();
+  revealAllThenHide(2000);
+});
+
+restartMemoryBtn.addEventListener("click", () => {
+  stopMemoryTimer();
+  timerEl.textContent = `Time: 0s`;
+  startMemoryBtn.style.display = "inline-block";
+  restartMemoryBtn.style.display = "none";
+  buildMemoryBoard();
+  memoryState.lock = true;
+});
+
+/* ------------------ ANXIETY GAME ------------------ */
+const STEPS = [
+  { count: 5, text: "things you can see" },
+  { count: 4, text: "things you can touch" },
+  { count: 3, text: "things you can hear" },
+  { count: 2, text: "things you can smell" },
+  { count: 1, text: "thing you can taste" },
+];
+
+let anxietyState = {
+  stepIndex: 0,
+  poppedInStep: 0,
+  required: STEPS[0].count,
+  active: false,
+};
+
+function setAnxietyPrompt() {
+  const s = STEPS[anxietyState.stepIndex];
+  groundingPrompt.textContent = `Pop ${s.count} ${s.text}`;
+}
+
+function generateBubbles(count = 40) {
+  bubbleContainer.innerHTML = "";
+  const pool = shuffleArray(ITEMS).slice(0, count);
+  pool.forEach((label) => {
+    const b = document.createElement("div");
+    b.className = "bubble";
+    b.textContent = label;
+
+    const size = 48 + Math.random() * 96;
+    b.style.width = `${size}px`;
+    b.style.height = `${size}px`;
+
+    const top = Math.random() * 82 + 4;
+    const left = Math.random() * 86 + 4;
+    b.style.top = `${top}%`;
+    b.style.left = `${left}%`;
+
+    b.addEventListener("click", () => {
+      if (!anxietyState.active) return;
+
+      popSound.currentTime = 0;
+      popSound.play();
+
+      b.classList.add("pop");
+      anxietyState.poppedInStep += 1;
+
+      setTimeout(() => {
+        if (b.parentNode) b.parentNode.removeChild(b);
+      }, 220);
+
+      const required = STEPS[anxietyState.stepIndex].count;
+      if (anxietyState.poppedInStep >= required) {
+        anxietyState.stepIndex += 1;
+        anxietyState.poppedInStep = 0;
+        if (anxietyState.stepIndex < STEPS.length) {
+          setTimeout(() => {
+            setAnxietyPrompt();
+            generateBubbles(40);
+          }, 550);
+        } else {
+          anxietyState.active = false;
+          groundingPrompt.textContent =
+            "✨ Well done! You completed the grounding exercise.";
+          startAnxietyBtn.style.display = "none";
+          restartAnxietyBtn.style.display = "inline-block";
+        }
+      }
+    });
+
+    bubbleContainer.appendChild(b);
+  });
+}
+
+startAnxietyBtn.addEventListener("click", () => {
+  anxietyState.stepIndex = 0;
+  anxietyState.poppedInStep = 0;
+  anxietyState.active = true;
+  startAnxietyBtn.style.display = "none";
+  restartAnxietyBtn.style.display = "inline-block";
+  setAnxietyPrompt();
+  generateBubbles(40);
+});
+
+restartAnxietyBtn.addEventListener("click", () => {
+  anxietyState.stepIndex = 0;
+  anxietyState.poppedInStep = 0;
+  anxietyState.active = false;
+  groundingPrompt.textContent = "Click start to begin";
+  bubbleContainer.innerHTML = "";
+  startAnxietyBtn.style.display = "inline-block";
+  restartAnxietyBtn.style.display = "none";
+});
+
+/* ------------------ CLEANUP ------------------ */
+window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    if (memoryModal.style.display === "flex") {
+      closeModal(memoryModal);
+      stopMemoryTimer();
+    }
+    if (anxietyModal.style.display === "flex") {
+      closeModal(anxietyModal);
+      anxietyState.active = false;
+      bubbleContainer.innerHTML = "";
+      startAnxietyBtn.style.display = "inline-block";
+      restartAnxietyBtn.style.display = "none";
+      groundingPrompt.textContent = "Click start to begin";
+    }
   }
 });
 
-console.log('Focus & Anxiety Management page script loaded');
+/* ------------------ Init ------------------ */
+buildMemoryBoard();
