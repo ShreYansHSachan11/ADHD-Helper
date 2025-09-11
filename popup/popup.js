@@ -2214,6 +2214,21 @@ class SimpleAudioManager {
     return this.volume;
   }
 }
+document.getElementById("backgroundBtn").addEventListener("click", async () => {
+  if (!(await chrome.offscreen.hasDocument())) {
+    await chrome.offscreen.createDocument({
+      url: "../external-pages/offscreen.html",
+      reasons: ["AUDIO_PLAYBACK"],
+      justification: "Play white noise in the background",
+    });
+  }
+
+  chrome.runtime.sendMessage({
+    type: "PLAY_OFFSCREEN_AUDIO",
+    soundIndex: 2,
+    volume: 1,
+  });
+});
 
 // Initialize the popup when the script loads
 new PopupManager();

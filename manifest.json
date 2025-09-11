@@ -10,7 +10,8 @@
     "activeTab",
     "notifications",
     "identity",
-    "alarms"
+    "alarms",
+    "offscreen"
   ],
 
   "host_permissions": [

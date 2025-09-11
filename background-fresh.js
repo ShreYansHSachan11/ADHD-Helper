@@ -181,4 +181,37 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true; // Keep message channel open
 });
 
+let bgAudio = null;
+
+function playBackgroundSound(soundIndex, volume) {
+  const sounds = [
+    { name: "Air Conditioner", file: "./assets/sounds/air-white-noise.mp3" },
+    { name: "Ocean Waves", file: "./assets/sounds/ocean-white-noise.mp3" },
+    { name: "Rain Drops", file: "./assets/sounds/rain-white-noise.mp3" },
+    { name: "Shower", file: "./assets/sounds/shower-white-noise.mp3" },
+    { name: "Train Journey", file: "./assets/sounds/train-white-noise.mp3" },
+    { name: "Flowing Water", file: "./assets/sounds/water-white-noise.mp3" },
+    { name: "Waterfall", file: "./assets/sounds/waterfall-white-noise.mp3" },
+  ];
+
+  const sound = sounds[soundIndex] || sounds[0];
+
+  if (bgAudio) bgAudio.pause();
+  bgAudio = new Audio(chrome.runtime.getURL(sound.file));
+  bgAudio.loop = true;
+  bgAudio.volume = Math.max(0, Math.min(1, volume));
+  bgAudio.play();
+}
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg.type === "PLAY_OFFSCREEN_AUDIO") {
+    chrome.runtime.sendMessage({
+      type: "PLAY_IN_OFFSCREEN",
+      soundIndex: msg.soundIndex,
+      volume: msg.volume,
+    });
+    sendResponse({ success: true });
+  }
+  return true;
+});
+
 console.log("Fresh background service worker ready!");
