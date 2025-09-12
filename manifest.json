@@ -27,16 +27,16 @@
     "default_popup": "popup/popup.html",
     "default_title": "Nudge",
     "default_icon": {
-      "16": "./assets/icons/16.ico",
-      "48": "./assets/icons/48.ico",
-      "128": "./assets/icons/128.ico"
+      "16": "assets/icons/icon16.png",
+      "48": "assets/icons/icon48.png",
+      "128": "assets/icons/icon128.png"
     }
   },
 
   "icons": {
-    "16": "./assets/icons/16.ico",
-    "48": "./assets/icons/48.ico",
-    "128": "./assets/icons/128.ico"
+    "16": "assets/icons/icon16.png",
+    "48": "assets/icons/icon48.png",
+    "128": "assets/icons/icon128.png"
   },
 
   "web_accessible_resources": [
