@@ -51,6 +51,12 @@ class PopupManager {
       // Initialize UI elements
       this.initializeElements();
 
+      // Initialize break timer manager
+      await this.initializeBreakTimer();
+
+      // Initialize break settings UI
+      await this.initializeBreakSettings();
+
       // Performance optimization: Lazy load heavy components
       await this.initializeComponentsLazily();
 
@@ -335,6 +341,12 @@ class PopupManager {
     this.breakTypeModal = document.getElementById("breakTypeModal");
     this.closeBreakTypeBtn = document.getElementById("closeBreakTypeBtn");
     this.breakTypeButtons = document.querySelectorAll(".break-type-btn");
+    
+    // Break timer manager instance
+    this.breakTimerManager = null;
+    this.breakUpdateInterval = null;
+    this.breakAnalyticsDisplay = null;
+    this.breakSettingsUI = null;
 
     // Focus elements
     this.focusUrlEl = document.getElementById("focusUrl");
@@ -577,6 +589,50 @@ class PopupManager {
 
     // Keyboard navigation
     document.addEventListener("keydown", (e) => this.handleKeydown(e));
+    
+    // Cleanup on page unload
+    window.addEventListener("beforeunload", () => this.cleanup());
+  }
+
+  /**
+   * Cleanup resources when popup is closed
+   */
+  cleanup() {
+    try {
+      if (this.breakUpdateInterval) {
+        clearInterval(this.breakUpdateInterval);
+        this.breakUpdateInterval = null;
+      }
+      
+      if (this.breakAnalyticsDisplay) {
+        this.breakAnalyticsDisplay.destroy();
+        this.breakAnalyticsDisplay = null;
+      }
+      
+      if (this.breakSettingsUI) {
+        this.breakSettingsUI.destroy();
+        this.breakSettingsUI = null;
+      }
+    } catch (error) {
+      console.error("Error during cleanup:", error);
+    }
+  }
+
+  /**
+   * Show error message to user
+   */
+  showError(message) {
+    try {
+      if (this.errorHandler) {
+        this.errorHandler.showUserFeedback(message, "error", { duration: 4000 });
+      } else {
+        console.error("Error:", message);
+        // Fallback: show alert if no error handler
+        alert(message);
+      }
+    } catch (error) {
+      console.error("Error showing error message:", error);
+    }
   }
 
   async loadInitialDataWithErrorHandling() {
@@ -908,11 +964,370 @@ class PopupManager {
     }
   }
 
+  /**
+   * Initialize break timer manager
+   */
+  async initializeBreakTimer() {
+    try {
+      if (typeof BreakTimerManager !== 'undefined') {
+        this.breakTimerManager = new BreakTimerManager();
+        
+        // Start periodic updates for break controls
+        this.startBreakControlsUpdates();
+        
+        console.log("Break timer manager initialized successfully");
+      } else {
+        console.warn("BreakTimerManager not available");
+      }
+      
+      // Initialize break analytics display
+      await this.initializeBreakAnalytics();
+      
+    } catch (error) {
+      console.error("Failed to initialize break timer manager:", error);
+    }
+  }
+
+  /**
+   * Initialize break analytics display component
+   */
+  async initializeBreakAnalytics() {
+    try {
+      if (typeof BreakAnalyticsDisplay !== 'undefined') {
+        this.breakAnalyticsDisplay = new BreakAnalyticsDisplay('breakAnalyticsContainer');
+        console.log("Break analytics display initialized successfully");
+      } else {
+        console.warn("BreakAnalyticsDisplay not available");
+      }
+    } catch (error) {
+      console.error("Failed to initialize break analytics display:", error);
+    }
+  }
+
+  /**
+   * Initialize break settings UI component
+   */
+  async initializeBreakSettings() {
+    try {
+      if (typeof BreakSettingsUI !== 'undefined') {
+        this.breakSettingsUI = new BreakSettingsUI('breakReminderPanel');
+        
+        // Listen for settings changes
+        document.addEventListener('breakSettingsChanged', (event) => {
+          this.handleBreakSettingsChanged(event.detail);
+        });
+        
+        console.log("Break settings UI initialized successfully");
+      } else {
+        console.warn("BreakSettingsUI not available");
+      }
+    } catch (error) {
+      console.error("Failed to initialize break settings UI:", error);
+    }
+  }
+
+  /**
+   * Start periodic updates for break controls UI
+   */
+  startBreakControlsUpdates() {
+    // Update immediately
+    this.updateBreakControlsUI();
+    
+    // Update every second
+    this.breakUpdateInterval = setInterval(() => {
+      this.updateBreakControlsUI();
+    }, 1000);
+  }
+
+  /**
+   * Update break controls UI based on current timer status
+   */
+  async updateBreakControlsUI() {
+    try {
+      if (!this.breakTimerManager) return;
+      
+      const status = this.breakTimerManager.getTimerStatus();
+      if (!status) return;
+      
+      // Update work timer display
+      const workTimeMinutes = Math.floor(status.currentWorkTime / (1000 * 60));
+      const workTimeSeconds = Math.floor((status.currentWorkTime % (1000 * 60)) / 1000);
+      const workTimeDisplay = `${workTimeMinutes}m ${workTimeSeconds}s`;
+      
+      if (this.currentTimeEl) {
+        this.currentTimeEl.textContent = workTimeDisplay;
+        
+        // Add visual indicators based on work time
+        this.currentTimeEl.classList.remove('time-warning', 'time-danger');
+        if (status.isThresholdExceeded) {
+          this.currentTimeEl.classList.add('time-danger');
+        } else if (workTimeMinutes >= 20) {
+          this.currentTimeEl.classList.add('time-warning');
+        }
+      }
+      
+      // Update break status display
+      if (status.isOnBreak) {
+        this.showBreakStatus(status);
+      } else {
+        this.showWorkControls(status);
+      }
+      
+      // Update work time threshold input
+      if (this.timeLimitInput && status.workTimeThreshold) {
+        const thresholdMinutes = Math.floor(status.workTimeThreshold / (1000 * 60));
+        if (parseInt(this.timeLimitInput.value) !== thresholdMinutes) {
+          this.timeLimitInput.value = thresholdMinutes;
+        }
+      }
+      
+    } catch (error) {
+      console.error("Error updating break controls UI:", error);
+    }
+  }
+
+  /**
+   * Show break status when user is on break
+   */
+  showBreakStatus(status) {
+    try {
+      if (this.breakStatus && this.workControls) {
+        this.breakStatus.style.display = 'block';
+        this.workControls.style.display = 'none';
+        
+        // Update break type display
+        if (this.breakType && status.breakType) {
+          const breakTypeLabels = {
+            short: 'Short Break',
+            medium: 'Medium Break', 
+            long: 'Long Break'
+          };
+          this.breakType.textContent = breakTypeLabels[status.breakType] || status.breakType;
+        }
+        
+        // Update remaining time display
+        if (this.breakTimeRemaining) {
+          const remainingMs = status.remainingBreakTime;
+          const remainingMinutes = Math.floor(remainingMs / (1000 * 60));
+          const remainingSeconds = Math.floor((remainingMs % (1000 * 60)) / 1000);
+          this.breakTimeRemaining.textContent = `${remainingMinutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+        }
+        
+        // Enable end break button
+        if (this.endBreakBtn) {
+          this.endBreakBtn.disabled = false;
+        }
+      }
+    } catch (error) {
+      console.error("Error showing break status:", error);
+    }
+  }
+
+  /**
+   * Show work controls when user is working
+   */
+  showWorkControls(status) {
+    try {
+      if (this.breakStatus && this.workControls) {
+        this.breakStatus.style.display = 'none';
+        this.workControls.style.display = 'block';
+        
+        // Enable/disable take break button based on timer state
+        if (this.takeBreakBtn) {
+          this.takeBreakBtn.disabled = !status.isWorkTimerActive;
+          
+          // Update button text based on work time
+          if (status.isThresholdExceeded) {
+            this.takeBreakBtn.textContent = 'Take Break Now (Recommended)';
+            this.takeBreakBtn.classList.add('btn-primary');
+            this.takeBreakBtn.classList.remove('btn-secondary');
+          } else {
+            this.takeBreakBtn.textContent = 'Take Break Now';
+            this.takeBreakBtn.classList.add('btn-secondary');
+            this.takeBreakBtn.classList.remove('btn-primary');
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error showing work controls:", error);
+    }
+  }
+
+  /**
+   * Handle take break button click
+   */
+  async handleTakeBreak() {
+    try {
+      if (!this.breakTimerManager) {
+        console.error("Break timer manager not available");
+        return;
+      }
+      
+      // Show break type selection modal
+      this.showBreakTypeModal();
+      
+    } catch (error) {
+      console.error("Error handling take break:", error);
+      this.showError("Failed to start break. Please try again.");
+    }
+  }
+
+  /**
+   * Show break type selection modal
+   */
+  showBreakTypeModal() {
+    try {
+      if (this.breakTypeModal) {
+        this.breakTypeModal.style.display = 'flex';
+        
+        // Focus first break type button for accessibility
+        const firstButton = this.breakTypeModal.querySelector('.break-type-btn');
+        if (firstButton) {
+          firstButton.focus();
+        }
+      }
+    } catch (error) {
+      console.error("Error showing break type modal:", error);
+    }
+  }
+
+  /**
+   * Close break type selection modal
+   */
+  closeBreakTypeModal() {
+    try {
+      if (this.breakTypeModal) {
+        this.breakTypeModal.style.display = 'none';
+      }
+    } catch (error) {
+      console.error("Error closing break type modal:", error);
+    }
+  }
+
+  /**
+   * Handle break type selection
+   */
+  async handleBreakTypeSelection(breakType, duration) {
+    try {
+      if (!this.breakTimerManager) {
+        console.error("Break timer manager not available");
+        return;
+      }
+      
+      // Close modal first
+      this.closeBreakTypeModal();
+      
+      // Start the selected break
+      const success = await this.breakTimerManager.startBreak(breakType, duration);
+      
+      if (success) {
+        console.log(`Started ${breakType} break for ${duration} minutes`);
+        
+        // Show success feedback
+        this.showBreakStatus({
+          isOnBreak: true,
+          breakType: breakType,
+          remainingBreakTime: duration * 60 * 1000
+        });
+        
+        // Show success message
+        if (this.errorHandler) {
+          this.errorHandler.showUserFeedback(
+            `${breakType.charAt(0).toUpperCase() + breakType.slice(1)} break started! Enjoy your ${duration}-minute break.`,
+            "success",
+            { duration: 3000 }
+          );
+        }
+      } else {
+        console.error("Failed to start break");
+        this.showError("Failed to start break. Please try again.");
+      }
+      
+    } catch (error) {
+      console.error("Error handling break type selection:", error);
+      this.showError("Failed to start break. Please try again.");
+    }
+  }
+
+  /**
+   * Handle end break button click
+   */
+  async handleEndBreak() {
+    try {
+      if (!this.breakTimerManager) {
+        console.error("Break timer manager not available");
+        return;
+      }
+      
+      const success = await this.breakTimerManager.endBreak();
+      
+      if (success) {
+        console.log("Break ended successfully");
+        
+        // Update UI immediately
+        this.updateBreakControlsUI();
+        
+        // Show success message
+        if (this.errorHandler) {
+          this.errorHandler.showUserFeedback(
+            "Break ended. Work timer has been reset.",
+            "success",
+            { duration: 2000 }
+          );
+        }
+      } else {
+        console.error("Failed to end break");
+        this.showError("Failed to end break. Please try again.");
+      }
+      
+    } catch (error) {
+      console.error("Error handling end break:", error);
+      this.showError("Failed to end break. Please try again.");
+    }
+  }
+
+  /**
+   * Handle break settings changes
+   */
+  async handleBreakSettingsChanged(newSettings) {
+    try {
+      console.log("Break settings changed:", newSettings);
+      
+      // Update break timer manager with new settings
+      if (this.breakTimerManager && newSettings.workTimeThresholdMinutes) {
+        await this.breakTimerManager.updateWorkTimeThreshold(newSettings.workTimeThresholdMinutes);
+      }
+      
+      // Update the time limit input in the UI to reflect the new setting
+      if (this.timeLimitInput && newSettings.workTimeThresholdMinutes) {
+        this.timeLimitInput.value = newSettings.workTimeThresholdMinutes;
+      }
+      
+      // Show feedback to user
+      if (this.errorHandler) {
+        this.errorHandler.showUserFeedback(
+          "Break reminder settings updated successfully!",
+          "success",
+          { duration: 2000 }
+        );
+      }
+      
+    } catch (error) {
+      console.error("Error handling break settings change:", error);
+      this.showError("Failed to apply new settings. Please try again.");
+    }
+  }
+
   // Screen Time Methods
   async handleTimeLimitChange(event) {
     const newLimit = parseInt(event.target.value);
     if (newLimit >= 5 && newLimit <= 180) {
       try {
+        // Update break timer manager threshold
+        if (this.breakTimerManager) {
+          await this.breakTimerManager.updateWorkTimeThreshold(newLimit);
+        }
+        
         // Update storage with new limit
         const settings =
           (await chrome.storage.local.get("screenTimeSettings")) || {};

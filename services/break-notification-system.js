@@ -130,6 +130,12 @@ class BreakNotificationSystem {
     try {
       const now = Date.now();
 
+      // Check if notifications are enabled
+      if (this.breakTimerManager && !this.breakTimerManager.areNotificationsEnabled()) {
+        console.log("Break notifications are disabled");
+        return false;
+      }
+
       // Check cooldown period to prevent spam
       if (now - this.lastBreakNotificationTime < this.cooldownPeriod) {
         console.log("Break notification on cooldown");

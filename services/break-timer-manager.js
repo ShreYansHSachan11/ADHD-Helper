@@ -18,6 +18,7 @@ class BreakTimerManager {
     
     // Storage and dependencies
     this.storageManager = null;
+    this.settingsManager = null;
     this.constants = null;
     this.helpers = null;
     
@@ -45,17 +46,25 @@ class BreakTimerManager {
       if (typeof importScripts !== "undefined") {
         importScripts(
           "/services/storage-manager.js",
+          "/services/break-settings-manager.js",
           "/utils/constants.js",
           "/utils/helpers.js"
         );
         this.storageManager = new StorageManager();
+        this.settingsManager = new BreakSettingsManager();
         this.constants = CONSTANTS;
         this.helpers = HELPERS;
       } else {
         // For testing environment, use globally available dependencies
         this.storageManager = this.storageManager || new StorageManager();
+        this.settingsManager = this.settingsManager || new BreakSettingsManager();
         this.constants = this.constants || CONSTANTS;
         this.helpers = this.helpers || HELPERS;
+      }
+      
+      // Initialize settings manager
+      if (this.settingsManager) {
+        await this.settingsManager.init();
       }
       
       // Load persisted state
@@ -64,8 +73,8 @@ class BreakTimerManager {
       // Setup browser focus detection
       await this.setupFocusDetection();
       
-      // Initialize default settings if needed
-      await this.initializeDefaultSettings();
+      // Load settings from settings manager
+      await this.loadSettingsFromManager();
       
       console.log("BreakTimerManager initialized successfully");
     } catch (error) {
@@ -162,30 +171,21 @@ class BreakTimerManager {
   }
 
   /**
-   * Initialize default break settings
+   * Load settings from settings manager
    */
-  async initializeDefaultSettings() {
+  async loadSettingsFromManager() {
     try {
-      const existingSettings = await this.storageManager.get(this.STORAGE_KEYS.BREAK_SETTINGS);
-      
-      if (!existingSettings) {
-        const defaultSettings = {
-          workTimeThresholdMinutes: 30,
-          notificationsEnabled: true,
-          breakTypes: {
-            short: { duration: 5, label: "Short Break (5 min)" },
-            medium: { duration: 15, label: "Medium Break (15 min)" },
-            long: { duration: 30, label: "Long Break (30 min)" }
-          }
-        };
-        
-        await this.storageManager.set(this.STORAGE_KEYS.BREAK_SETTINGS, defaultSettings);
-        this.workTimeThreshold = defaultSettings.workTimeThresholdMinutes * 60 * 1000;
+      if (this.settingsManager) {
+        this.workTimeThreshold = this.settingsManager.getWorkTimeThresholdMs();
+        console.log(`Work time threshold loaded: ${this.workTimeThreshold / 1000 / 60} minutes`);
       } else {
-        this.workTimeThreshold = (existingSettings.workTimeThresholdMinutes || 30) * 60 * 1000;
+        // Fallback to default
+        this.workTimeThreshold = 30 * 60 * 1000;
+        console.warn("Settings manager not available, using default threshold");
       }
     } catch (error) {
-      console.error("Error initializing default settings:", error);
+      console.error("Error loading settings from manager:", error);
+      this.workTimeThreshold = 30 * 60 * 1000;
     }
   }
 
@@ -492,17 +492,55 @@ class BreakTimerManager {
    */
   async updateWorkTimeThreshold(minutes) {
     try {
-      this.workTimeThreshold = minutes * 60 * 1000;
-      
-      const settings = await this.storageManager.get(this.STORAGE_KEYS.BREAK_SETTINGS) || {};
-      settings.workTimeThresholdMinutes = minutes;
-      await this.storageManager.set(this.STORAGE_KEYS.BREAK_SETTINGS, settings);
-      
-      console.log(`Work time threshold updated to ${minutes} minutes`);
-      return true;
+      if (this.settingsManager) {
+        const success = await this.settingsManager.updateWorkTimeThreshold(minutes);
+        if (success) {
+          this.workTimeThreshold = minutes * 60 * 1000;
+          console.log(`Work time threshold updated to ${minutes} minutes`);
+        }
+        return success;
+      } else {
+        // Fallback to direct storage update
+        this.workTimeThreshold = minutes * 60 * 1000;
+        const settings = await this.storageManager.get(this.STORAGE_KEYS.BREAK_SETTINGS) || {};
+        settings.workTimeThresholdMinutes = minutes;
+        await this.storageManager.set(this.STORAGE_KEYS.BREAK_SETTINGS, settings);
+        console.log(`Work time threshold updated to ${minutes} minutes (fallback)`);
+        return true;
+      }
     } catch (error) {
       console.error("Error updating work time threshold:", error);
       return false;
+    }
+  }
+
+  /**
+   * Check if notifications are enabled
+   */
+  areNotificationsEnabled() {
+    try {
+      if (this.settingsManager) {
+        return this.settingsManager.areNotificationsEnabled();
+      }
+      return true; // Default to enabled
+    } catch (error) {
+      console.error("Error checking notifications setting:", error);
+      return true;
+    }
+  }
+
+  /**
+   * Get current settings
+   */
+  getCurrentSettings() {
+    try {
+      if (this.settingsManager) {
+        return this.settingsManager.getSettings();
+      }
+      return null;
+    } catch (error) {
+      console.error("Error getting current settings:", error);
+      return null;
     }
   }
 
