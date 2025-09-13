@@ -323,6 +323,18 @@ class PopupManager {
     this.timeLimitInput = document.getElementById("timeLimitInput");
     this.takeBreakBtn = document.getElementById("takeBreakBtn");
     this.resetScreenTimeBtn = document.getElementById("resetScreenTimeBtn");
+    
+    // Break status elements
+    this.breakStatus = document.getElementById("breakStatus");
+    this.workControls = document.getElementById("workControls");
+    this.breakType = document.getElementById("breakType");
+    this.breakTimeRemaining = document.getElementById("breakTimeRemaining");
+    this.endBreakBtn = document.getElementById("endBreakBtn");
+    
+    // Break type modal elements
+    this.breakTypeModal = document.getElementById("breakTypeModal");
+    this.closeBreakTypeBtn = document.getElementById("closeBreakTypeBtn");
+    this.breakTypeButtons = document.querySelectorAll(".break-type-btn");
 
     // Focus elements
     this.focusUrlEl = document.getElementById("focusUrl");
@@ -432,6 +444,19 @@ class PopupManager {
     this.resetScreenTimeBtn?.addEventListener("click", () =>
       this.resetScreenTimeData()
     );
+    
+    // Break control event listeners
+    this.endBreakBtn?.addEventListener("click", () => this.handleEndBreak());
+    this.closeBreakTypeBtn?.addEventListener("click", () => this.closeBreakTypeModal());
+    
+    // Break type selection event listeners
+    this.breakTypeButtons?.forEach(btn => {
+      btn.addEventListener("click", () => {
+        const breakType = btn.dataset.breakType;
+        const duration = parseInt(btn.dataset.duration);
+        this.handleBreakTypeSelection(breakType, duration);
+      });
+    });
 
     // Focus listeners
     this.setFocusBtn?.addEventListener("click", () => this.handleSetFocus());
@@ -491,7 +516,7 @@ class PopupManager {
       whiteNoiseBtn3.addEventListener("click", () => {
         whiteNoisePanel.style.display =
           whiteNoisePanel.style.display === "none" ||
-          whiteNoisePanel.style.display === ""
+            whiteNoisePanel.style.display === ""
             ? "block"
             : "none";
       });
@@ -921,21 +946,66 @@ class PopupManager {
 
   async handleTakeBreak() {
     try {
-      // Send message to background script to trigger manual break
+      // Show break type selection modal
+      this.showBreakTypeModal();
+    } catch (error) {
+      console.error("Failed to show break type modal:", error);
+      this.showScreenTimeStatus("Failed to show break options", "error");
+    }
+  }
+
+  showBreakTypeModal() {
+    if (this.breakTypeModal) {
+      this.breakTypeModal.style.display = "flex";
+    }
+  }
+
+  closeBreakTypeModal() {
+    if (this.breakTypeModal) {
+      this.breakTypeModal.style.display = "none";
+    }
+  }
+
+  async handleBreakTypeSelection(breakType, duration) {
+    try {
+      this.closeBreakTypeModal();
+      
+      // Start the selected break
       const response = await chrome.runtime.sendMessage({
-        type: "TRIGGER_MANUAL_BREAK",
+        type: "START_BREAK",
+        breakType: breakType,
+        durationMinutes: duration
       });
 
       if (response && response.success) {
-        this.showScreenTimeStatus("Break started! Timer reset.", "success");
-        // Update the current time display immediately
-        this.updateCurrentTime(0);
+        this.showScreenTimeStatus(`${breakType} break started!`, "success");
+        // Update break status display
+        await this.updateBreakStatus();
       } else {
-        this.showScreenTimeStatus("Failed to trigger break", "error");
+        this.showScreenTimeStatus("Failed to start break", "error");
       }
     } catch (error) {
-      console.error("Failed to trigger break:", error);
-      this.showScreenTimeStatus("Failed to trigger break", "error");
+      console.error("Failed to start break:", error);
+      this.showScreenTimeStatus("Failed to start break", "error");
+    }
+  }
+
+  async handleEndBreak() {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: "CANCEL_BREAK"
+      });
+
+      if (response && response.success) {
+        this.showScreenTimeStatus("Break ended early", "success");
+        // Update break status display
+        await this.updateBreakStatus();
+      } else {
+        this.showScreenTimeStatus("Failed to end break", "error");
+      }
+    } catch (error) {
+      console.error("Failed to end break:", error);
+      this.showScreenTimeStatus("Failed to end break", "error");
     }
   }
 
@@ -964,6 +1034,9 @@ class PopupManager {
         this.updateCurrentTime(0);
         this.updateBreakReminderCount(0);
       }
+      
+      // Update break status
+      await this.updateBreakStatus();
     } catch (error) {
       console.error("Failed to get current time:", error);
       this.updateCurrentTime(0);
@@ -1021,9 +1094,8 @@ class PopupManager {
     }
 
     if (count > 0) {
-      reminderCountEl.textContent = `(${count} reminder${
-        count > 1 ? "s" : ""
-      })`;
+      reminderCountEl.textContent = `(${count} reminder${count > 1 ? "s" : ""
+        })`;
       reminderCountEl.style.display = "inline";
     } else {
       reminderCountEl.style.display = "none";
@@ -1553,9 +1625,8 @@ class PopupManager {
     };
 
     if (this.priorityInfo) {
-      this.priorityInfo.innerHTML = `<small>${
-        infoTexts[priority] || infoTexts.medium
-      }</small>`;
+      this.priorityInfo.innerHTML = `<small>${infoTexts[priority] || infoTexts.medium
+        }</small>`;
     }
   }
 
@@ -1852,8 +1923,7 @@ class PopupManager {
         }
 
         console.log(
-          `White noise ${result.isPlaying ? "started" : "stopped"}: ${
-            result.soundName
+          `White noise ${result.isPlaying ? "started" : "stopped"}: ${result.soundName
           }`
         );
       } else {
@@ -2114,6 +2184,65 @@ class PopupManager {
       if (this.breathingModal.style.display === "flex") {
         this.hideBreathingModal();
       }
+    }
+  }
+
+  async updateBreakStatus() {
+    try {
+      // Get break timer status from background
+      const response = await chrome.runtime.sendMessage({
+        type: "GET_BREAK_TIMER_STATUS",
+      });
+
+      if (response && response.success && response.data) {
+        const status = response.data;
+        
+        if (status.isOnBreak) {
+          // Show break status, hide work controls
+          this.showBreakStatus(status);
+        } else {
+          // Show work controls, hide break status
+          this.showWorkControls();
+        }
+      } else {
+        // Default to work controls if no status available
+        this.showWorkControls();
+      }
+    } catch (error) {
+      console.error("Failed to get break status:", error);
+      this.showWorkControls();
+    }
+  }
+
+  showBreakStatus(status) {
+    if (this.breakStatus && this.workControls) {
+      this.breakStatus.style.display = "block";
+      this.workControls.style.display = "none";
+      
+      // Update break type display
+      if (this.breakType) {
+        const breakTypeLabels = {
+          short: "Short Break",
+          medium: "Medium Break", 
+          long: "Long Break"
+        };
+        this.breakType.textContent = breakTypeLabels[status.breakType] || "Break";
+      }
+      
+      // Update remaining time display
+      if (this.breakTimeRemaining && status.remainingBreakTime) {
+        const remainingMinutes = Math.ceil(status.remainingBreakTime / (1000 * 60));
+        const minutes = Math.floor(remainingMinutes);
+        const seconds = Math.floor((status.remainingBreakTime % (1000 * 60)) / 1000);
+        this.breakTimeRemaining.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+      }
+    }
+  }
+
+  showWorkControls() {
+    if (this.breakStatus && this.workControls) {
+      this.breakStatus.style.display = "none";
+      this.workControls.style.display = "block";
     }
   }
 }

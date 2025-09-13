@@ -374,6 +374,7 @@ describe('BreakTimerManager', () => {
         isWorkTimerActive: true,
         isOnBreak: false,
         breakType: null,
+        workStartTime: expect.any(Number),
         currentWorkTime: 20 * 60 * 1000, // 15 + 5 minutes
         totalWorkTime: 15 * 60 * 1000,
         workTimeThreshold: 30 * 60 * 1000,

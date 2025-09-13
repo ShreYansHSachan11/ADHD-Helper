@@ -6,14 +6,27 @@
 // Initialize service worker
 console.log("Focus Productivity Extension background service worker loaded");
 
+// Import service dependencies
+importScripts(
+  "/services/storage-manager.js",
+  "/services/break-timer-manager.js",
+  "/services/break-notification-system.js",
+  "/services/tab-tracker.js",
+  "/services/gemini-service.js",
+  "/services/pomodoro-service.js",
+  "/utils/constants.js",
+  "/utils/helpers.js"
+);
+
 // Global instances
 let tabTracker = null;
 let storageManager = null;
 let geminiService = null;
 let pomodoroService = null;
+let breakTimerManager = null;
+let breakNotificationSystem = null;
 
-// No imports - self-contained background script
-console.log("Background script loaded without imports");
+console.log("Background script loaded with service dependencies");
 
 /**
  * Extension installation and startup
@@ -32,7 +45,18 @@ chrome.runtime.onInstalled.addListener(async (details) => {
       await initializeDefaultSettings();
     }
 
-    // Initialize tab tracker
+    // Initialize break timer manager first (required by tab tracker)
+    if (!breakTimerManager) {
+      breakTimerManager = new BreakTimerManager();
+    }
+
+    // Initialize break notification system
+    if (!breakNotificationSystem) {
+      breakNotificationSystem = new BreakNotificationSystem();
+      breakNotificationSystem.setBreakTimerManager(breakTimerManager);
+    }
+
+    // Initialize tab tracker (will integrate with break timer manager)
     if (!tabTracker) {
       tabTracker = new TabTracker();
     }
@@ -50,7 +74,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     // Initialize notification system
     await initializeNotificationSystem();
 
-    console.log("Background service worker initialized successfully");
+    console.log("Background service worker initialized successfully with integrated work time tracking");
   } catch (error) {
     console.error("Error initializing background service worker:", error);
   }
@@ -60,19 +84,37 @@ chrome.runtime.onInstalled.addListener(async (details) => {
  * Service worker startup (when browser starts)
  */
 chrome.runtime.onStartup.addListener(async () => {
-  console.log("Browser startup detected");
+  console.log("Browser startup detected - recovering work time tracking state");
 
   try {
     // Reinitialize components if needed
     if (!storageManager) {
       storageManager = new StorageManager();
     }
+    
+    // Initialize break timer manager first for state recovery
+    if (!breakTimerManager) {
+      breakTimerManager = new BreakTimerManager();
+    }
+    
+    // Initialize break notification system
+    if (!breakNotificationSystem) {
+      breakNotificationSystem = new BreakNotificationSystem();
+      breakNotificationSystem.setBreakTimerManager(breakTimerManager);
+    }
+    
+    // Initialize tab tracker (will recover timer state)
     if (!tabTracker) {
       tabTracker = new TabTracker();
+    } else {
+      // If tab tracker exists, trigger state recovery
+      await tabTracker.recoverTimerStateAfterRestart();
     }
 
     // Reinitialize notification system
     await initializeNotificationSystem();
+    
+    console.log("Browser startup recovery completed - work time tracking restored");
   } catch (error) {
     console.error("Error on startup:", error);
   }
@@ -143,6 +185,12 @@ async function initializeNotificationSystem() {
     if (!notificationState.notificationPermissionGranted) {
       console.warn("Notifications permission not granted");
     }
+
+    // Set up periodic break timer checking
+    await chrome.alarms.create("break_timer_check", {
+      delayInMinutes: 1,
+      periodInMinutes: 1
+    });
 
     console.log("Notification system initialized, permission:", permission);
   } catch (error) {
@@ -241,6 +289,44 @@ async function showBreakReminderNotification(tabId, timeSpent) {
 }
 
 /**
+ * Show break timer notification (30-minute work time threshold)
+ */
+async function showBreakTimerNotification(workTime, workMinutes) {
+  try {
+    const now = Date.now();
+    const cooldownMs = 5 * 60 * 1000; // 5 minutes
+
+    // Check cooldown period
+    if (now - notificationState.lastBreakNotificationTime < cooldownMs) {
+      console.log("Break timer notification on cooldown");
+      return false;
+    }
+
+    const notificationId = `break-timer-${now}`;
+
+    const success = await createNotification(notificationId, {
+      title: "Break Reminder! ⏰",
+      message: `You've been working for ${workMinutes} minutes. Time to take a break!`,
+      buttons: [
+        { title: "Short Break (5 min)" },
+        { title: "Medium Break (15 min)" },
+        { title: "Long Break (30 min)" }
+      ],
+    });
+
+    if (success) {
+      notificationState.lastBreakNotificationTime = now;
+      console.log("Break timer notification shown, work time:", workMinutes, "minutes");
+    }
+
+    return success;
+  } catch (error) {
+    console.error("Error showing break timer notification:", error);
+    return false;
+  }
+}
+
+/**
  * Handle messages from popup and content scripts
  */
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -249,13 +335,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 /**
- * Handle Chrome alarms for Pomodoro timer
+ * Handle Chrome alarms for Pomodoro timer and break timers
  */
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   console.log("Alarm triggered:", alarm.name);
 
   if (alarm.name.startsWith("pomodoro_")) {
     await handlePomodoroAlarm(alarm);
+  } else if (alarm.name.startsWith("break_")) {
+    await handleBreakAlarm(alarm);
+  } else if (alarm.name === "break_timer_check") {
+    await handleBreakTimerCheck();
   }
 });
 
@@ -371,6 +461,70 @@ async function updatePomodoroStats(action, sessionType) {
   } catch (error) {
     console.error("Error updating Pomodoro stats:", error);
     return null;
+  }
+}
+
+/**
+ * Handle break timer alarms
+ */
+async function handleBreakAlarm(alarm) {
+  try {
+    if (!breakTimerManager) return;
+
+    const timerStatus = breakTimerManager.getTimerStatus();
+    
+    if (timerStatus && timerStatus.isOnBreak) {
+      // Check if break should end
+      const remainingTime = breakTimerManager.getRemainingBreakTime();
+      
+      if (remainingTime <= 0) {
+        await breakTimerManager.endBreak();
+        
+        // Show break completion notification
+        await createNotification(`break-complete-${Date.now()}`, {
+          title: "Break Complete! 🎯",
+          message: "Your break is over. Ready to get back to work?",
+          buttons: [{ title: "Start Working" }],
+        });
+        
+        console.log("Break completed via alarm");
+      }
+    }
+  } catch (error) {
+    console.error("Error handling break alarm:", error);
+  }
+}
+
+/**
+ * Handle periodic break timer checks
+ */
+async function handleBreakTimerCheck() {
+  try {
+    if (!breakTimerManager || !breakNotificationSystem) return;
+
+    const timerStatus = breakTimerManager.getTimerStatus();
+    
+    if (timerStatus && timerStatus.isOnBreak) {
+      const remainingTime = breakTimerManager.getRemainingBreakTime();
+      
+      // Update badge with remaining time
+      await breakTimerManager.updateExtensionBadge();
+      
+      // If break time is up, end the break
+      if (remainingTime <= 0) {
+        await breakTimerManager.endBreak();
+        
+        // Show break completion notification using the notification system
+        await breakNotificationSystem.showBreakCompletionNotification(timerStatus.breakType || "break");
+        
+        console.log("Break completed via periodic check");
+      }
+    } else {
+      // Check if work time threshold is exceeded and show notification
+      await breakNotificationSystem.checkAndNotifyWorkTimeThreshold();
+    }
+  } catch (error) {
+    console.error("Error in break timer check:", error);
   }
 }
 
@@ -524,15 +678,48 @@ async function handleMessage(message, sender, sendResponse) {
         sendResponse({ success: breakSuccess });
         break;
 
+      case "SHOW_BREAK_TIMER_NOTIFICATION":
+        try {
+          if (!breakNotificationSystem) {
+            throw new Error("Break notification system not initialized");
+          }
+          
+          const breakTimerSuccess = await breakNotificationSystem.showWorkTimeThresholdNotification(
+            message.workMinutes
+          );
+          sendResponse({ success: breakTimerSuccess });
+        } catch (error) {
+          console.error("Error showing break timer notification:", error);
+          sendResponse({ success: false, error: error.message });
+        }
+        break;
+
       case "CHECK_NOTIFICATION_PERMISSION":
-        const permission = await chrome.notifications.getPermissionLevel();
-        sendResponse({
-          success: true,
-          data: {
-            permission: permission,
-            granted: permission === "granted",
-          },
-        });
+        try {
+          if (breakNotificationSystem) {
+            const granted = await breakNotificationSystem.checkNotificationPermission();
+            const permission = await chrome.notifications.getPermissionLevel();
+            sendResponse({
+              success: true,
+              data: {
+                permission: permission,
+                granted: granted,
+              },
+            });
+          } else {
+            const permission = await chrome.notifications.getPermissionLevel();
+            sendResponse({
+              success: true,
+              data: {
+                permission: permission,
+                granted: permission === "granted",
+              },
+            });
+          }
+        } catch (error) {
+          console.error("Error checking notification permission:", error);
+          sendResponse({ success: false, error: error.message });
+        }
         break;
 
       case "POMODORO_START_SESSION":
@@ -579,6 +766,159 @@ async function handleMessage(message, sender, sendResponse) {
         }
         break;
 
+      case "GET_BREAK_TIMER_STATUS":
+        try {
+          if (!breakTimerManager) {
+            throw new Error("Break timer manager not initialized");
+          }
+
+          const status = breakTimerManager.getTimerStatus();
+          sendResponse({ success: true, data: status });
+        } catch (error) {
+          console.error("Error getting break timer status:", error);
+          sendResponse({ success: false, error: error.message });
+        }
+        break;
+
+      case "START_BREAK":
+        try {
+          if (!breakTimerManager) {
+            throw new Error("Break timer manager not initialized");
+          }
+
+          const { breakType, durationMinutes } = message;
+          const success = await breakTimerManager.startBreak(breakType, durationMinutes);
+          
+          if (success) {
+            // Set up alarm for break completion
+            const alarmName = `break_${breakType}_${Date.now()}`;
+            await chrome.alarms.create(alarmName, {
+              delayInMinutes: durationMinutes
+            });
+            console.log(`Break alarm set for ${durationMinutes} minutes`);
+          }
+          
+          sendResponse({ success: success });
+        } catch (error) {
+          console.error("Error starting break:", error);
+          sendResponse({ success: false, error: error.message });
+        }
+        break;
+
+      case "END_BREAK":
+        try {
+          if (!breakTimerManager) {
+            throw new Error("Break timer manager not initialized");
+          }
+
+          const success = await breakTimerManager.endBreak();
+          sendResponse({ success: success });
+        } catch (error) {
+          console.error("Error ending break:", error);
+          sendResponse({ success: false, error: error.message });
+        }
+        break;
+
+      case "CANCEL_BREAK":
+        try {
+          if (!breakTimerManager) {
+            throw new Error("Break timer manager not initialized");
+          }
+
+          const success = await breakTimerManager.cancelBreak();
+          sendResponse({ success: success });
+        } catch (error) {
+          console.error("Error cancelling break:", error);
+          sendResponse({ success: false, error: error.message });
+        }
+        break;
+
+      case "RESET_WORK_TIMER":
+        try {
+          if (!breakTimerManager) {
+            throw new Error("Break timer manager not initialized");
+          }
+
+          const success = await breakTimerManager.resetWorkTimer();
+          sendResponse({ success: success });
+        } catch (error) {
+          console.error("Error resetting work timer:", error);
+          sendResponse({ success: false, error: error.message });
+        }
+        break;
+
+      case "GET_INTEGRATED_TIMER_STATUS":
+        try {
+          if (!tabTracker) {
+            throw new Error("Tab tracker not initialized");
+          }
+
+          const status = await tabTracker.getIntegratedTimerStatus();
+          sendResponse({ success: true, data: status });
+        } catch (error) {
+          console.error("Error getting integrated timer status:", error);
+          sendResponse({ success: false, error: error.message });
+        }
+        break;
+
+      case "UPDATE_WORK_TIME_THRESHOLD":
+        try {
+          if (!breakTimerManager) {
+            throw new Error("Break timer manager not initialized");
+          }
+
+          const { minutes } = message;
+          const success = await breakTimerManager.updateWorkTimeThreshold(minutes);
+          sendResponse({ success: success });
+        } catch (error) {
+          console.error("Error updating work time threshold:", error);
+          sendResponse({ success: false, error: error.message });
+        }
+        break;
+
+      case "GET_NOTIFICATION_STATUS":
+        try {
+          if (!breakNotificationSystem) {
+            throw new Error("Break notification system not initialized");
+          }
+
+          const status = breakNotificationSystem.getNotificationStatus();
+          sendResponse({ success: true, data: status });
+        } catch (error) {
+          console.error("Error getting notification status:", error);
+          sendResponse({ success: false, error: error.message });
+        }
+        break;
+
+      case "CLEAR_ALL_NOTIFICATIONS":
+        try {
+          if (!breakNotificationSystem) {
+            throw new Error("Break notification system not initialized");
+          }
+
+          const success = await breakNotificationSystem.clearAllNotifications();
+          sendResponse({ success: success });
+        } catch (error) {
+          console.error("Error clearing all notifications:", error);
+          sendResponse({ success: false, error: error.message });
+        }
+        break;
+
+      case "UPDATE_BREAK_TYPES":
+        try {
+          if (!breakNotificationSystem) {
+            throw new Error("Break notification system not initialized");
+          }
+
+          const { breakTypes } = message;
+          const success = await breakNotificationSystem.updateBreakTypes(breakTypes);
+          sendResponse({ success: success });
+        } catch (error) {
+          console.error("Error updating break types:", error);
+          sendResponse({ success: false, error: error.message });
+        }
+        break;
+
       default:
         sendResponse({ success: false, error: "Unknown message type" });
     }
@@ -593,15 +933,19 @@ async function handleMessage(message, sender, sendResponse) {
  */
 chrome.notifications.onClicked.addListener(async (notificationId) => {
   try {
-    // Clear the notification
-    await chrome.notifications.clear(notificationId);
-    notificationState.activeNotifications.delete(notificationId);
+    if (breakNotificationSystem) {
+      await breakNotificationSystem.handleNotificationClick(notificationId);
+    } else {
+      // Fallback to legacy handling
+      await chrome.notifications.clear(notificationId);
+      notificationState.activeNotifications.delete(notificationId);
 
-    // Open extension popup
-    try {
-      await chrome.action.openPopup();
-    } catch (error) {
-      console.log("Could not open popup:", error);
+      // Open extension popup
+      try {
+        await chrome.action.openPopup();
+      } catch (error) {
+        console.log("Could not open popup:", error);
+      }
     }
   } catch (error) {
     console.error("Error handling notification click:", error);
@@ -614,20 +958,45 @@ chrome.notifications.onClicked.addListener(async (notificationId) => {
 chrome.notifications.onButtonClicked.addListener(
   async (notificationId, buttonIndex) => {
     try {
-      // Clear the notification
-      await chrome.notifications.clear(notificationId);
-      notificationState.activeNotifications.delete(notificationId);
+      if (breakNotificationSystem) {
+        await breakNotificationSystem.handleNotificationButtonClick(notificationId, buttonIndex);
+      } else {
+        // Fallback to legacy handling
+        await chrome.notifications.clear(notificationId);
+        notificationState.activeNotifications.delete(notificationId);
 
-      // Handle different notification types based on button clicked
-      if (notificationId.includes("break")) {
-        if (buttonIndex === 0) {
-          // "Take Break" button clicked
-          if (tabTracker) {
-            await tabTracker.triggerManualBreak();
-            console.log("Manual break triggered from notification");
+        // Handle different notification types based on button clicked
+        if (notificationId.includes("break-timer")) {
+          // Break timer notification with break type selection
+          const breakTypes = [
+            { type: "short", duration: 5 },
+            { type: "medium", duration: 15 },
+            { type: "long", duration: 30 }
+          ];
+
+          if (buttonIndex >= 0 && buttonIndex < breakTypes.length) {
+            const selectedBreak = breakTypes[buttonIndex];
+            
+            if (breakTimerManager) {
+              await breakTimerManager.startBreak(selectedBreak.type, selectedBreak.duration);
+              console.log(`Started ${selectedBreak.type} break (${selectedBreak.duration} min) from notification`);
+            }
+
+            if (tabTracker) {
+              await tabTracker.triggerManualBreak();
+            }
           }
+        } else if (notificationId.includes("break")) {
+          // Legacy break reminder notification
+          if (buttonIndex === 0) {
+            // "Take Break" button clicked
+            if (tabTracker) {
+              await tabTracker.triggerManualBreak();
+              console.log("Manual break triggered from notification");
+            }
+          }
+          // "Continue Working" (buttonIndex === 1) - no action needed, just dismiss
         }
-        // "Continue Working" (buttonIndex === 1) - no action needed, just dismiss
       }
     } catch (error) {
       console.error("Error handling notification button click:", error);
@@ -638,11 +1007,16 @@ chrome.notifications.onButtonClicked.addListener(
 /**
  * Handle notification dismissal (when user closes notification)
  */
-chrome.notifications.onClosed.addListener((notificationId, byUser) => {
+chrome.notifications.onClosed.addListener(async (notificationId, byUser) => {
   try {
-    notificationState.activeNotifications.delete(notificationId);
-    if (byUser) {
-      console.log("Notification dismissed by user:", notificationId);
+    if (breakNotificationSystem) {
+      await breakNotificationSystem.handleNotificationDismissal(notificationId, byUser);
+    } else {
+      // Fallback to legacy handling
+      notificationState.activeNotifications.delete(notificationId);
+      if (byUser) {
+        console.log("Notification dismissed by user:", notificationId);
+      }
     }
   } catch (error) {
     console.error("Error handling notification dismissal:", error);
@@ -660,6 +1034,13 @@ chrome.notifications.onClosed.addListener((notificationId, byUser) => {
     }
     if (!geminiService) {
       geminiService = new GeminiService();
+    }
+    if (!breakTimerManager) {
+      breakTimerManager = new BreakTimerManager();
+    }
+    if (!breakNotificationSystem) {
+      breakNotificationSystem = new BreakNotificationSystem();
+      breakNotificationSystem.setBreakTimerManager(breakTimerManager);
     }
     await initializeNotificationSystem();
     console.log("Service worker initialization complete");

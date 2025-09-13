@@ -20,7 +20,7 @@
   ],
 
   "background": {
-    "service_worker": "background-fresh.js"
+    "service_worker": "background.js"
   },
 
   "action": {

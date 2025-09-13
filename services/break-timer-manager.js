@@ -51,6 +51,11 @@ class BreakTimerManager {
         this.storageManager = new StorageManager();
         this.constants = CONSTANTS;
         this.helpers = HELPERS;
+      } else {
+        // For testing environment, use globally available dependencies
+        this.storageManager = this.storageManager || new StorageManager();
+        this.constants = this.constants || CONSTANTS;
+        this.helpers = this.helpers || HELPERS;
       }
       
       // Load persisted state
@@ -304,6 +309,9 @@ class BreakTimerManager {
       
       await this.persistTimerState();
       
+      // Update extension badge to show break status
+      await this.updateExtensionBadge();
+      
       console.log(`Started ${breakType} break for ${durationMinutes} minutes`);
       return true;
     } catch (error) {
@@ -329,6 +337,9 @@ class BreakTimerManager {
       
       // Reset work timer for new work session
       await this.resetWorkTimer();
+      
+      // Clear extension badge
+      await this.clearExtensionBadge();
       
       console.log("Break ended, work timer reset");
       return true;
@@ -390,6 +401,11 @@ class BreakTimerManager {
       // Resume work timer if paused due to inactivity
       if (!this.isWorkTimerActive && !this.isOnBreak && this.isBrowserFocused) {
         await this.resumeWorkTimer();
+      }
+      
+      // Update badge if on break
+      if (this.isOnBreak) {
+        await this.updateExtensionBadge();
       }
     } catch (error) {
       console.error("Error updating activity:", error);
@@ -456,6 +472,7 @@ class BreakTimerManager {
         isWorkTimerActive: this.isWorkTimerActive,
         isOnBreak: this.isOnBreak,
         breakType: this.breakType,
+        workStartTime: this.workStartTime,
         currentWorkTime: this.getCurrentWorkTime(),
         totalWorkTime: this.totalWorkTime,
         workTimeThreshold: this.workTimeThreshold,
@@ -485,6 +502,63 @@ class BreakTimerManager {
       return true;
     } catch (error) {
       console.error("Error updating work time threshold:", error);
+      return false;
+    }
+  }
+
+  /**
+   * Update extension badge to show break status
+   */
+  async updateExtensionBadge() {
+    try {
+      if (typeof chrome !== 'undefined' && chrome.action) {
+        if (this.isOnBreak) {
+          const remainingMinutes = Math.ceil(this.getRemainingBreakTime() / (1000 * 60));
+          await chrome.action.setBadgeText({ text: `${remainingMinutes}m` });
+          await chrome.action.setBadgeBackgroundColor({ color: '#4CAF50' }); // Green for break
+          await chrome.action.setTitle({ title: `Break: ${remainingMinutes} minutes remaining` });
+        } else {
+          await this.clearExtensionBadge();
+        }
+      }
+    } catch (error) {
+      console.error("Error updating extension badge:", error);
+    }
+  }
+
+  /**
+   * Clear extension badge
+   */
+  async clearExtensionBadge() {
+    try {
+      if (typeof chrome !== 'undefined' && chrome.action) {
+        await chrome.action.setBadgeText({ text: '' });
+        await chrome.action.setTitle({ title: 'Focus Productivity Extension' });
+      }
+    } catch (error) {
+      console.error("Error clearing extension badge:", error);
+    }
+  }
+
+  /**
+   * Cancel current break early
+   */
+  async cancelBreak() {
+    try {
+      if (!this.isOnBreak) {
+        console.log("No active break to cancel");
+        return false;
+      }
+      
+      console.log(`Cancelling ${this.breakType} break early`);
+      
+      // End the break and reset work timer
+      await this.endBreak();
+      
+      console.log("Break cancelled successfully");
+      return true;
+    } catch (error) {
+      console.error("Error cancelling break:", error);
       return false;
     }
   }
