@@ -59,6 +59,10 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     // Initialize tab tracker (will integrate with break timer manager)
     if (!tabTracker) {
       tabTracker = new TabTracker();
+      // Set break timer manager reference for integration
+      if (breakTimerManager) {
+        tabTracker.setBreakTimerManager(breakTimerManager);
+      }
     }
 
     // Initialize Gemini service
@@ -106,6 +110,10 @@ chrome.runtime.onStartup.addListener(async () => {
     // Initialize tab tracker (will recover timer state)
     if (!tabTracker) {
       tabTracker = new TabTracker();
+      // Set break timer manager reference for integration
+      if (breakTimerManager) {
+        tabTracker.setBreakTimerManager(breakTimerManager);
+      }
     } else {
       // If tab tracker exists, trigger state recovery
       await tabTracker.recoverTimerStateAfterRestart();

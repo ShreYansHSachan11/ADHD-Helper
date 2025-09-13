@@ -69,7 +69,7 @@ class TabTracker {
         this.storageManager = this.storageManager || new StorageManager();
         this.constants = this.constants || CONSTANTS;
         this.helpers = this.helpers || HELPERS;
-        this.breakTimerManager = this.breakTimerManager || new BreakTimerManager();
+        // Break timer manager will be set via setBreakTimerManager method
       }
 
       await this.loadStoredData();
@@ -1029,6 +1029,139 @@ class TabTracker {
       console.log("Periodic activity detection setup complete");
     } catch (error) {
       console.error("Error setting up periodic activity detection:", error);
+    }
+  }
+
+  /**
+   * Set break timer manager reference for integration
+   */
+  setBreakTimerManager(breakTimerManager) {
+    this.breakTimerManager = breakTimerManager;
+    console.log("Break timer manager integrated with TabTracker");
+  }
+
+  /**
+   * Get integrated timer status combining tab tracking and break timer data
+   */
+  async getIntegratedTimerStatus() {
+    try {
+      const tabStats = await this.getCurrentTabStats();
+      const breakTimerStatus = this.breakTimerManager ? this.breakTimerManager.getTimerStatus() : null;
+      
+      return {
+        currentTab: tabStats,
+        breakTimer: breakTimerStatus,
+        isIntegrated: Boolean(this.breakTimerManager)
+      };
+    } catch (error) {
+      console.error("Error getting integrated timer status:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Recover timer state after browser restart
+   */
+  async recoverTimerStateAfterRestart() {
+    try {
+      if (this.breakTimerManager) {
+        // Break timer manager handles its own state recovery
+        console.log("Break timer state recovery handled by BreakTimerManager");
+      }
+      
+      // Recover tab tracking state
+      await this.loadStoredData();
+      await this.initializeCurrentTab();
+      
+      console.log("Tab tracker state recovered after restart");
+    } catch (error) {
+      console.error("Error recovering tab tracker state:", error);
+    }
+  }
+
+  /**
+   * Check break timer threshold and show notification if needed
+   */
+  async checkBreakTimerThreshold() {
+    try {
+      if (!this.breakTimerManager) {
+        return false;
+      }
+
+      const status = this.breakTimerManager.getTimerStatus();
+      
+      if (status && status.isThresholdExceeded && !status.isOnBreak) {
+        const workTimeMinutes = Math.floor(status.currentWorkTime / (1000 * 60));
+        
+        // Send message to background script to show break timer notification
+        try {
+          await chrome.runtime.sendMessage({
+            type: "SHOW_BREAK_TIMER_NOTIFICATION",
+            workMinutes: workTimeMinutes,
+          });
+          console.log("Break timer notification request sent, work time:", workTimeMinutes, "minutes");
+          return true;
+        } catch (error) {
+          console.error("Error sending break timer notification request:", error);
+        }
+      }
+      
+      return false;
+    } catch (error) {
+      console.error("Error checking break timer threshold:", error);
+      return false;
+    }
+  }
+
+  /**
+   * Perform periodic activity check (every 30 seconds)
+   */
+  async performPeriodicActivityCheck() {
+    try {
+      if (!this.isInitialized) return;
+
+      // Update activity timestamp
+      await this.updateActivity();
+      
+      // Check break timer threshold if integrated
+      if (this.breakTimerManager) {
+        await this.checkBreakTimerThreshold();
+      }
+      
+    } catch (error) {
+      console.error("Error in periodic activity check:", error);
+    }
+  }
+
+  /**
+   * Perform frequent activity update (every 5 seconds)
+   */
+  async performFrequentActivityUpdate() {
+    try {
+      if (!this.isInitialized || !this.currentTabId) return;
+
+      // Update break timer activity if integrated
+      if (this.breakTimerManager) {
+        await this.breakTimerManager.updateActivity();
+      }
+      
+    } catch (error) {
+      console.error("Error in frequent activity update:", error);
+    }
+  }
+
+  /**
+   * Update activity timestamp and integrate with break timer
+   */
+  async updateActivity() {
+    try {
+      // Update break timer activity if integrated
+      if (this.breakTimerManager) {
+        await this.breakTimerManager.updateActivity();
+      }
+      
+    } catch (error) {
+      console.error("Error updating activity:", error);
     }
   }
 

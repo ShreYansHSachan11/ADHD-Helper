@@ -79,11 +79,9 @@ global.StorageManager = vi.fn(() => mockStorageManager);
 global.CONSTANTS = mockConstants;
 global.HELPERS = mockHelpers;
 
-// Import the classes after setting up mocks
-const { default: BreakTimerManager } = await import('../services/break-timer-manager.js');
-const { default: TabTracker } = await import('../services/tab-tracker.js');
-
 describe('Background Work Time Tracking Integration', () => {
+  let BreakTimerManager;
+  let TabTracker;
   let breakTimerManager;
   let tabTracker;
   let mockTab;
@@ -94,6 +92,12 @@ describe('Background Work Time Tracking Integration', () => {
     // Reset Date.now to a fixed time
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2024-01-01T10:00:00Z'));
+
+    // Import the classes after setting up mocks
+    const breakTimerModule = await import('../services/break-timer-manager.js');
+    const tabTrackerModule = await import('../services/tab-tracker.js');
+    BreakTimerManager = breakTimerModule.default;
+    TabTracker = tabTrackerModule.default;
 
     mockTab = {
       id: 1,

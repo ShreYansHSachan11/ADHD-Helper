@@ -51,7 +51,7 @@ class PopupManager {
       // Initialize UI elements
       this.initializeElements();
 
-      // Initialize break timer manager
+      // Initialize break timer manager and components
       await this.initializeBreakTimer();
 
       // Initialize break settings UI
@@ -965,7 +965,7 @@ class PopupManager {
   }
 
   /**
-   * Initialize break timer manager
+   * Initialize break timer manager and related components
    */
   async initializeBreakTimer() {
     try {
@@ -1044,9 +1044,17 @@ class PopupManager {
    */
   async updateBreakControlsUI() {
     try {
-      if (!this.breakTimerManager) return;
+      // Get break timer status from background script
+      const response = await chrome.runtime.sendMessage({
+        type: "GET_BREAK_TIMER_STATUS"
+      });
       
-      const status = this.breakTimerManager.getTimerStatus();
+      if (!response || !response.success) {
+        console.warn("Failed to get break timer status");
+        return;
+      }
+      
+      const status = response.data;
       if (!status) return;
       
       // Update work timer display
@@ -1209,26 +1217,21 @@ class PopupManager {
    */
   async handleBreakTypeSelection(breakType, duration) {
     try {
-      if (!this.breakTimerManager) {
-        console.error("Break timer manager not available");
-        return;
-      }
-      
       // Close modal first
       this.closeBreakTypeModal();
       
-      // Start the selected break
-      const success = await this.breakTimerManager.startBreak(breakType, duration);
+      // Start the selected break via background script
+      const response = await chrome.runtime.sendMessage({
+        type: "START_BREAK",
+        breakType: breakType,
+        durationMinutes: duration
+      });
       
-      if (success) {
+      if (response && response.success) {
         console.log(`Started ${breakType} break for ${duration} minutes`);
         
-        // Show success feedback
-        this.showBreakStatus({
-          isOnBreak: true,
-          breakType: breakType,
-          remainingBreakTime: duration * 60 * 1000
-        });
+        // Update UI immediately
+        await this.updateBreakControlsUI();
         
         // Show success message
         if (this.errorHandler) {
@@ -1239,7 +1242,7 @@ class PopupManager {
           );
         }
       } else {
-        console.error("Failed to start break");
+        console.error("Failed to start break:", response?.error);
         this.showError("Failed to start break. Please try again.");
       }
       
@@ -1254,18 +1257,16 @@ class PopupManager {
    */
   async handleEndBreak() {
     try {
-      if (!this.breakTimerManager) {
-        console.error("Break timer manager not available");
-        return;
-      }
+      // End the break via background script
+      const response = await chrome.runtime.sendMessage({
+        type: "END_BREAK"
+      });
       
-      const success = await this.breakTimerManager.endBreak();
-      
-      if (success) {
+      if (response && response.success) {
         console.log("Break ended successfully");
         
         // Update UI immediately
-        this.updateBreakControlsUI();
+        await this.updateBreakControlsUI();
         
         // Show success message
         if (this.errorHandler) {
@@ -1276,7 +1277,7 @@ class PopupManager {
           );
         }
       } else {
-        console.error("Failed to end break");
+        console.error("Failed to end break:", response?.error);
         this.showError("Failed to end break. Please try again.");
       }
       
@@ -1293,14 +1294,21 @@ class PopupManager {
     try {
       console.log("Break settings changed:", newSettings);
       
-      // Update break timer manager with new settings
-      if (this.breakTimerManager && newSettings.workTimeThresholdMinutes) {
-        await this.breakTimerManager.updateWorkTimeThreshold(newSettings.workTimeThresholdMinutes);
-      }
-      
-      // Update the time limit input in the UI to reflect the new setting
-      if (this.timeLimitInput && newSettings.workTimeThresholdMinutes) {
-        this.timeLimitInput.value = newSettings.workTimeThresholdMinutes;
+      // Update work time threshold via background script
+      if (newSettings.workTimeThresholdMinutes) {
+        const response = await chrome.runtime.sendMessage({
+          type: "UPDATE_WORK_TIME_THRESHOLD",
+          minutes: newSettings.workTimeThresholdMinutes
+        });
+        
+        if (response && response.success) {
+          // Update the time limit input in the UI to reflect the new setting
+          if (this.timeLimitInput) {
+            this.timeLimitInput.value = newSettings.workTimeThresholdMinutes;
+          }
+        } else {
+          console.error("Failed to update work time threshold:", response?.error);
+        }
       }
       
       // Show feedback to user
@@ -1323,28 +1331,31 @@ class PopupManager {
     const newLimit = parseInt(event.target.value);
     if (newLimit >= 5 && newLimit <= 180) {
       try {
-        // Update break timer manager threshold
-        if (this.breakTimerManager) {
-          await this.breakTimerManager.updateWorkTimeThreshold(newLimit);
-        }
+        // Update work time threshold via background script
+        const response = await chrome.runtime.sendMessage({
+          type: "UPDATE_WORK_TIME_THRESHOLD",
+          minutes: newLimit
+        });
         
-        // Update storage with new limit
-        const settings =
-          (await chrome.storage.local.get("screenTimeSettings")) || {};
-        const currentSettings = settings.screenTimeSettings || {
-          limitMinutes: 30,
-          enabled: true,
-          notificationsEnabled: true,
-        };
+        if (response && response.success) {
+          console.log("Work time threshold updated:", newLimit);
+          
+          // Also update legacy screen time settings for compatibility
+          const settings = (await chrome.storage.local.get("screenTimeSettings")) || {};
+          const currentSettings = settings.screenTimeSettings || {
+            limitMinutes: 30,
+            enabled: true,
+            notificationsEnabled: true,
+          };
 
-        currentSettings.limitMinutes = newLimit;
-        await chrome.storage.local.set({ screenTimeSettings: currentSettings });
-
-        console.log("Time limit updated:", newLimit);
-        this.showScreenTimeStatus(
-          "Time limit updated successfully!",
-          "success"
-        );
+          currentSettings.limitMinutes = newLimit;
+          await chrome.storage.local.set({ screenTimeSettings: currentSettings });
+          
+          this.showScreenTimeStatus("Time limit updated successfully!", "success");
+        } else {
+          console.error("Failed to update work time threshold:", response?.error);
+          this.showScreenTimeStatus("Failed to save time limit", "error");
+        }
       } catch (error) {
         console.error("Failed to save time limit:", error);
         this.showScreenTimeStatus("Failed to save time limit", "error");
@@ -1426,6 +1437,25 @@ class PopupManager {
 
   async updateCurrentTimeDisplay() {
     try {
+      // Try to get integrated timer status first (break timer + tab tracking)
+      const integratedResponse = await chrome.runtime.sendMessage({
+        type: "GET_INTEGRATED_TIMER_STATUS",
+      });
+
+      if (integratedResponse && integratedResponse.success && integratedResponse.data) {
+        const integratedData = integratedResponse.data;
+        
+        // Use break timer data if available, otherwise fall back to tab stats
+        if (integratedData.breakTimer && integratedData.breakTimer.currentWorkTime !== undefined) {
+          const workTimeMinutes = Math.floor(integratedData.breakTimer.currentWorkTime / (1000 * 60));
+          this.updateCurrentTime(workTimeMinutes);
+          
+          // Update break controls UI is handled separately
+          return;
+        }
+      }
+      
+      // Fallback to legacy tab stats
       const response = await chrome.runtime.sendMessage({
         type: "GET_TAB_STATS",
       });
@@ -1450,8 +1480,6 @@ class PopupManager {
         this.updateBreakReminderCount(0);
       }
       
-      // Update break status
-      await this.updateBreakStatus();
     } catch (error) {
       console.error("Failed to get current time:", error);
       this.updateCurrentTime(0);

@@ -21,6 +21,7 @@ class BreakTimerManager {
     this.settingsManager = null;
     this.constants = null;
     this.helpers = null;
+    this.breakErrorHandler = null;
     
     // Browser focus state
     this.isBrowserFocused = true;
@@ -48,18 +49,26 @@ class BreakTimerManager {
           "/services/storage-manager.js",
           "/services/break-settings-manager.js",
           "/utils/constants.js",
-          "/utils/helpers.js"
+          "/utils/helpers.js",
+          "/utils/break-error-handler.js"
         );
         this.storageManager = new StorageManager();
         this.settingsManager = new BreakSettingsManager();
         this.constants = CONSTANTS;
         this.helpers = HELPERS;
+        this.breakErrorHandler = new BreakErrorHandler();
       } else {
         // For testing environment, use globally available dependencies
         this.storageManager = this.storageManager || new StorageManager();
         this.settingsManager = this.settingsManager || new BreakSettingsManager();
         this.constants = this.constants || CONSTANTS;
         this.helpers = this.helpers || HELPERS;
+        this.breakErrorHandler = this.breakErrorHandler || new BreakErrorHandler();
+      }
+      
+      // Initialize error handler
+      if (this.breakErrorHandler) {
+        await this.breakErrorHandler.init();
       }
       
       // Initialize settings manager
@@ -67,8 +76,8 @@ class BreakTimerManager {
         await this.settingsManager.init();
       }
       
-      // Load persisted state
-      await this.loadPersistedState();
+      // Load persisted state with error handling
+      await this.loadPersistedStateWithErrorHandling();
       
       // Setup browser focus detection
       await this.setupFocusDetection();
@@ -79,38 +88,103 @@ class BreakTimerManager {
       console.log("BreakTimerManager initialized successfully");
     } catch (error) {
       console.error("BreakTimerManager initialization error:", error);
+      // Try to continue with minimal functionality
+      await this.initializeFallbackMode();
     }
   }
 
   /**
-   * Load persisted timer state from storage
+   * Load persisted timer state from storage with comprehensive error handling
    */
-  async loadPersistedState() {
+  async loadPersistedStateWithErrorHandling() {
     try {
       const timerState = await this.storageManager.get(this.STORAGE_KEYS.BREAK_TIMER_STATE);
       const workSessionData = await this.storageManager.get(this.STORAGE_KEYS.WORK_SESSION_DATA);
       
+      // Validate and sanitize timer state
       if (timerState) {
-        this.isWorkTimerActive = timerState.isWorkTimerActive || false;
-        this.isOnBreak = timerState.isOnBreak || false;
-        this.breakType = timerState.breakType || null;
-        this.lastActivityTime = timerState.lastActivityTime || Date.now();
-        this.workTimeThreshold = timerState.workTimeThreshold || (30 * 60 * 1000);
+        const validation = this.breakErrorHandler.validateAndSanitizeBreakData(timerState, 'timer_state');
+        
+        if (!validation.isValid) {
+          console.warn("Timer state validation failed, attempting recovery");
+          const recoveryResult = await this.breakErrorHandler.handleTimerStateCorruption(timerState, 'timer_state');
+          
+          if (recoveryResult.success) {
+            const recovered = recoveryResult.recoveredState;
+            this.isWorkTimerActive = recovered.isWorkTimerActive;
+            this.isOnBreak = recovered.isOnBreak;
+            this.breakType = recovered.breakType;
+            this.lastActivityTime = recovered.lastActivityTime;
+            this.workTimeThreshold = recovered.workTimeThreshold;
+          } else {
+            // Use defaults if recovery failed
+            await this.initializeDefaultState();
+          }
+        } else {
+          // Use sanitized data
+          const sanitized = validation.sanitizedData;
+          this.isWorkTimerActive = sanitized.isWorkTimerActive || false;
+          this.isOnBreak = sanitized.isOnBreak || false;
+          this.breakType = sanitized.breakType || null;
+          this.lastActivityTime = sanitized.lastActivityTime || Date.now();
+          this.workTimeThreshold = sanitized.workTimeThreshold || (30 * 60 * 1000);
+        }
       }
       
+      // Validate and sanitize work session data
       if (workSessionData) {
-        this.workStartTime = workSessionData.workStartTime || null;
-        this.totalWorkTime = workSessionData.totalWorkTime !== undefined ? workSessionData.totalWorkTime : 0;
-        this.breakStartTime = workSessionData.breakStartTime || null;
-        this.breakDuration = workSessionData.breakDuration || 0;
+        const validation = this.breakErrorHandler.validateAndSanitizeBreakData(workSessionData, 'work_session_data');
+        
+        if (!validation.isValid) {
+          console.warn("Work session data validation failed, attempting recovery");
+          const recoveryResult = await this.breakErrorHandler.handleTimerStateCorruption(workSessionData, 'work_session');
+          
+          if (recoveryResult.success) {
+            const recovered = recoveryResult.recoveredState;
+            this.workStartTime = recovered.workStartTime;
+            this.totalWorkTime = recovered.totalWorkTime;
+            this.breakStartTime = recovered.breakStartTime;
+            this.breakDuration = recovered.breakDuration;
+          } else {
+            // Use defaults if recovery failed
+            this.workStartTime = null;
+            this.totalWorkTime = 0;
+            this.breakStartTime = null;
+            this.breakDuration = 0;
+          }
+        } else {
+          // Use sanitized data
+          const sanitized = validation.sanitizedData;
+          this.workStartTime = sanitized.workStartTime || null;
+          this.totalWorkTime = sanitized.workTime || 0;
+          this.breakStartTime = sanitized.startTime || null;
+          this.breakDuration = sanitized.duration || 0;
+        }
         
         // Validate and recover from browser restart
-        await this.recoverFromBrowserRestart();
+        await this.recoverFromBrowserRestartWithErrorHandling();
       }
       
     } catch (error) {
       console.error("Error loading persisted state:", error);
+      
+      if (this.breakErrorHandler) {
+        await this.breakErrorHandler.handleChromeApiUnavailable('storage', 'get', {
+          key: 'timer_state',
+          operation: 'load_persisted_state'
+        });
+      }
+      
+      // Initialize with defaults
+      await this.initializeDefaultState();
     }
+  }
+
+  /**
+   * Load persisted timer state from storage (legacy method for compatibility)
+   */
+  async loadPersistedState() {
+    return await this.loadPersistedStateWithErrorHandling();
   }
 
   /**
@@ -208,7 +282,12 @@ class BreakTimerManager {
       this.isWorkTimerActive = true;
       this.lastActivityTime = this.workStartTime;
       
-      await this.persistTimerState();
+      try {
+        await this.persistTimerStateWithErrorHandling();
+      } catch (error) {
+        console.error("Error persisting timer state during start:", error);
+        // Continue anyway for better user experience
+      }
       
       console.log("Work timer started");
       return true;
@@ -300,17 +379,32 @@ class BreakTimerManager {
       }
       
       // Pause work timer first
-      await this.pauseWorkTimer();
+      try {
+        await this.pauseWorkTimer();
+      } catch (error) {
+        console.error("Error pausing work timer:", error);
+        // Continue anyway
+      }
       
       this.isOnBreak = true;
       this.breakType = breakType;
       this.breakStartTime = Date.now();
       this.breakDuration = durationMinutes * 60 * 1000; // Convert to milliseconds
       
-      await this.persistTimerState();
+      try {
+        await this.persistTimerStateWithErrorHandling();
+      } catch (error) {
+        console.error("Error persisting timer state during break start:", error);
+        // Continue anyway for better user experience
+      }
       
       // Update extension badge to show break status
-      await this.updateExtensionBadge();
+      try {
+        await this.updateExtensionBadgeWithErrorHandling();
+      } catch (error) {
+        console.error("Error updating badge during break start:", error);
+        // Continue anyway
+      }
       
       console.log(`Started ${breakType} break for ${durationMinutes} minutes`);
       return true;
@@ -339,7 +433,7 @@ class BreakTimerManager {
       await this.resetWorkTimer();
       
       // Clear extension badge
-      await this.clearExtensionBadge();
+      await this.clearExtensionBadgeWithErrorHandling();
       
       console.log("Break ended, work timer reset");
       return true;
@@ -405,7 +499,7 @@ class BreakTimerManager {
       
       // Update badge if on break
       if (this.isOnBreak) {
-        await this.updateExtensionBadge();
+        await this.updateExtensionBadgeWithErrorHandling();
       }
     } catch (error) {
       console.error("Error updating activity:", error);
@@ -417,14 +511,19 @@ class BreakTimerManager {
    */
   getCurrentWorkTime() {
     try {
-      let currentWorkTime = this.totalWorkTime;
+      let currentWorkTime = typeof this.totalWorkTime === 'number' ? this.totalWorkTime : 0;
       
       // Add current session time if timer is active
-      if (this.isWorkTimerActive && this.workStartTime) {
-        currentWorkTime += (Date.now() - this.workStartTime);
+      if (this.isWorkTimerActive && 
+          typeof this.workStartTime === 'number' && 
+          this.workStartTime > 0) {
+        const sessionTime = Date.now() - this.workStartTime;
+        if (sessionTime >= 0 && sessionTime < 24 * 60 * 60 * 1000) { // Reasonable session time
+          currentWorkTime += sessionTime;
+        }
       }
       
-      return currentWorkTime;
+      return Math.max(0, currentWorkTime);
     } catch (error) {
       console.error("Error getting current work time:", error);
       return 0;
@@ -602,9 +701,129 @@ class BreakTimerManager {
   }
 
   /**
-   * Persist timer state to storage
+   * Initialize fallback mode when normal initialization fails
    */
-  async persistTimerState() {
+  async initializeFallbackMode() {
+    try {
+      console.log("Initializing BreakTimerManager in fallback mode");
+      
+      // Set up minimal functionality
+      this.workStartTime = null;
+      this.totalWorkTime = 0;
+      this.isWorkTimerActive = false;
+      this.isOnBreak = false;
+      this.breakStartTime = null;
+      this.breakDuration = 0;
+      this.breakType = null;
+      this.lastActivityTime = Date.now();
+      this.workTimeThreshold = 30 * 60 * 1000;
+      this.isBrowserFocused = true;
+      
+      // Create minimal error handler if not available
+      if (!this.breakErrorHandler) {
+        this.breakErrorHandler = {
+          handleChromeApiUnavailable: async () => ({ success: false, fallbackMode: true }),
+          validateAndSanitizeBreakData: (data) => ({ isValid: true, sanitizedData: data, errors: [] }),
+          showUserFeedback: (message, type) => console.log(`Fallback Feedback [${type}]: ${message}`)
+        };
+      }
+      
+      console.log("BreakTimerManager fallback mode initialized");
+    } catch (error) {
+      console.error("Error initializing fallback mode:", error);
+    }
+  }
+
+  /**
+   * Initialize default state
+   */
+  async initializeDefaultState() {
+    this.workStartTime = null;
+    this.totalWorkTime = 0;
+    this.isWorkTimerActive = false;
+    this.isOnBreak = false;
+    this.breakStartTime = null;
+    this.breakDuration = 0;
+    this.breakType = null;
+    this.lastActivityTime = Date.now();
+    this.workTimeThreshold = 30 * 60 * 1000;
+    this.isBrowserFocused = true;
+    
+    // Persist default state
+    await this.persistTimerStateWithErrorHandling();
+  }
+
+  /**
+   * Recover from browser restart with error handling
+   */
+  async recoverFromBrowserRestartWithErrorHandling() {
+    try {
+      const now = Date.now();
+      
+      // If work timer was active before restart, calculate elapsed time
+      if (this.isWorkTimerActive && this.workStartTime) {
+        const elapsedTime = now - this.workStartTime;
+        
+        // Validate elapsed time is reasonable (not more than 24 hours)
+        if (elapsedTime > 24 * 60 * 60 * 1000) {
+          console.warn("Unreasonable elapsed time detected, resetting work timer");
+          this.isWorkTimerActive = false;
+          this.workStartTime = null;
+          this.totalWorkTime = 0;
+          await this.persistTimerStateWithErrorHandling();
+          return;
+        }
+        
+        // If more than inactivity threshold passed, consider it as inactivity
+        if (elapsedTime > this.inactivityThreshold) {
+          console.log("Browser was inactive during restart, pausing work timer");
+          await this.pauseWorkTimer();
+        } else {
+          // Continue tracking from where we left off
+          console.log("Recovering work timer state after browser restart");
+          this.lastActivityTime = now;
+        }
+      }
+      
+      // If on break before restart, check if break should have ended
+      if (this.isOnBreak && this.breakStartTime && this.breakDuration > 0) {
+        const breakElapsed = now - this.breakStartTime;
+        
+        // Validate break duration is reasonable
+        if (breakElapsed > 4 * 60 * 60 * 1000) { // More than 4 hours
+          console.warn("Unreasonable break duration detected, ending break");
+          await this.endBreak();
+          return;
+        }
+        
+        if (breakElapsed >= this.breakDuration) {
+          console.log("Break ended during browser restart, resuming work timer");
+          await this.endBreak();
+        }
+      }
+      
+    } catch (error) {
+      console.error("Error recovering from browser restart:", error);
+      
+      if (this.breakErrorHandler) {
+        await this.breakErrorHandler.handleTimerStateCorruption({
+          workStartTime: this.workStartTime,
+          isWorkTimerActive: this.isWorkTimerActive,
+          isOnBreak: this.isOnBreak,
+          breakStartTime: this.breakStartTime,
+          breakDuration: this.breakDuration
+        }, 'browser_restart_recovery');
+      }
+      
+      // Reset to safe state
+      await this.initializeDefaultState();
+    }
+  }
+
+  /**
+   * Persist timer state to storage with error handling
+   */
+  async persistTimerStateWithErrorHandling() {
     try {
       const timerState = {
         isWorkTimerActive: this.isWorkTimerActive,
@@ -621,14 +840,133 @@ class BreakTimerManager {
         breakDuration: this.breakDuration
       };
       
-      await this.storageManager.setMultiple({
-        [this.STORAGE_KEYS.BREAK_TIMER_STATE]: timerState,
-        [this.STORAGE_KEYS.WORK_SESSION_DATA]: workSessionData
-      });
+      // Validate data before persisting
+      if (this.breakErrorHandler) {
+        const timerValidation = this.breakErrorHandler.validateAndSanitizeBreakData(timerState, 'timer_state_persist');
+        const workValidation = this.breakErrorHandler.validateAndSanitizeBreakData(workSessionData, 'work_session_persist');
+        
+        if (!timerValidation.isValid || !workValidation.isValid) {
+          console.warn("Data validation failed during persist, using sanitized data");
+        }
+        
+        // Use sanitized data
+        const sanitizedTimerState = timerValidation.sanitizedData;
+        const sanitizedWorkData = workValidation.sanitizedData;
+        
+        await this.storageManager.setMultiple({
+          [this.STORAGE_KEYS.BREAK_TIMER_STATE]: sanitizedTimerState,
+          [this.STORAGE_KEYS.WORK_SESSION_DATA]: sanitizedWorkData
+        });
+      } else {
+        // Fallback without validation
+        await this.storageManager.setMultiple({
+          [this.STORAGE_KEYS.BREAK_TIMER_STATE]: timerState,
+          [this.STORAGE_KEYS.WORK_SESSION_DATA]: workSessionData
+        });
+      }
       
     } catch (error) {
       console.error("Error persisting timer state:", error);
+      
+      if (this.breakErrorHandler) {
+        const timerStateData = {
+          isWorkTimerActive: this.isWorkTimerActive,
+          isOnBreak: this.isOnBreak,
+          breakType: this.breakType,
+          lastActivityTime: this.lastActivityTime,
+          workTimeThreshold: this.workTimeThreshold
+        };
+        
+        const workSessionDataObj = {
+          workStartTime: this.workStartTime,
+          totalWorkTime: this.totalWorkTime,
+          breakStartTime: this.breakStartTime,
+          breakDuration: this.breakDuration
+        };
+        
+        await this.breakErrorHandler.handleChromeApiUnavailable('storage', 'set', {
+          key: 'timer_state',
+          value: { timerState: timerStateData, workSessionData: workSessionDataObj },
+          operation: 'persist_timer_state'
+        });
+      }
     }
+  }
+
+  /**
+   * Persist timer state to storage (legacy method for compatibility)
+   */
+  async persistTimerState() {
+    return await this.persistTimerStateWithErrorHandling();
+  }
+
+  /**
+   * Update extension badge with error handling
+   */
+  async updateExtensionBadgeWithErrorHandling() {
+    try {
+      if (typeof chrome !== 'undefined' && chrome.action) {
+        if (this.isOnBreak) {
+          const remainingMinutes = Math.ceil(this.getRemainingBreakTime() / (1000 * 60));
+          await chrome.action.setBadgeText({ text: `${remainingMinutes}m` });
+          await chrome.action.setBadgeBackgroundColor({ color: '#4CAF50' }); // Green for break
+          await chrome.action.setTitle({ title: `Break: ${remainingMinutes} minutes remaining` });
+        } else {
+          await this.clearExtensionBadge();
+        }
+      }
+    } catch (error) {
+      console.error("Error updating extension badge:", error);
+      
+      if (this.breakErrorHandler) {
+        // Try fallback badge update
+        if (this.isOnBreak) {
+          const remainingMinutes = Math.ceil(this.getRemainingBreakTime() / (1000 * 60));
+          await this.breakErrorHandler.handleChromeApiUnavailable('action', 'setBadgeText', {
+            text: `${remainingMinutes}m`
+          });
+          await this.breakErrorHandler.handleChromeApiUnavailable('action', 'setBadgeBackgroundColor', {
+            color: '#4CAF50'
+          });
+          await this.breakErrorHandler.handleChromeApiUnavailable('action', 'setTitle', {
+            title: `Break: ${remainingMinutes} minutes remaining`
+          });
+        } else {
+          await this.clearExtensionBadgeWithErrorHandling();
+        }
+      }
+    }
+  }
+
+  /**
+   * Clear extension badge with error handling
+   */
+  async clearExtensionBadgeWithErrorHandling() {
+    try {
+      if (typeof chrome !== 'undefined' && chrome.action) {
+        await chrome.action.setBadgeText({ text: '' });
+        await chrome.action.setTitle({ title: 'Focus Productivity Extension' });
+      }
+    } catch (error) {
+      console.error("Error clearing extension badge:", error);
+      
+      if (this.breakErrorHandler) {
+        await this.breakErrorHandler.handleChromeApiUnavailable('action', 'setBadgeText', { text: '' });
+        await this.breakErrorHandler.handleChromeApiUnavailable('action', 'setTitle', { 
+          title: 'Focus Productivity Extension' 
+        });
+      }
+    }
+  }
+
+  /**
+   * Get error handler statistics
+   */
+  getErrorHandlerStats() {
+    if (this.breakErrorHandler && typeof this.breakErrorHandler.getErrorStats === 'function') {
+      return this.breakErrorHandler.getErrorStats();
+    }
+    return null;
   }
 }
 

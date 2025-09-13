@@ -20,6 +20,7 @@ class BreakNotificationSystem {
     // Dependencies
     this.storageManager = null;
     this.breakTimerManager = null;
+    this.breakErrorHandler = null;
     
     this.init();
   }
@@ -32,17 +33,27 @@ class BreakNotificationSystem {
       // Import dependencies if in service worker context
       if (typeof importScripts !== "undefined") {
         importScripts(
-          "/services/storage-manager.js"
+          "/services/storage-manager.js",
+          "/utils/break-error-handler.js"
         );
         this.storageManager = new StorageManager();
+        this.breakErrorHandler = new BreakErrorHandler();
       } else {
         this.storageManager = this.storageManager || new StorageManager();
+        this.breakErrorHandler = this.breakErrorHandler || new BreakErrorHandler();
       }
       
-      await this.checkNotificationPermission();
+      // Initialize error handler
+      if (this.breakErrorHandler) {
+        await this.breakErrorHandler.init();
+      }
+      
+      await this.checkNotificationPermissionWithErrorHandling();
       console.log("BreakNotificationSystem initialized successfully");
     } catch (error) {
       console.error("BreakNotificationSystem initialization error:", error);
+      // Continue with limited functionality
+      await this.initializeFallbackMode();
     }
   }
 
@@ -76,13 +87,92 @@ class BreakNotificationSystem {
   }
 
   /**
-   * Create and display a Chrome notification with proper error handling
+   * Initialize fallback mode when normal initialization fails
+   */
+  async initializeFallbackMode() {
+    try {
+      console.log("Initializing BreakNotificationSystem in fallback mode");
+      
+      this.notificationPermissionGranted = false;
+      
+      // Create minimal error handler if not available
+      if (!this.breakErrorHandler) {
+        this.breakErrorHandler = {
+          handleNotificationFailure: async (data, error) => {
+            console.warn("Notification failed (fallback mode):", error);
+            return { success: false, fallbackMode: true };
+          },
+          handleChromeApiUnavailable: async () => ({ success: false, fallbackMode: true })
+        };
+      }
+      
+      console.log("BreakNotificationSystem fallback mode initialized");
+    } catch (error) {
+      console.error("Error initializing notification fallback mode:", error);
+    }
+  }
+
+  /**
+   * Check notification permission with error handling
+   */
+  async checkNotificationPermissionWithErrorHandling() {
+    try {
+      if (typeof chrome !== 'undefined' && chrome.notifications) {
+        const permission = await chrome.notifications.getPermissionLevel();
+        this.notificationPermissionGranted = permission === "granted";
+        
+        if (!this.notificationPermissionGranted) {
+          console.warn("Notifications permission not granted");
+        }
+        
+        return this.notificationPermissionGranted;
+      }
+      return false;
+    } catch (error) {
+      console.error("Error checking notification permission:", error);
+      
+      if (this.breakErrorHandler) {
+        await this.breakErrorHandler.handleChromeApiUnavailable('notifications', 'getPermissionLevel');
+      }
+      
+      return false;
+    }
+  }
+
+  /**
+   * Create and display a Chrome notification with comprehensive error handling
    */
   async createNotification(notificationId, options) {
     try {
+      // Validate notification data
+      if (this.breakErrorHandler) {
+        const validation = this.breakErrorHandler.validateAndSanitizeBreakData({
+          title: options.title,
+          message: options.message,
+          notificationId: notificationId
+        }, 'notification_data');
+        
+        if (!validation.isValid) {
+          console.warn("Notification data validation failed, using sanitized data");
+          options.title = validation.sanitizedData.title || "Break Reminder";
+          options.message = validation.sanitizedData.message || "Time for a break!";
+        }
+      }
+
       // Check permission first
       if (!this.notificationPermissionGranted) {
         console.warn("Cannot show notification: permission not granted");
+        
+        // Try fallback notification methods
+        if (this.breakErrorHandler) {
+          const fallbackResult = await this.breakErrorHandler.handleNotificationFailure(
+            { title: options.title, message: options.message },
+            new Error("Permission not granted"),
+            'permission_denied'
+          );
+          return fallbackResult.success;
+        }
+        
         return false;
       }
 
@@ -107,6 +197,17 @@ class BreakNotificationSystem {
         await chrome.notifications.create(notificationId, notificationOptions);
       } catch (error) {
         console.error("Failed to create notification:", error);
+        
+        // Try fallback notification methods
+        if (this.breakErrorHandler) {
+          const fallbackResult = await this.breakErrorHandler.handleNotificationFailure(
+            { title: options.title, message: options.message },
+            error,
+            'create_notification'
+          );
+          return fallbackResult.success;
+        }
+        
         return false;
       }
 
@@ -119,6 +220,17 @@ class BreakNotificationSystem {
       return true;
     } catch (error) {
       console.error("Error creating notification:", error);
+      
+      // Try fallback notification methods
+      if (this.breakErrorHandler) {
+        const fallbackResult = await this.breakErrorHandler.handleNotificationFailure(
+          { title: options.title, message: options.message },
+          error,
+          'create_notification_error'
+        );
+        return fallbackResult.success;
+      }
+      
       return false;
     }
   }

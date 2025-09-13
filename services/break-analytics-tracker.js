@@ -24,6 +24,7 @@ class BreakAnalyticsTracker {
     
     // Dependencies
     this.storageManager = null;
+    this.breakErrorHandler = null;
     
     this.init();
   }
@@ -35,25 +36,58 @@ class BreakAnalyticsTracker {
     try {
       // Import dependencies if in service worker context
       if (typeof importScripts !== "undefined") {
-        importScripts("/services/storage-manager.js");
+        importScripts(
+          "/services/storage-manager.js",
+          "/utils/break-error-handler.js"
+        );
         this.storageManager = new StorageManager();
+        this.breakErrorHandler = new BreakErrorHandler();
       } else {
         this.storageManager = this.storageManager || new StorageManager();
+        this.breakErrorHandler = this.breakErrorHandler || new BreakErrorHandler();
       }
       
-      // Initialize default settings
-      await this.initializeDefaultSettings();
+      // Initialize error handler
+      if (this.breakErrorHandler) {
+        await this.breakErrorHandler.init();
+      }
+      
+      // Initialize default settings with error handling
+      await this.initializeDefaultSettingsWithErrorHandling();
       
       console.log("BreakAnalyticsTracker initialized successfully");
     } catch (error) {
       console.error("BreakAnalyticsTracker initialization error:", error);
+      // Continue with limited functionality
+      await this.initializeFallbackMode();
     }
   }
 
   /**
-   * Initialize default analytics settings
+   * Initialize fallback mode when normal initialization fails
    */
-  async initializeDefaultSettings() {
+  async initializeFallbackMode() {
+    try {
+      console.log("Initializing BreakAnalyticsTracker in fallback mode");
+      
+      // Create minimal error handler if not available
+      if (!this.breakErrorHandler) {
+        this.breakErrorHandler = {
+          validateAndSanitizeBreakData: (data) => ({ isValid: true, sanitizedData: data, errors: [] }),
+          handleChromeApiUnavailable: async () => ({ success: false, fallbackMode: true })
+        };
+      }
+      
+      console.log("BreakAnalyticsTracker fallback mode initialized");
+    } catch (error) {
+      console.error("Error initializing analytics fallback mode:", error);
+    }
+  }
+
+  /**
+   * Initialize default analytics settings with error handling
+   */
+  async initializeDefaultSettingsWithErrorHandling() {
     try {
       const existingSettings = await this.storageManager.get(this.STORAGE_KEYS.ANALYTICS_SETTINGS);
       
@@ -65,15 +99,38 @@ class BreakAnalyticsTracker {
           aggregationEnabled: true
         };
         
-        await this.storageManager.set(this.STORAGE_KEYS.ANALYTICS_SETTINGS, defaultSettings);
+        // Validate settings data
+        if (this.breakErrorHandler) {
+          const validation = this.breakErrorHandler.validateAndSanitizeBreakData(defaultSettings, 'analytics_settings');
+          if (!validation.isValid) {
+            console.warn("Default settings validation failed, using sanitized data");
+          }
+          await this.storageManager.set(this.STORAGE_KEYS.ANALYTICS_SETTINGS, validation.sanitizedData);
+        } else {
+          await this.storageManager.set(this.STORAGE_KEYS.ANALYTICS_SETTINGS, defaultSettings);
+        }
       }
     } catch (error) {
       console.error("Error initializing default settings:", error);
+      
+      if (this.breakErrorHandler) {
+        await this.breakErrorHandler.handleChromeApiUnavailable('storage', 'set', {
+          key: this.STORAGE_KEYS.ANALYTICS_SETTINGS,
+          operation: 'initialize_default_settings'
+        });
+      }
     }
   }
 
   /**
-   * Record a break session with metadata
+   * Initialize default analytics settings (legacy method for compatibility)
+   */
+  async initializeDefaultSettings() {
+    return await this.initializeDefaultSettingsWithErrorHandling();
+  }
+
+  /**
+   * Record a break session with metadata and comprehensive error handling
    */
   async recordBreakSession(breakType, durationMinutes, startTime, endTime, metadata = {}) {
     try {
@@ -84,7 +141,7 @@ class BreakAnalyticsTracker {
         return false;
       }
 
-      const session = {
+      const rawSession = {
         id: `break_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         type: breakType,
         plannedDuration: durationMinutes,
@@ -103,22 +160,86 @@ class BreakAnalyticsTracker {
         }
       };
 
-      // Get existing sessions
-      const existingSessions = await this.storageManager.get(this.STORAGE_KEYS.BREAK_SESSIONS) || [];
+      // Validate and sanitize session data
+      let session = rawSession;
+      if (this.breakErrorHandler) {
+        const validation = this.breakErrorHandler.validateAndSanitizeBreakData(rawSession, 'break_session');
+        if (!validation.isValid) {
+          console.warn("Break session data validation failed, using sanitized data:", validation.errors);
+        }
+        session = { ...rawSession, ...validation.sanitizedData };
+      }
+
+      // Get existing sessions with error handling
+      let existingSessions = [];
+      try {
+        existingSessions = await this.storageManager.get(this.STORAGE_KEYS.BREAK_SESSIONS) || [];
+        
+        // Validate existing sessions array
+        if (!Array.isArray(existingSessions)) {
+          console.warn("Existing sessions data corrupted, resetting to empty array");
+          existingSessions = [];
+        }
+      } catch (error) {
+        console.error("Error loading existing sessions:", error);
+        
+        if (this.breakErrorHandler) {
+          await this.breakErrorHandler.handleChromeApiUnavailable('storage', 'get', {
+            key: this.STORAGE_KEYS.BREAK_SESSIONS,
+            operation: 'load_existing_sessions'
+          });
+        }
+        
+        existingSessions = [];
+      }
       
       // Add new session
       existingSessions.push(session);
       
-      // Save updated sessions
-      await this.storageManager.set(this.STORAGE_KEYS.BREAK_SESSIONS, existingSessions);
+      // Limit sessions to prevent storage bloat
+      if (existingSessions.length > 1000) {
+        existingSessions = existingSessions.slice(-500); // Keep last 500 sessions
+        console.log("Trimmed sessions to prevent storage bloat");
+      }
       
-      // Update aggregated statistics
-      await this.updateAggregatedStats(session);
+      // Save updated sessions with error handling
+      try {
+        await this.storageManager.set(this.STORAGE_KEYS.BREAK_SESSIONS, existingSessions);
+      } catch (error) {
+        console.error("Error saving break session:", error);
+        
+        if (this.breakErrorHandler) {
+          await this.breakErrorHandler.handleChromeApiUnavailable('storage', 'set', {
+            key: this.STORAGE_KEYS.BREAK_SESSIONS,
+            value: existingSessions,
+            operation: 'save_break_session'
+          });
+        }
+        
+        return null;
+      }
+      
+      // Update aggregated statistics with error handling
+      try {
+        await this.updateAggregatedStats(session);
+      } catch (error) {
+        console.error("Error updating aggregated stats:", error);
+        // Don't fail the entire operation if stats update fails
+      }
       
       console.log("Break session recorded:", session.id, session.type, session.actualDuration + "min");
       return session.id;
     } catch (error) {
       console.error("Error recording break session:", error);
+      
+      if (this.breakErrorHandler) {
+        this.breakErrorHandler.showUserFeedback(
+          "Failed to record break session",
+          "error",
+          { context: "Analytics", duration: 3000 }
+        );
+      }
+      
       return null;
     }
   }
