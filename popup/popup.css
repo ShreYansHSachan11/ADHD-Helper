@@ -1,4 +1,10 @@
 /* Material Design 3 CSS for Focus Productivity Extension */
+li {
+  color: white;
+}
+.step-text {
+  color: white;
+}
 
 /* Reset and Base Styles */
 .skip-link {
@@ -778,7 +784,7 @@ input:focus-visible,
 .focus-url {
   font-size: 14px;
   color: var(--md-sys-color-on-surface);
-  font-family: 'Roboto Mono', 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+  font-family: "Roboto Mono", "SF Mono", "Monaco", "Inconsolata", monospace;
   word-break: break-all;
   flex: 1;
   padding: 8px 12px;
@@ -872,7 +878,7 @@ input:focus-visible,
 }
 
 .history-title::before {
-  content: '📊';
+  content: "📊";
   font-size: 16px;
 }
 
@@ -883,7 +889,8 @@ input:focus-visible,
   max-height: 200px;
   overflow-y: auto;
   scrollbar-width: thin;
-  scrollbar-color: var(--md-sys-color-outline) var(--md-sys-color-surface-variant);
+  scrollbar-color: var(--md-sys-color-outline)
+    var(--md-sys-color-surface-variant);
 }
 
 .deviation-list::-webkit-scrollbar {
@@ -920,7 +927,7 @@ input:focus-visible,
 .deviation-from,
 .deviation-to {
   font-size: 12px;
-  font-family: 'Roboto Mono', 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+  font-family: "Roboto Mono", "SF Mono", "Monaco", "Inconsolata", monospace;
   color: var(--md-sys-color-on-surface);
   padding: 6px 8px;
   background: var(--md-sys-color-surface-variant);
@@ -987,7 +994,7 @@ input:focus-visible,
 }
 
 .session-title::before {
-  content: '🎯';
+  content: "🎯";
   font-size: 16px;
 }
 
@@ -1027,12 +1034,21 @@ input:focus-visible,
 }
 
 .progress-ring-bg {
-  background: conic-gradient(from 0deg, var(--md-sys-color-outline-variant) 0deg, var(--md-sys-color-outline-variant) 360deg);
+  background: conic-gradient(
+    from 0deg,
+    var(--md-sys-color-outline-variant) 0deg,
+    var(--md-sys-color-outline-variant) 360deg
+  );
   opacity: 0.3;
 }
 
 .progress-ring-fill {
-  background: conic-gradient(from -90deg, var(--md-sys-color-primary) 0deg, var(--md-sys-color-primary) var(--progress-angle, 0deg), transparent var(--progress-angle, 0deg));
+  background: conic-gradient(
+    from -90deg,
+    var(--md-sys-color-primary) 0deg,
+    var(--md-sys-color-primary) var(--progress-angle, 0deg),
+    transparent var(--progress-angle, 0deg)
+  );
   transition: --progress-angle 0.3s cubic-bezier(0.2, 0, 0, 1);
 }
 
@@ -1144,40 +1160,40 @@ input:focus-visible,
   .focus-session-visualization {
     padding: 16px;
   }
-  
+
   .focus-progress-ring {
     width: 100px;
     height: 100px;
   }
-  
+
   .progress-ring-center {
     width: 70px;
     height: 70px;
   }
-  
+
   .progress-time {
     font-size: 14px;
   }
-  
+
   .focus-metrics-grid {
     grid-template-columns: repeat(3, 1fr);
     gap: 8px;
   }
-  
+
   .metric-card {
     padding: 8px;
   }
-  
+
   .metric-value {
     font-size: 16px;
   }
-  
+
   .deviation-item {
     grid-template-columns: 1fr auto 1fr;
     gap: 6px;
     padding: 10px;
   }
-  
+
   .deviation-time {
     grid-column: 1 / -1;
     text-align: center;
@@ -1192,7 +1208,7 @@ input:focus-visible,
 }
 
 .focus-loading::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 50%;
   left: 50%;
@@ -1221,24 +1237,23 @@ input:focus-visible,
   .focus-status-indicator {
     border-width: 2px;
   }
-  
+
   .metric-card,
   .session-stat,
   .deviation-item {
     border-width: 2px;
   }
 }
-  .focus-status-indicator,
-  .focus-tab-display,
-  .session-stat,
-  .deviation-item {
-    border-width: 2px;
-  }
-  
-  .status-dot,
-  .live-dot {
-    border: 2px solid currentColor;
-  }
+.focus-status-indicator,
+.focus-tab-display,
+.session-stat,
+.deviation-item {
+  border-width: 2px;
+}
+
+.status-dot,
+.live-dot {
+  border: 2px solid currentColor;
 }
 
 .wellness-controls {
@@ -1745,13 +1760,27 @@ input:focus-visible,
 }
 
 @keyframes pulse-warning {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.8; transform: scale(1.05); }
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
 }
 
 @keyframes pulse-danger {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.7; transform: scale(1.1); }
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
 }
 
 /* Feature Grid Enhancements */
@@ -1775,13 +1804,25 @@ input:focus-visible,
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes fadeOut {
-  from { opacity: 1; transform: translateY(0); }
-  to { opacity: 0; transform: translateY(-10px); }
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
 }
 
 /* Break Analytics Display Styles */
@@ -1990,15 +2031,15 @@ input:focus-visible,
 }
 
 .progress-fill.short-break {
-  background: linear-gradient(90deg, #4CAF50, #66BB6A);
+  background: linear-gradient(90deg, #4caf50, #66bb6a);
 }
 
 .progress-fill.medium-break {
-  background: linear-gradient(90deg, #FF9800, #FFB74D);
+  background: linear-gradient(90deg, #ff9800, #ffb74d);
 }
 
 .progress-fill.long-break {
-  background: linear-gradient(90deg, #2196F3, #64B5F6);
+  background: linear-gradient(90deg, #2196f3, #64b5f6);
 }
 
 .break-type-percentage {
@@ -2063,34 +2104,34 @@ input:focus-visible,
     grid-template-columns: 1fr;
     gap: 8px;
   }
-  
+
   .stat-card {
     padding: 10px;
   }
-  
+
   .stat-value {
     font-size: 14px;
   }
-  
+
   .stat-label {
     font-size: 10px;
   }
-  
+
   .period-selector {
     gap: 2px;
   }
-  
+
   .period-btn {
     padding: 4px 8px;
     font-size: 11px;
   }
-  
+
   .analytics-header {
     flex-direction: column;
     gap: 12px;
     align-items: stretch;
   }
-  
+
   .analytics-header h3 {
     text-align: center;
   }
@@ -2111,24 +2152,24 @@ input:focus-visible,
   .breathing-text {
     font-size: 20px;
   }
-  
+
   .break-type-options {
     gap: 8px;
   }
-  
+
   .break-type-btn {
     padding: 12px 16px;
   }
-  
+
   .break-type-icon {
     font-size: 20px;
     min-width: 24px;
   }
-  
+
   .break-type-label {
     font-size: 14px;
   }
-  
+
   .break-type-duration {
     font-size: 12px;
   }
@@ -3343,7 +3384,7 @@ input:focus-visible,
 }
 /* Break Status Styles */
 .break-status {
-  background: linear-gradient(135deg, #4CAF50, #45a049);
+  background: linear-gradient(135deg, #4caf50, #45a049);
   color: white;
   padding: 16px;
   border-radius: 12px;
@@ -3365,7 +3406,7 @@ input:focus-visible,
 .break-time-remaining {
   font-size: 18px;
   font-weight: 600;
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
 }
 
 .break-controls {
@@ -3407,7 +3448,7 @@ input:focus-visible,
 }
 
 .break-type-btn:hover {
-  border-color: #2196F3;
+  border-color: #2196f3;
   background: #f8f9ff;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(33, 150, 243, 0.15);
@@ -3663,12 +3704,12 @@ reak Settings UI Styles */
   .settings-actions {
     flex-direction: column;
   }
-  
+
   .setting-input-group {
     flex-direction: column;
     align-items: flex-start;
   }
-  
+
   .input-suffix {
     margin-top: 4px;
   }
@@ -3680,7 +3721,11 @@ reak Settings UI Styles */
 .task-input-section {
   margin-bottom: 24px;
   padding: 24px;
-  background: linear-gradient(135deg, var(--md-sys-color-surface) 0%, var(--md-sys-color-primary-container) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--md-sys-color-surface) 0%,
+    var(--md-sys-color-primary-container) 100%
+  );
   border-radius: 20px;
   border: 1px solid var(--md-sys-color-outline-variant);
   position: relative;
@@ -3689,13 +3734,18 @@ reak Settings UI Styles */
 }
 
 .task-input-section::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
   transition: left 0.6s ease;
 }
 
@@ -3708,8 +3758,12 @@ reak Settings UI Styles */
 }
 
 @keyframes shimmer {
-  0% { background-position: -200px 0; }
-  100% { background-position: calc(200px + 100%) 0; }
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
 }
 
 .task-input-group {
@@ -3738,7 +3792,8 @@ reak Settings UI Styles */
 
 .task-input:focus {
   border-color: var(--md-sys-color-primary);
-  box-shadow: 0 0 0 4px rgba(0, 106, 107, 0.15), 0 8px 24px rgba(0, 106, 107, 0.1);
+  box-shadow: 0 0 0 4px rgba(0, 106, 107, 0.15),
+    0 8px 24px rgba(0, 106, 107, 0.1);
   transform: translateY(-2px);
   background: var(--md-sys-color-primary-container);
 }
@@ -3761,9 +3816,16 @@ reak Settings UI Styles */
 }
 
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-5px); }
-  75% { transform: translateX(5px); }
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
 }
 
 .task-input::placeholder {
@@ -3794,7 +3856,7 @@ reak Settings UI Styles */
 }
 
 .task-input-actions .btn::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 50%;
   left: 50%;
@@ -3827,7 +3889,7 @@ reak Settings UI Styles */
 }
 
 .task-input-actions .btn.loading::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 50%;
   left: 50%;
@@ -3841,8 +3903,12 @@ reak Settings UI Styles */
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* Character Count Enhancement */
@@ -3863,7 +3929,7 @@ reak Settings UI Styles */
 }
 
 .character-count.warning::before {
-  content: '⚠️';
+  content: "⚠️";
   margin-right: 4px;
 }
 
@@ -3890,7 +3956,7 @@ reak Settings UI Styles */
 }
 
 .btn.loading::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 50%;
   left: 50%;
@@ -3904,13 +3970,21 @@ reak Settings UI Styles */
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* Task Breakdown Display - Enhanced */
 .task-breakdown {
-  background: linear-gradient(145deg, var(--md-sys-color-surface) 0%, var(--md-sys-color-primary-container) 100%);
+  background: linear-gradient(
+    145deg,
+    var(--md-sys-color-surface) 0%,
+    var(--md-sys-color-primary-container) 100%
+  );
   border-radius: 24px;
   padding: 32px;
   margin-top: 32px;
@@ -3922,20 +3996,25 @@ reak Settings UI Styles */
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.task-breakdown::before {
-  content: '';
+/* .task-breakdown::before {
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, var(--md-sys-color-primary), var(--md-sys-color-secondary));
+  background: linear-gradient(
+    90deg,
+    var(--md-sys-color-primary),
+    var(--md-sys-color-secondary)
+  );
   border-radius: 24px 24px 0 0;
-}
+} */
 
 .task-breakdown:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 48px rgba(0, 106, 107, 0.15), 0 8px 24px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 12px 48px rgba(0, 106, 107, 0.15),
+    0 8px 24px rgba(0, 0, 0, 0.08);
 }
 
 @keyframes slideInUp {
@@ -3981,11 +4060,12 @@ reak Settings UI Styles */
 }
 
 .task-deadline::before {
-  content: '📅';
+  content: "📅";
   font-size: 14px;
 }
 
-.task-ai-badge, .task-placeholder-badge {
+.task-ai-badge,
+.task-placeholder-badge {
   padding: 4px 8px;
   border-radius: 12px;
   font-size: 11px;
@@ -4000,7 +4080,7 @@ reak Settings UI Styles */
 }
 
 .task-ai-badge::before {
-  content: '✨';
+  content: "✨";
   margin-right: 4px;
 }
 
@@ -4010,7 +4090,7 @@ reak Settings UI Styles */
 }
 
 .task-placeholder-badge::before {
-  content: '📝';
+  content: "📝";
   margin-right: 4px;
 }
 
@@ -4023,17 +4103,22 @@ reak Settings UI Styles */
   position: relative;
 }
 
-.breakdown-steps::before {
-  content: '';
+/* .breakdown-steps::before {
+  content: "";
   position: absolute;
   left: 14px;
   top: 40px;
   bottom: 40px;
   width: 2px;
-  background: linear-gradient(to bottom, var(--md-sys-color-primary), var(--md-sys-color-secondary));
+  background: linear-gradient(
+    to bottom,
+    var(--md-sys-color-primary),
+    var(--md-sys-color-secondary)
+  );
   border-radius: 1px;
+
   opacity: 0.3;
-}
+} */
 
 .breakdown-step {
   counter-increment: step-counter;
@@ -4044,16 +4129,36 @@ reak Settings UI Styles */
   z-index: 1;
 }
 
-.breakdown-step:nth-child(1) { animation-delay: 0.1s; }
-.breakdown-step:nth-child(2) { animation-delay: 0.2s; }
-.breakdown-step:nth-child(3) { animation-delay: 0.3s; }
-.breakdown-step:nth-child(4) { animation-delay: 0.4s; }
-.breakdown-step:nth-child(5) { animation-delay: 0.5s; }
-.breakdown-step:nth-child(6) { animation-delay: 0.6s; }
-.breakdown-step:nth-child(7) { animation-delay: 0.7s; }
-.breakdown-step:nth-child(8) { animation-delay: 0.8s; }
-.breakdown-step:nth-child(9) { animation-delay: 0.9s; }
-.breakdown-step:nth-child(10) { animation-delay: 1.0s; }
+.breakdown-step:nth-child(1) {
+  animation-delay: 0.1s;
+}
+.breakdown-step:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.breakdown-step:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.breakdown-step:nth-child(4) {
+  animation-delay: 0.4s;
+}
+.breakdown-step:nth-child(5) {
+  animation-delay: 0.5s;
+}
+.breakdown-step:nth-child(6) {
+  animation-delay: 0.6s;
+}
+.breakdown-step:nth-child(7) {
+  animation-delay: 0.7s;
+}
+.breakdown-step:nth-child(8) {
+  animation-delay: 0.8s;
+}
+.breakdown-step:nth-child(9) {
+  animation-delay: 0.9s;
+}
+.breakdown-step:nth-child(10) {
+  animation-delay: 1s;
+}
 
 @keyframes fadeInStep {
   from {
@@ -4082,13 +4187,18 @@ reak Settings UI Styles */
 }
 
 .step-content::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(0, 106, 107, 0.1), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0, 106, 107, 0.1),
+    transparent
+  );
   transition: left 0.5s ease;
 }
 
@@ -4096,14 +4206,18 @@ reak Settings UI Styles */
   left: 100%;
 }
 
-.step-content::before {
+/* .step-content::before {
   content: counter(step-counter);
   display: flex;
   align-items: center;
   justify-content: center;
   width: 32px;
   height: 32px;
-  background: linear-gradient(135deg, var(--md-sys-color-primary), var(--md-sys-color-secondary));
+  background: linear-gradient(
+    135deg,
+    var(--md-sys-color-primary),
+    var(--md-sys-color-secondary)
+  );
   color: var(--md-sys-color-on-primary);
   border-radius: 50%;
   font-weight: 700;
@@ -4113,7 +4227,7 @@ reak Settings UI Styles */
   box-shadow: 0 2px 8px rgba(0, 106, 107, 0.3);
   z-index: 2;
   position: relative;
-}
+} */
 
 .step-content:hover {
   background: var(--md-sys-color-primary-container);
@@ -4123,7 +4237,11 @@ reak Settings UI Styles */
 }
 
 .step-content:hover::before {
-  background: linear-gradient(135deg, var(--md-sys-color-secondary), var(--md-sys-color-primary));
+  background: linear-gradient(
+    135deg,
+    var(--md-sys-color-secondary),
+    var(--md-sys-color-primary)
+  );
   transform: scale(1.15) rotate(5deg);
   box-shadow: 0 4px 16px rgba(0, 106, 107, 0.4);
 }
@@ -4160,7 +4278,11 @@ reak Settings UI Styles */
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--md-sys-color-secondary-container), var(--md-sys-color-primary-container));
+  background: linear-gradient(
+    135deg,
+    var(--md-sys-color-secondary-container),
+    var(--md-sys-color-primary-container)
+  );
   color: var(--md-sys-color-on-secondary-container);
   border: 2px solid var(--md-sys-color-outline-variant);
   cursor: pointer;
@@ -4176,7 +4298,7 @@ reak Settings UI Styles */
 }
 
 .step-complete-btn::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 50%;
   left: 50%;
@@ -4194,7 +4316,11 @@ reak Settings UI Styles */
 }
 
 .step-complete-btn:hover {
-  background: linear-gradient(135deg, var(--md-sys-color-primary), var(--md-sys-color-secondary));
+  background: linear-gradient(
+    135deg,
+    var(--md-sys-color-primary),
+    var(--md-sys-color-secondary)
+  );
   color: var(--md-sys-color-on-primary);
   transform: scale(1.15) rotate(10deg);
   box-shadow: 0 6px 20px rgba(0, 106, 107, 0.4);
@@ -4212,33 +4338,52 @@ reak Settings UI Styles */
 }
 
 @keyframes completeStep {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.02); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .breakdown-step.completed .step-content {
-  background: linear-gradient(135deg, var(--md-sys-color-primary-container), #e8f5e8);
+  background: linear-gradient(
+    135deg,
+    var(--md-sys-color-primary-container),
+    #e8f5e8
+  );
   border-color: var(--md-sys-color-primary);
   opacity: 0.9;
   position: relative;
 }
 
 .breakdown-step.completed .step-content::after {
-  background: linear-gradient(90deg, transparent, rgba(76, 175, 80, 0.1), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(76, 175, 80, 0.1),
+    transparent
+  );
 }
 
 .breakdown-step.completed .step-content::before {
   background: linear-gradient(135deg, #4caf50, #66bb6a);
   color: white;
-  content: '✓';
+  content: "✓";
   font-weight: bold;
   animation: checkmarkPop 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
 @keyframes checkmarkPop {
-  0% { transform: scale(0) rotate(-180deg); }
-  100% { transform: scale(1) rotate(0deg); }
+  0% {
+    transform: scale(0) rotate(-180deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
 }
 
 .breakdown-step.completed .step-text {
@@ -4257,8 +4402,13 @@ reak Settings UI Styles */
 }
 
 @keyframes completeBtnPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.4); }
-  50% { box-shadow: 0 0 0 8px rgba(76, 175, 80, 0); }
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(76, 175, 80, 0);
+  }
 }
 
 /* Task Actions - Enhanced */
@@ -4274,14 +4424,18 @@ reak Settings UI Styles */
 }
 
 .task-actions::before {
-  content: '';
+  content: "";
   position: absolute;
   top: -1px;
   left: 50%;
   transform: translateX(-50%);
   width: 60px;
   height: 2px;
-  background: linear-gradient(90deg, var(--md-sys-color-primary), var(--md-sys-color-secondary));
+  background: linear-gradient(
+    90deg,
+    var(--md-sys-color-primary),
+    var(--md-sys-color-secondary)
+  );
   border-radius: 1px;
 }
 
@@ -4298,7 +4452,7 @@ reak Settings UI Styles */
 }
 
 .task-actions .btn::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 50%;
   left: 50%;
@@ -4326,11 +4480,19 @@ reak Settings UI Styles */
 }
 
 .task-actions .btn-primary {
-  background: linear-gradient(135deg, var(--md-sys-color-primary), var(--md-sys-color-secondary));
+  background: linear-gradient(
+    135deg,
+    var(--md-sys-color-primary),
+    var(--md-sys-color-secondary)
+  );
 }
 
 .task-actions .btn-secondary {
-  background: linear-gradient(135deg, var(--md-sys-color-secondary-container), var(--md-sys-color-primary-container));
+  background: linear-gradient(
+    135deg,
+    var(--md-sys-color-secondary-container),
+    var(--md-sys-color-primary-container)
+  );
   border: 2px solid var(--md-sys-color-outline-variant);
 }
 
@@ -4345,7 +4507,11 @@ reak Settings UI Styles */
 .task-progress {
   margin-top: 24px;
   padding: 20px;
-  background: linear-gradient(135deg, var(--md-sys-color-secondary-container), var(--md-sys-color-primary-container));
+  background: linear-gradient(
+    135deg,
+    var(--md-sys-color-secondary-container),
+    var(--md-sys-color-primary-container)
+  );
   border-radius: 16px;
   display: flex;
   align-items: center;
@@ -4357,7 +4523,7 @@ reak Settings UI Styles */
 }
 
 .task-progress::before {
-  content: '📊';
+  content: "📊";
   font-size: 20px;
   margin-right: 4px;
 }
@@ -4374,7 +4540,11 @@ reak Settings UI Styles */
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--md-sys-color-primary), var(--md-sys-color-secondary));
+  background: linear-gradient(
+    90deg,
+    var(--md-sys-color-primary),
+    var(--md-sys-color-secondary)
+  );
   border-radius: 4px;
   transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
@@ -4382,19 +4552,28 @@ reak Settings UI Styles */
 }
 
 .progress-fill::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
   animation: progressShine 2s infinite;
 }
 
 @keyframes progressShine {
-  0% { left: -100%; }
-  100% { left: 100%; }
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
 }
 
 .progress-text {
@@ -4476,15 +4655,15 @@ reak Settings UI Styles */
   .task-input-actions {
     flex-direction: column;
   }
-  
+
   .task-actions {
     flex-direction: column;
   }
-  
+
   .task-actions .btn {
     flex: none;
   }
-  
+
   .task-meta {
     flex-direction: column;
     align-items: flex-start;
@@ -4520,12 +4699,12 @@ reak Settings UI Styles */
   .step-content {
     border: 2px solid var(--md-sys-color-outline);
   }
-  
+
   .task-breakdown {
     border: 2px solid var(--md-sys-color-outline);
   }
-}/
-* Additional Task Breakdown Animations */
+}
+/* Additional Task Breakdown Animations */
 @keyframes completionPulse {
   0% {
     transform: scale(1);
@@ -4582,12 +4761,20 @@ reak Settings UI Styles */
 /* Task Input Enhancements */
 .task-input.valid {
   border-color: var(--md-sys-color-primary);
-  background: color-mix(in srgb, var(--md-sys-color-primary-container) 10%, var(--md-sys-color-surface));
+  background: color-mix(
+    in srgb,
+    var(--md-sys-color-primary-container) 10%,
+    var(--md-sys-color-surface)
+  );
 }
 
 .task-input.invalid {
   border-color: var(--md-sys-color-error);
-  background: color-mix(in srgb, var(--md-sys-color-error-container) 10%, var(--md-sys-color-surface));
+  background: color-mix(
+    in srgb,
+    var(--md-sys-color-error-container) 10%,
+    var(--md-sys-color-surface)
+  );
 }
 
 /* Smooth Transitions for All Interactive Elements */
@@ -4617,24 +4804,28 @@ reak Settings UI Styles */
 
 /* Progress Bar Enhancements */
 .progress-fill {
-  background: linear-gradient(90deg, 
-    var(--md-sys-color-primary) 0%, 
-    color-mix(in srgb, var(--md-sys-color-primary) 80%, white) 100%);
+  background: linear-gradient(
+    90deg,
+    var(--md-sys-color-primary) 0%,
+    color-mix(in srgb, var(--md-sys-color-primary) 80%, white) 100%
+  );
   position: relative;
   overflow: hidden;
 }
 
 .progress-fill::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, 
-    transparent 0%, 
-    rgba(255, 255, 255, 0.3) 50%, 
-    transparent 100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    transparent 100%
+  );
   animation: progressShimmer 2s infinite;
 }
 
@@ -4654,16 +4845,18 @@ reak Settings UI Styles */
 }
 
 .history-item::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, 
-    transparent 0%, 
-    rgba(0, 106, 107, 0.1) 50%, 
-    transparent 100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 106, 107, 0.1) 50%,
+    transparent 100%
+  );
   transition: left 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -4682,7 +4875,11 @@ reak Settings UI Styles */
 
 /* Loading State Enhancements */
 .btn.loading {
-  background: color-mix(in srgb, var(--md-sys-color-primary) 70%, var(--md-sys-color-surface));
+  background: color-mix(
+    in srgb,
+    var(--md-sys-color-primary) 70%,
+    var(--md-sys-color-surface)
+  );
 }
 
 .btn.loading::after {
@@ -4697,7 +4894,7 @@ ced Button Loading States */
 }
 
 .btn.loading::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 50%;
   left: 50%;
@@ -4758,7 +4955,11 @@ ced Button Loading States */
 }
 
 .task-status.loading {
-  background: linear-gradient(135deg, var(--md-sys-color-primary-container), var(--md-sys-color-secondary-container));
+  background: linear-gradient(
+    135deg,
+    var(--md-sys-color-primary-container),
+    var(--md-sys-color-secondary-container)
+  );
   color: var(--md-sys-color-on-primary-container);
   border: 1px solid var(--md-sys-color-primary);
 }
@@ -4767,10 +4968,18 @@ ced Button Loading States */
   font-size: 16px;
 }
 
-.task-status.success::before { content: '✅'; }
-.task-status.error::before { content: '❌'; }
-.task-status.warning::before { content: '⚠️'; }
-.task-status.loading::before { content: '⏳'; }
+.task-status.success::before {
+  content: "✅";
+}
+.task-status.error::before {
+  content: "❌";
+}
+.task-status.warning::before {
+  content: "⚠️";
+}
+.task-status.loading::before {
+  content: "⏳";
+}
 
 /* Enhanced Focus States for Accessibility */
 .task-input:focus-visible,
@@ -4797,40 +5006,40 @@ ced Button Loading States */
     padding: 16px;
     margin-bottom: 16px;
   }
-  
+
   .task-input {
     height: 48px;
     padding: 12px 16px;
     font-size: 14px;
   }
-  
+
   .task-breakdown {
     padding: 20px;
     margin-top: 20px;
   }
-  
+
   .step-content {
     padding: 16px;
     gap: 12px;
   }
-  
+
   .step-content::before {
     width: 28px;
     height: 28px;
     font-size: 12px;
   }
-  
+
   .step-complete-btn {
     width: 32px;
     height: 32px;
     font-size: 16px;
   }
-  
+
   .task-actions {
     flex-direction: column;
     gap: 12px;
   }
-  
+
   .task-actions .btn {
     min-width: auto;
     width: 100%;
@@ -4842,16 +5051,16 @@ ced Button Loading States */
   .task-input-section {
     background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
   }
-  
+
   .task-breakdown {
     background: linear-gradient(145deg, #1a1a1a 0%, #2d2d2d 100%);
   }
-  
+
   .step-content {
     background: #2d2d2d;
     border-color: #404040;
   }
-  
+
   .step-content:hover {
     background: #3d3d3d;
   }
@@ -4869,13 +5078,13 @@ ced Button Loading States */
     animation: none !important;
     transition: none !important;
   }
-  
+
   .step-content:hover,
   .btn:hover,
   .task-input:hover {
     transform: none !important;
   }
-}/* 
+} /* 
 Additional animations for enhanced task breakdown UI */
 @keyframes floatUp {
   0% {
@@ -4931,15 +5140,25 @@ Additional animations for enhanced task breakdown UI */
 
 .loading-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--md-sys-color-primary), var(--md-sys-color-secondary));
+  background: linear-gradient(
+    90deg,
+    var(--md-sys-color-primary),
+    var(--md-sys-color-secondary)
+  );
   border-radius: 2px;
   animation: loadingProgress 2s ease-in-out infinite;
 }
 
 @keyframes loadingProgress {
-  0% { width: 0%; }
-  50% { width: 70%; }
-  100% { width: 100%; }
+  0% {
+    width: 0%;
+  }
+  50% {
+    width: 70%;
+  }
+  100% {
+    width: 100%;
+  }
 }
 
 .loading-text {
@@ -4964,13 +5183,21 @@ Additional animations for enhanced task breakdown UI */
 
 /* Fade animations */
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes fadeOut {
-  from { opacity: 1; }
-  to { opacity: 0; }
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }
 
 /* Enhanced step completion feedback */
@@ -4988,10 +5215,19 @@ Additional animations for enhanced task breakdown UI */
 }
 
 @keyframes iconBounce {
-  0%, 100% { transform: scale(1) rotate(0deg); }
-  25% { transform: scale(1.1) rotate(-5deg); }
-  50% { transform: scale(1.2) rotate(5deg); }
-  75% { transform: scale(1.1) rotate(-2deg); }
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+  25% {
+    transform: scale(1.1) rotate(-5deg);
+  }
+  50% {
+    transform: scale(1.2) rotate(5deg);
+  }
+  75% {
+    transform: scale(1.1) rotate(-2deg);
+  }
 }
 
 /* Enhanced focus ring for better accessibility */
@@ -5004,8 +5240,12 @@ Additional animations for enhanced task breakdown UI */
 }
 
 @keyframes focusRing {
-  0% { outline-width: 0; }
-  100% { outline-width: 3px; }
+  0% {
+    outline-width: 0;
+  }
+  100% {
+    outline-width: 3px;
+  }
 }
 
 /* Smooth transitions for all interactive elements */
@@ -5025,7 +5265,7 @@ Additional animations for enhanced task breakdown UI */
   .task-input-section {
     border-width: 3px;
   }
-  
+
   .step-content::before,
   .step-complete-btn {
     border: 2px solid currentColor;
@@ -5039,15 +5279,63 @@ Additional animations for enhanced task breakdown UI */
     box-shadow: none !important;
     border: 2px solid #000 !important;
   }
-  
+
   .step-content {
     background: white !important;
     border: 1px solid #000 !important;
   }
-  
+
   .btn,
   .task-input-actions,
   .task-actions {
     display: none !important;
   }
+}
+#breakdownList {
+  list-style-type: disc; /* bullets */
+  padding-left: 20px; /* indent so bullets show */
+  margin: 12px 0;
+  color: var(--md-sys-color-on-surface); /* dark text for visibility */
+}
+
+#breakdownList li {
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+.step-actions {
+  display: none;
+}
+/* === Temporary/Targeted fixes to make breakdown visible === */
+
+/* Ensure steps are visible even if animations are disabled */
+.breakdown-step {
+  opacity: 1 !important;
+  animation: none !important;
+  transform: none !important;
+}
+
+/* Make sure step text is readable (overrides any global li/white rules) */
+.breakdown-step .step-text,
+.breakdown-steps li,
+#breakdownList,
+.task-item,
+.task-list li {
+  color: var(--md-sys-color-on-surface) !important;
+  display: block !important;
+}
+
+/* Show step-actions by default for debugging (revert later) */
+.step-content .step-actions {
+  opacity: 1 !important;
+  transform: translateX(0) !important;
+}
+
+/* Safety override for accidental transparent-button classes */
+.transpbtn,
+.btn.loading {
+  color: inherit !important;
+  background: transparent !important;
+}
+#saveTaskBtn {
+  display: none;
 }
