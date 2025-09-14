@@ -26,8 +26,7 @@ class BreakErrorHandler {
     // Dependencies
     this.storageManager = null;
     this.errorHandler = null;
-    
-    this.init();
+    this.isInitialized = false;
   }
 
   /**
@@ -35,22 +34,52 @@ class BreakErrorHandler {
    */
   async init() {
     try {
-      // Import dependencies if in service worker context
-      if (typeof importScripts !== "undefined") {
-        importScripts(
-          "/services/storage-manager.js",
-          "/utils/error-handler.js"
-        );
-        this.storageManager = new StorageManager();
-        this.errorHandler = new ErrorHandler();
-      } else {
-        this.storageManager = this.storageManager || new StorageManager();
-        this.errorHandler = this.errorHandler || (typeof errorHandler !== 'undefined' ? errorHandler : new ErrorHandler());
+      if (this.isInitialized) {
+        return true;
       }
       
+      // Import dependencies if in service worker context
+      if (typeof importScripts !== "undefined") {
+        try {
+          importScripts(
+            "/services/storage-manager.js",
+            "/utils/error-handler.js"
+          );
+          this.storageManager = new StorageManager();
+          this.errorHandler = new ErrorHandler();
+        } catch (importError) {
+          console.warn("Could not import dependencies, using fallback mode:", importError);
+          this.fallbackMode = true;
+        }
+      } else {
+        // In popup context, dependencies should be available globally
+        this.storageManager = this.storageManager || (typeof StorageManager !== 'undefined' ? new StorageManager() : null);
+        this.errorHandler = this.errorHandler || (typeof ErrorHandler !== 'undefined' ? new ErrorHandler() : null);
+      }
+      
+      // Create minimal fallback if dependencies are not available
+      if (!this.storageManager) {
+        this.storageManager = {
+          get: async (key) => null,
+          set: async (key, value) => true,
+          setMultiple: async (data) => true
+        };
+      }
+      
+      if (!this.errorHandler) {
+        this.errorHandler = {
+          showUserFeedback: (message, type, options) => console.log(`[${type}] ${message}`)
+        };
+      }
+      
+      this.isInitialized = true;
       console.log("BreakErrorHandler initialized successfully");
+      return true;
     } catch (error) {
       console.error("BreakErrorHandler initialization error:", error);
+      this.fallbackMode = true;
+      this.isInitialized = true; // Mark as initialized even in fallback mode
+      return false;
     }
   }
 
@@ -908,6 +937,7 @@ class BreakErrorHandler {
 // Export for use in service worker and other contexts
 if (typeof module !== "undefined" && module.exports) {
   module.exports = BreakErrorHandler;
-} else if (typeof self !== "undefined") {
-  self.BreakErrorHandler = BreakErrorHandler;
+} else {
+  // Make available globally in service worker context
+  globalThis.BreakErrorHandler = BreakErrorHandler;
 }

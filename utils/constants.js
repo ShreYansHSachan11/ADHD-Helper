@@ -219,6 +219,7 @@ const CONSTANTS = {
 // For use in service worker and popup
 if (typeof module !== "undefined" && module.exports) {
   module.exports = CONSTANTS;
-} else if (typeof window !== "undefined") {
-  window.CONSTANTS = CONSTANTS;
+} else {
+  // Make available globally in both service worker and popup contexts
+  globalThis.CONSTANTS = CONSTANTS;
 }

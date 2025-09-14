@@ -380,6 +380,7 @@ class BreakSettingsManager {
 // Export for use in service worker and popup
 if (typeof module !== "undefined" && module.exports) {
   module.exports = BreakSettingsManager;
-} else if (typeof self !== "undefined") {
-  self.BreakSettingsManager = BreakSettingsManager;
+} else {
+  // Make available globally in service worker context
+  globalThis.BreakSettingsManager = BreakSettingsManager;
 }

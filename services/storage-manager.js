@@ -1,11 +1,18 @@
 /**
  * Storage Manager - Chrome Extension Storage API Wrapper
  * Provides simplified interface for Chrome storage operations
+ * Implements singleton pattern to prevent multiple instances
  */
 
 class StorageManager {
   constructor() {
+    // Implement singleton pattern
+    if (StorageManager.instance) {
+      return StorageManager.instance;
+    }
+    
     this.storage = chrome.storage.local;
+    StorageManager.instance = this;
   }
 
   /**
@@ -161,13 +168,18 @@ class StorageManager {
   }
 }
 
-// Export singleton instance
-const storageManager = new StorageManager();
+// Static method to get singleton instance
+StorageManager.getInstance = function() {
+  if (!StorageManager.instance) {
+    StorageManager.instance = new StorageManager();
+  }
+  return StorageManager.instance;
+};
 
 // For use in service worker and popup
 if (typeof module !== "undefined" && module.exports) {
   module.exports = StorageManager;
-} else if (typeof window !== "undefined") {
-  window.StorageManager = StorageManager;
-  window.storageManager = storageManager;
+} else {
+  // Make available globally in both service worker and popup contexts
+  globalThis.StorageManager = StorageManager;
 }

@@ -541,13 +541,10 @@ Format your response as a numbered list of actionable steps. Do not include expl
   }
 }
 
-// Export singleton instance
-const geminiService = new GeminiService();
-
 // For use in service worker and popup
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = GeminiService;
-} else if (typeof window !== 'undefined') {
-  window.GeminiService = GeminiService;
-  window.geminiService = geminiService;
+} else {
+  // Make available globally in both service worker and popup contexts
+  globalThis.GeminiService = GeminiService;
 }

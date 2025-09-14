@@ -373,6 +373,7 @@ const HELPERS = {
 // For use in service worker and popup
 if (typeof module !== "undefined" && module.exports) {
   module.exports = HELPERS;
-} else if (typeof window !== "undefined") {
-  window.HELPERS = HELPERS;
+} else {
+  // Make available globally in both service worker and popup contexts
+  globalThis.HELPERS = HELPERS;
 }

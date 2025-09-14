@@ -43,34 +43,21 @@ class TabTracker {
 
       // Initialize performance monitoring
       try {
-        if (typeof importScripts !== "undefined") {
-          importScripts("/utils/performance-monitor.js");
+        if (typeof PerformanceMonitor !== 'undefined') {
           this.performanceMonitor = new PerformanceMonitor();
           this.performanceMonitor.startTabTrackingMonitoring();
+        } else {
+          console.warn('PerformanceMonitor not available, skipping performance monitoring');
         }
       } catch (error) {
         console.warn('Failed to initialize performance monitoring:', error);
       }
 
-      // Import dependencies (they should be available in service worker context)
-      if (typeof importScripts !== "undefined") {
-        importScripts(
-          "/services/storage-manager.js",
-          "/services/break-timer-manager.js",
-          "/utils/constants.js",
-          "/utils/helpers.js"
-        );
-        this.storageManager = new StorageManager();
-        this.constants = CONSTANTS;
-        this.helpers = HELPERS;
-        this.breakTimerManager = new BreakTimerManager();
-      } else {
-        // For testing environment, dependencies should be passed or available globally
-        this.storageManager = this.storageManager || new StorageManager();
-        this.constants = this.constants || CONSTANTS;
-        this.helpers = this.helpers || HELPERS;
-        // Break timer manager will be set via setBreakTimerManager method
-      }
+      // Use globally available dependencies (already loaded in background.js)
+      this.storageManager = this.storageManager || (typeof StorageManager !== 'undefined' ? new StorageManager() : null);
+      this.constants = this.constants || (typeof CONSTANTS !== 'undefined' ? CONSTANTS : null);
+      this.helpers = this.helpers || (typeof HELPERS !== 'undefined' ? HELPERS : null);
+      // Break timer manager will be set via setBreakTimerManager method
 
       await this.loadStoredData();
       await this.setupEventListeners();
@@ -104,6 +91,12 @@ class TabTracker {
    */
   async loadStoredData() {
     try {
+      // Check if storageManager is available
+      if (!this.storageManager) {
+        console.warn('StorageManager not available in TabTracker, skipping data loading');
+        return;
+      }
+
       const data = await this.storageManager.getMultiple([
         this.constants.STORAGE_KEYS.CURRENT_SESSION,
         this.constants.STORAGE_KEYS.TAB_HISTORY,
@@ -920,6 +913,18 @@ class TabTracker {
    */
   async getFocusSessionStats() {
     try {
+      // Check if storageManager is available
+      if (!this.storageManager) {
+        console.warn('StorageManager not available in TabTracker');
+        return {
+          sessionTime: 0,
+          deviationCount: 0,
+          isCurrentlyOnFocus: false,
+          focusTabUrl: null,
+          totalDeviations: 0
+        };
+      }
+
       const sessionData = await this.storageManager.get(
         this.constants.STORAGE_KEYS.CURRENT_SESSION
       );
@@ -968,6 +973,16 @@ class TabTracker {
    */
   async getFocusDeviationHistory() {
     try {
+      // Check if storageManager is available
+      if (!this.storageManager) {
+        console.warn('StorageManager not available in TabTracker');
+        return {
+          deviations: [],
+          sessionDeviations: 0,
+          totalDeviations: 0
+        };
+      }
+
       const focusHistory = await this.storageManager.get('focusHistory') || {};
       
       return {
@@ -1351,6 +1366,7 @@ class TabTracker {
 // Export for use in service worker
 if (typeof module !== "undefined" && module.exports) {
   module.exports = TabTracker;
-} else if (typeof self !== "undefined") {
-  self.TabTracker = TabTracker;
+} else {
+  // Make available globally in service worker context
+  globalThis.TabTracker = TabTracker;
 }

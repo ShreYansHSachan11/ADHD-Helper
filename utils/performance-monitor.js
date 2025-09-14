@@ -415,4 +415,10 @@ class PerformanceMonitor {
   }
 }
 
-export default PerformanceMonitor;
+// Export for use in service worker and other contexts
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = PerformanceMonitor;
+} else {
+  // Make available globally in service worker context
+  globalThis.PerformanceMonitor = PerformanceMonitor;
+}

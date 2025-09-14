@@ -682,10 +682,9 @@ class PomodoroService {
 }
 
 // Export for use in extension
-if (typeof window !== "undefined") {
-  window.PomodoroService = PomodoroService;
-}
-
 if (typeof module !== "undefined" && module.exports) {
   module.exports = PomodoroService;
+} else {
+  // Make available globally in both service worker and popup contexts
+  globalThis.PomodoroService = PomodoroService;
 }

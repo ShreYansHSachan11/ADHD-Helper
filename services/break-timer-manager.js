@@ -43,26 +43,18 @@ class BreakTimerManager {
    */
   async init() {
     try {
-      // Import dependencies if in service worker context
-      if (typeof importScripts !== "undefined") {
-        importScripts(
-          "/services/storage-manager.js",
-          "/services/break-settings-manager.js",
-          "/utils/constants.js",
-          "/utils/helpers.js",
-          "/utils/break-error-handler.js"
-        );
-        this.storageManager = new StorageManager();
-        this.settingsManager = new BreakSettingsManager();
-        this.constants = CONSTANTS;
-        this.helpers = HELPERS;
-        this.breakErrorHandler = new BreakErrorHandler();
-      } else {
-        // For testing environment, use globally available dependencies
-        this.storageManager = this.storageManager || new StorageManager();
+      // Use globally available dependencies (already imported in background.js)
+      this.storageManager = this.storageManager || (typeof StorageManager !== 'undefined' ? new StorageManager() : null);
+      this.constants = this.constants || (typeof CONSTANTS !== 'undefined' ? CONSTANTS : null);
+      this.helpers = this.helpers || (typeof HELPERS !== 'undefined' ? HELPERS : null);
+      
+      // Initialize settings manager if available
+      if (typeof BreakSettingsManager !== 'undefined') {
         this.settingsManager = this.settingsManager || new BreakSettingsManager();
-        this.constants = this.constants || CONSTANTS;
-        this.helpers = this.helpers || HELPERS;
+      }
+      
+      // Initialize error handler if available
+      if (typeof BreakErrorHandler !== 'undefined') {
         this.breakErrorHandler = this.breakErrorHandler || new BreakErrorHandler();
       }
       
@@ -103,62 +95,79 @@ class BreakTimerManager {
       
       // Validate and sanitize timer state
       if (timerState) {
-        const validation = this.breakErrorHandler.validateAndSanitizeBreakData(timerState, 'timer_state');
-        
-        if (!validation.isValid) {
-          console.warn("Timer state validation failed, attempting recovery");
-          const recoveryResult = await this.breakErrorHandler.handleTimerStateCorruption(timerState, 'timer_state');
+        if (this.breakErrorHandler && typeof this.breakErrorHandler.validateAndSanitizeBreakData === 'function') {
+          const validation = this.breakErrorHandler.validateAndSanitizeBreakData(timerState, 'timer_state');
           
-          if (recoveryResult.success) {
-            const recovered = recoveryResult.recoveredState;
-            this.isWorkTimerActive = recovered.isWorkTimerActive;
-            this.isOnBreak = recovered.isOnBreak;
-            this.breakType = recovered.breakType;
-            this.lastActivityTime = recovered.lastActivityTime;
-            this.workTimeThreshold = recovered.workTimeThreshold;
+          if (!validation.isValid) {
+            console.warn("Timer state validation failed, attempting recovery");
+            const recoveryResult = await this.breakErrorHandler.handleTimerStateCorruption(timerState, 'timer_state');
+            
+            if (recoveryResult.success) {
+              const recovered = recoveryResult.recoveredState;
+              this.isWorkTimerActive = recovered.isWorkTimerActive;
+              this.isOnBreak = recovered.isOnBreak;
+              this.breakType = recovered.breakType;
+              this.lastActivityTime = recovered.lastActivityTime;
+              this.workTimeThreshold = recovered.workTimeThreshold;
+            } else {
+              // Use defaults if recovery failed
+              await this.initializeDefaultState();
+            }
           } else {
-            // Use defaults if recovery failed
-            await this.initializeDefaultState();
+            // Use sanitized data
+            const sanitized = validation.sanitizedData;
+            this.isWorkTimerActive = sanitized.isWorkTimerActive || false;
+            this.isOnBreak = sanitized.isOnBreak || false;
+            this.breakType = sanitized.breakType || null;
+            this.lastActivityTime = sanitized.lastActivityTime || Date.now();
+            this.workTimeThreshold = sanitized.workTimeThreshold || (30 * 60 * 1000);
           }
         } else {
-          // Use sanitized data
-          const sanitized = validation.sanitizedData;
-          this.isWorkTimerActive = sanitized.isWorkTimerActive || false;
-          this.isOnBreak = sanitized.isOnBreak || false;
-          this.breakType = sanitized.breakType || null;
-          this.lastActivityTime = sanitized.lastActivityTime || Date.now();
-          this.workTimeThreshold = sanitized.workTimeThreshold || (30 * 60 * 1000);
+          // Fallback: use timer state directly without validation
+          this.isWorkTimerActive = timerState.isWorkTimerActive || false;
+          this.isOnBreak = timerState.isOnBreak || false;
+          this.breakType = timerState.breakType || null;
+          this.lastActivityTime = timerState.lastActivityTime || Date.now();
+          this.workTimeThreshold = timerState.workTimeThreshold || (30 * 60 * 1000);
         }
       }
       
       // Validate and sanitize work session data
       if (workSessionData) {
-        const validation = this.breakErrorHandler.validateAndSanitizeBreakData(workSessionData, 'work_session_data');
-        
-        if (!validation.isValid) {
-          console.warn("Work session data validation failed, attempting recovery");
-          const recoveryResult = await this.breakErrorHandler.handleTimerStateCorruption(workSessionData, 'work_session');
+        if (this.breakErrorHandler && typeof this.breakErrorHandler.validateAndSanitizeBreakData === 'function') {
+          const validation = this.breakErrorHandler.validateAndSanitizeBreakData(workSessionData, 'work_session_data');
           
-          if (recoveryResult.success) {
-            const recovered = recoveryResult.recoveredState;
-            this.workStartTime = recovered.workStartTime;
-            this.totalWorkTime = recovered.totalWorkTime;
-            this.breakStartTime = recovered.breakStartTime;
-            this.breakDuration = recovered.breakDuration;
+          if (!validation.isValid) {
+            console.warn("Work session data validation failed, attempting recovery");
+            const recoveryResult = await this.breakErrorHandler.handleTimerStateCorruption(workSessionData, 'work_session');
+            
+            if (recoveryResult.success) {
+              const recovered = recoveryResult.recoveredState;
+              this.workStartTime = recovered.workStartTime;
+              this.totalWorkTime = recovered.totalWorkTime;
+              this.breakStartTime = recovered.breakStartTime;
+              this.breakDuration = recovered.breakDuration;
+            } else {
+              // Use defaults if recovery failed
+              this.workStartTime = null;
+              this.totalWorkTime = 0;
+              this.breakStartTime = null;
+              this.breakDuration = 0;
+            }
           } else {
-            // Use defaults if recovery failed
-            this.workStartTime = null;
-            this.totalWorkTime = 0;
-            this.breakStartTime = null;
-            this.breakDuration = 0;
+            // Use sanitized data
+            const sanitized = validation.sanitizedData;
+            this.workStartTime = sanitized.workStartTime || null;
+            this.totalWorkTime = sanitized.workTime || 0;
+            this.breakStartTime = sanitized.startTime || null;
+            this.breakDuration = sanitized.duration || 0;
           }
         } else {
-          // Use sanitized data
-          const sanitized = validation.sanitizedData;
-          this.workStartTime = sanitized.workStartTime || null;
-          this.totalWorkTime = sanitized.workTime || 0;
-          this.breakStartTime = sanitized.startTime || null;
-          this.breakDuration = sanitized.duration || 0;
+          // Fallback: use work session data directly without validation
+          this.workStartTime = workSessionData.workStartTime || null;
+          this.totalWorkTime = workSessionData.totalWorkTime || 0;
+          this.breakStartTime = workSessionData.breakStartTime || null;
+          this.breakDuration = workSessionData.breakDuration || 0;
         }
         
         // Validate and recover from browser restart
@@ -841,7 +850,7 @@ class BreakTimerManager {
       };
       
       // Validate data before persisting
-      if (this.breakErrorHandler) {
+      if (this.breakErrorHandler && typeof this.breakErrorHandler.validateAndSanitizeBreakData === 'function') {
         const timerValidation = this.breakErrorHandler.validateAndSanitizeBreakData(timerState, 'timer_state_persist');
         const workValidation = this.breakErrorHandler.validateAndSanitizeBreakData(workSessionData, 'work_session_persist');
         
@@ -973,6 +982,7 @@ class BreakTimerManager {
 // Export for use in service worker and popup
 if (typeof module !== "undefined" && module.exports) {
   module.exports = BreakTimerManager;
-} else if (typeof self !== "undefined") {
-  self.BreakTimerManager = BreakTimerManager;
+} else {
+  // Make available globally in service worker context
+  globalThis.BreakTimerManager = BreakTimerManager;
 }

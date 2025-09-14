@@ -115,7 +115,7 @@
         </div>
 
         <!-- Break Reminder Panel -->
-        <div class="feature-panel" id="breakReminderPanel">
+        <div class="feature-panel" id="break-reminderPanel">
           <div class="panel-header">
             <h2>Break Reminder</h2>
             <span class="current-time" id="currentTime">0m</span>
@@ -168,6 +168,16 @@
               </div>
             </div>
             
+            <!-- Break Controls Container -->
+            <div class="break-controls-container" id="breakControlsContainer">
+              <!-- Break controls will be populated by BreakControlsUI component -->
+            </div>
+            
+            <!-- Break Settings Container -->
+            <div class="break-settings-container" id="breakSettingsContainer">
+              <!-- Break settings will be populated by BreakSettingsUI component -->
+            </div>
+            
             <!-- Break Analytics Display -->
             <div class="break-analytics" id="breakAnalyticsContainer">
               <!-- Analytics content will be populated by BreakAnalyticsDisplay component -->
@@ -176,7 +186,7 @@
         </div>
 
         <!-- Focus Tracking Panel -->
-        <div class="feature-panel" id="focusTrackingPanel">
+        <div class="feature-panel" id="focus-trackingPanel">
           <div class="panel-header">
             <h2>Focus Tracking</h2>
             <div class="focus-status-indicator" id="focusStatusIndicator">
@@ -271,7 +281,7 @@
         </div>
 
         <!-- Task Breakdown Panel -->
-        <div class="feature-panel" id="taskBreakdownPanel">
+        <div class="feature-panel" id="task-breakdownPanel">
           <div class="panel-header">
             <h2>AI Task Breakdown</h2>
           </div>
@@ -453,7 +463,7 @@
         </div>
 
         <!-- White Noise Panel -->
-        <div class="feature-panel" id="whiteNoisePanel">
+        <div class="feature-panel" id="white-noisePanel">
           <div class="panel-header">
             <h2>White Noise</h2>
           </div>
@@ -564,7 +574,10 @@
     <script src="../utils/error-handler.js"></script>
     <script src="../utils/lazy-loader.js"></script>
     <script src="../utils/accessibility.js"></script>
+    <script src="../utils/constants.js"></script>
+    <script src="../utils/helpers.js"></script>
     <script src="../services/storage-manager.js"></script>
+    <script src="../services/audio-manager.js"></script>
     <script src="../services/break-timer-manager.js"></script>
     <script src="../services/break-notification-system.js"></script>
     <script src="../services/break-analytics-tracker.js"></script>
@@ -572,10 +585,10 @@
     <script src="../services/pomodoro-service.js"></script>
     <script src="../services/gemini-service.js"></script>
     <script src="../services/calendar-service.js"></script>
-    <script src="../utils/constants.js"></script>
     <script src="components/task-manager.js"></script>
     <script src="components/pomodoro-timer.js"></script>
     <script src="components/breathing-exercise.js"></script>
+    <script src="components/break-controls-ui.js"></script>
     <script src="components/break-analytics-display.js"></script>
     <script src="components/break-settings-ui.js"></script>
     <script src="popup.js"></script>

@@ -171,4 +171,10 @@ class AudioOptimizer {
   }
 }
 
-export default AudioOptimizer;
+// Export for use in service worker and other contexts
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = AudioOptimizer;
+} else {
+  // Make available globally in service worker context
+  globalThis.AudioOptimizer = AudioOptimizer;
+}

@@ -285,8 +285,8 @@ class PopupManager {
   setupLazyExternalPages() {
     if (!this.lazyLoader) return;
 
-    const focusAnxietyBtn = document.getElementById("focusAnxietyBtn");
-    const asmrFidgetBtn = document.getElementById("asmrFidgetBtn");
+    const focusAnxietyBtn = document.getElementById("wellnessToolsBtn");
+    const asmrFidgetBtn = document.getElementById("asmrToysBtn");
 
     // Preload external pages on hover (anticipatory loading)
     focusAnxietyBtn?.addEventListener(
@@ -413,8 +413,8 @@ class PopupManager {
     this.currentSoundName = document.getElementById("currentSoundName");
 
     // External page elements
-    this.focusAnxietyBtn = document.getElementById("focusAnxietyBtn");
-    this.asmrFidgetBtn = document.getElementById("asmrFidgetBtn");
+    this.focusAnxietyBtn = document.getElementById("wellnessToolsBtn");
+    this.asmrFidgetBtn = document.getElementById("asmrToysBtn");
 
     console.log("External page elements bound:", {
       focusAnxietyBtn: !!this.focusAnxietyBtn,
@@ -602,6 +602,11 @@ class PopupManager {
       if (this.breakUpdateInterval) {
         clearInterval(this.breakUpdateInterval);
         this.breakUpdateInterval = null;
+      }
+      
+      if (this.breakControlsUI) {
+        this.breakControlsUI.destroy();
+        this.breakControlsUI = null;
       }
       
       if (this.breakAnalyticsDisplay) {
@@ -956,11 +961,11 @@ class PopupManager {
       if (typeof chrome !== "undefined" && chrome.storage) {
         const result = await chrome.storage.local.get("currentTab");
         const savedTab = result.currentTab || "overview";
-        this.switchTab(savedTab);
+        this.switchToFeature(savedTab);
       }
     } catch (error) {
       console.warn("Failed to load saved tab:", error);
-      this.switchTab("overview");
+      this.switchToFeature("break-reminder");
     }
   }
 
@@ -969,22 +974,20 @@ class PopupManager {
    */
   async initializeBreakTimer() {
     try {
-      if (typeof BreakTimerManager !== 'undefined') {
-        this.breakTimerManager = new BreakTimerManager();
-        
-        // Start periodic updates for break controls
-        this.startBreakControlsUpdates();
-        
-        console.log("Break timer manager initialized successfully");
+      // Initialize break controls UI if container exists
+      const controlsContainer = document.getElementById('breakControlsContainer');
+      if (controlsContainer && typeof BreakControlsUI !== 'undefined') {
+        this.breakControlsUI = new BreakControlsUI('breakControlsContainer');
+        console.log("Break controls UI initialized successfully");
       } else {
-        console.warn("BreakTimerManager not available");
+        console.warn("BreakControlsUI not available or container not found");
       }
       
       // Initialize break analytics display
       await this.initializeBreakAnalytics();
       
     } catch (error) {
-      console.error("Failed to initialize break timer manager:", error);
+      console.error("Failed to initialize break timer components:", error);
     }
   }
 
@@ -1010,7 +1013,7 @@ class PopupManager {
   async initializeBreakSettings() {
     try {
       if (typeof BreakSettingsUI !== 'undefined') {
-        this.breakSettingsUI = new BreakSettingsUI('breakReminderPanel');
+        this.breakSettingsUI = new BreakSettingsUI('breakSettingsContainer');
         
         // Listen for settings changes
         document.addEventListener('breakSettingsChanged', (event) => {

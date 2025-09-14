@@ -6,18 +6,6 @@
 // Initialize service worker
 console.log("Focus Productivity Extension background service worker loaded");
 
-// Import service dependencies
-importScripts(
-  "/services/storage-manager.js",
-  "/services/break-timer-manager.js",
-  "/services/break-notification-system.js",
-  "/services/tab-tracker.js",
-  "/services/gemini-service.js",
-  "/services/pomodoro-service.js",
-  "/utils/constants.js",
-  "/utils/helpers.js"
-);
-
 // Global instances
 let tabTracker = null;
 let storageManager = null;
@@ -25,6 +13,27 @@ let geminiService = null;
 let pomodoroService = null;
 let breakTimerManager = null;
 let breakNotificationSystem = null;
+
+// Import service dependencies
+try {
+  importScripts(
+    "/utils/constants.js",
+    "/utils/helpers.js",
+    "/utils/break-error-handler.js",
+    "/utils/performance-monitor.js",
+    "/services/storage-manager.js",
+    "/services/break-settings-manager.js",
+    "/services/break-timer-manager.js",
+    "/services/break-notification-system.js",
+    "/services/break-analytics-tracker.js",
+    "/services/tab-tracker.js",
+    "/services/gemini-service.js",
+    "/services/pomodoro-service.js"
+  );
+  console.log("All service dependencies loaded successfully");
+} catch (error) {
+  console.error("Error loading service dependencies:", error);
+}
 
 console.log("Background script loaded with service dependencies");
 
@@ -35,9 +44,18 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   console.log("Extension installed/updated:", details.reason);
 
   try {
-    // Initialize storage manager
-    if (!storageManager) {
-      storageManager = new StorageManager();
+    // Initialize storage manager (singleton pattern)
+    if (!storageManager && typeof StorageManager !== 'undefined') {
+      console.log("Getting StorageManager instance...");
+      console.log("StorageManager.getInstance available:", typeof StorageManager.getInstance);
+
+      if (typeof StorageManager.getInstance === 'function') {
+        storageManager = StorageManager.getInstance();
+      } else {
+        console.log("getInstance not available, creating new instance");
+        storageManager = new StorageManager();
+      }
+      console.log("StorageManager instance obtained successfully");
     }
 
     // Initialize default settings if this is a fresh install
@@ -46,32 +64,62 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     }
 
     // Initialize break timer manager first (required by tab tracker)
-    if (!breakTimerManager) {
+    if (!breakTimerManager && typeof BreakTimerManager !== 'undefined') {
+      console.log("Initializing BreakTimerManager...");
       breakTimerManager = new BreakTimerManager();
+      // Set storage manager dependency
+      if (storageManager) {
+        breakTimerManager.storageManager = storageManager;
+      }
+      await breakTimerManager.init();
+      console.log("BreakTimerManager initialized successfully");
     }
 
     // Initialize break notification system
-    if (!breakNotificationSystem) {
+    if (!breakNotificationSystem && typeof BreakNotificationSystem !== 'undefined') {
+      console.log("Initializing BreakNotificationSystem...");
       breakNotificationSystem = new BreakNotificationSystem();
-      breakNotificationSystem.setBreakTimerManager(breakTimerManager);
+      if (breakTimerManager) {
+        breakNotificationSystem.setBreakTimerManager(breakTimerManager);
+      }
+      console.log("BreakNotificationSystem initialized successfully");
     }
 
     // Initialize tab tracker (will integrate with break timer manager)
-    if (!tabTracker) {
-      tabTracker = new TabTracker();
-      // Set break timer manager reference for integration
-      if (breakTimerManager) {
-        tabTracker.setBreakTimerManager(breakTimerManager);
+    if (!tabTracker && typeof TabTracker !== 'undefined') {
+      console.log("Initializing TabTracker...");
+      try {
+        tabTracker = new TabTracker();
+        // Set all dependencies BEFORE initialization
+        if (storageManager) {
+          tabTracker.storageManager = storageManager;
+        }
+        if (typeof CONSTANTS !== 'undefined') {
+          tabTracker.constants = CONSTANTS;
+        }
+        if (typeof HELPERS !== 'undefined') {
+          tabTracker.helpers = HELPERS;
+        }
+        // Set break timer manager reference for integration
+        if (breakTimerManager) {
+          tabTracker.setBreakTimerManager(breakTimerManager);
+        }
+        console.log("TabTracker initialized successfully");
+      } catch (error) {
+        console.error("Error initializing TabTracker:", error);
+        tabTracker = null;
       }
+    } else if (!tabTracker) {
+      console.warn("TabTracker class not available");
     }
 
     // Initialize Gemini service
-    if (!geminiService) {
+    if (!geminiService && typeof GeminiService !== 'undefined') {
       geminiService = new GeminiService();
     }
 
     // Initialize Pomodoro service for background alarms
-    if (!pomodoroService) {
+    if (!pomodoroService && typeof PomodoroService !== 'undefined') {
       pomodoroService = new PomodoroService();
     }
 
@@ -92,36 +140,62 @@ chrome.runtime.onStartup.addListener(async () => {
 
   try {
     // Reinitialize components if needed
-    if (!storageManager) {
-      storageManager = new StorageManager();
+    if (!storageManager && typeof StorageManager !== 'undefined') {
+      if (typeof StorageManager.getInstance === 'function') {
+        storageManager = StorageManager.getInstance();
+      } else {
+        storageManager = new StorageManager();
+      }
     }
-    
+
     // Initialize break timer manager first for state recovery
-    if (!breakTimerManager) {
+    if (!breakTimerManager && typeof BreakTimerManager !== 'undefined') {
       breakTimerManager = new BreakTimerManager();
     }
-    
+
     // Initialize break notification system
-    if (!breakNotificationSystem) {
+    if (!breakNotificationSystem && typeof BreakNotificationSystem !== 'undefined') {
       breakNotificationSystem = new BreakNotificationSystem();
-      breakNotificationSystem.setBreakTimerManager(breakTimerManager);
-    }
-    
-    // Initialize tab tracker (will recover timer state)
-    if (!tabTracker) {
-      tabTracker = new TabTracker();
-      // Set break timer manager reference for integration
       if (breakTimerManager) {
-        tabTracker.setBreakTimerManager(breakTimerManager);
+        breakNotificationSystem.setBreakTimerManager(breakTimerManager);
       }
-    } else {
+    }
+
+    // Initialize tab tracker (will recover timer state)
+    if (!tabTracker && typeof TabTracker !== 'undefined') {
+      try {
+        tabTracker = new TabTracker();
+        // Set all dependencies BEFORE initialization
+        if (storageManager) {
+          tabTracker.storageManager = storageManager;
+        }
+        if (typeof CONSTANTS !== 'undefined') {
+          tabTracker.constants = CONSTANTS;
+        }
+        if (typeof HELPERS !== 'undefined') {
+          tabTracker.helpers = HELPERS;
+        }
+        // Set break timer manager reference for integration
+        if (breakTimerManager) {
+          tabTracker.setBreakTimerManager(breakTimerManager);
+        }
+        console.log("TabTracker initialized on startup");
+      } catch (error) {
+        console.error("Error initializing TabTracker on startup:", error);
+        tabTracker = null;
+      }
+    } else if (tabTracker) {
       // If tab tracker exists, trigger state recovery
-      await tabTracker.recoverTimerStateAfterRestart();
+      try {
+        await tabTracker.recoverTimerStateAfterRestart();
+      } catch (error) {
+        console.error("Error recovering tab tracker state:", error);
+      }
     }
 
     // Reinitialize notification system
     await initializeNotificationSystem();
-    
+
     console.log("Browser startup recovery completed - work time tracking restored");
   } catch (error) {
     console.error("Error on startup:", error);
@@ -480,21 +554,21 @@ async function handleBreakAlarm(alarm) {
     if (!breakTimerManager) return;
 
     const timerStatus = breakTimerManager.getTimerStatus();
-    
+
     if (timerStatus && timerStatus.isOnBreak) {
       // Check if break should end
       const remainingTime = breakTimerManager.getRemainingBreakTime();
-      
+
       if (remainingTime <= 0) {
         await breakTimerManager.endBreak();
-        
+
         // Show break completion notification
         await createNotification(`break-complete-${Date.now()}`, {
           title: "Break Complete! 🎯",
           message: "Your break is over. Ready to get back to work?",
           buttons: [{ title: "Start Working" }],
         });
-        
+
         console.log("Break completed via alarm");
       }
     }
@@ -511,20 +585,20 @@ async function handleBreakTimerCheck() {
     if (!breakTimerManager || !breakNotificationSystem) return;
 
     const timerStatus = breakTimerManager.getTimerStatus();
-    
+
     if (timerStatus && timerStatus.isOnBreak) {
       const remainingTime = breakTimerManager.getRemainingBreakTime();
-      
+
       // Update badge with remaining time
       await breakTimerManager.updateExtensionBadge();
-      
+
       // If break time is up, end the break
       if (remainingTime <= 0) {
         await breakTimerManager.endBreak();
-        
+
         // Show break completion notification using the notification system
         await breakNotificationSystem.showBreakCompletionNotification(timerStatus.breakType || "break");
-        
+
         console.log("Break completed via periodic check");
       }
     } else {
@@ -691,7 +765,7 @@ async function handleMessage(message, sender, sendResponse) {
           if (!breakNotificationSystem) {
             throw new Error("Break notification system not initialized");
           }
-          
+
           const breakTimerSuccess = await breakNotificationSystem.showWorkTimeThresholdNotification(
             message.workMinutes
           );
@@ -796,7 +870,7 @@ async function handleMessage(message, sender, sendResponse) {
 
           const { breakType, durationMinutes } = message;
           const success = await breakTimerManager.startBreak(breakType, durationMinutes);
-          
+
           if (success) {
             // Set up alarm for break completion
             const alarmName = `break_${breakType}_${Date.now()}`;
@@ -805,7 +879,7 @@ async function handleMessage(message, sender, sendResponse) {
             });
             console.log(`Break alarm set for ${durationMinutes} minutes`);
           }
-          
+
           sendResponse({ success: success });
         } catch (error) {
           console.error("Error starting break:", error);
@@ -984,7 +1058,7 @@ chrome.notifications.onButtonClicked.addListener(
 
           if (buttonIndex >= 0 && buttonIndex < breakTypes.length) {
             const selectedBreak = breakTypes[buttonIndex];
-            
+
             if (breakTimerManager) {
               await breakTimerManager.startBreak(selectedBreak.type, selectedBreak.duration);
               console.log(`Started ${selectedBreak.type} break (${selectedBreak.duration} min) from notification`);
@@ -1034,22 +1108,59 @@ chrome.notifications.onClosed.addListener(async (notificationId, byUser) => {
 // Initialize when service worker loads
 (async () => {
   try {
-    if (!storageManager) {
+    console.log("Starting service worker initialization...");
+
+    // Wait a bit for all scripts to load
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // Check if classes are available
+    console.log("Available classes:", {
+      StorageManager: typeof StorageManager,
+      TabTracker: typeof TabTracker,
+      GeminiService: typeof GeminiService,
+      BreakTimerManager: typeof BreakTimerManager,
+      BreakNotificationSystem: typeof BreakNotificationSystem
+    });
+
+    if (!storageManager && typeof StorageManager !== 'undefined') {
+      console.log("Creating StorageManager instance...");
       storageManager = new StorageManager();
     }
-    if (!tabTracker) {
+
+    if (!tabTracker && typeof TabTracker !== 'undefined') {
+      console.log("Creating TabTracker instance...");
       tabTracker = new TabTracker();
+      // Set all dependencies BEFORE initialization
+      if (storageManager) {
+        tabTracker.storageManager = storageManager;
+      }
+      if (typeof CONSTANTS !== 'undefined') {
+        tabTracker.constants = CONSTANTS;
+      }
+      if (typeof HELPERS !== 'undefined') {
+        tabTracker.helpers = HELPERS;
+      }
+      console.log("TabTracker dependencies set, initializing...");
     }
-    if (!geminiService) {
+
+    if (!geminiService && typeof GeminiService !== 'undefined') {
+      console.log("Creating GeminiService instance...");
       geminiService = new GeminiService();
     }
-    if (!breakTimerManager) {
+
+    if (!breakTimerManager && typeof BreakTimerManager !== 'undefined') {
+      console.log("Creating BreakTimerManager instance...");
       breakTimerManager = new BreakTimerManager();
     }
-    if (!breakNotificationSystem) {
+
+    if (!breakNotificationSystem && typeof BreakNotificationSystem !== 'undefined') {
+      console.log("Creating BreakNotificationSystem instance...");
       breakNotificationSystem = new BreakNotificationSystem();
-      breakNotificationSystem.setBreakTimerManager(breakTimerManager);
+      if (breakTimerManager) {
+        breakNotificationSystem.setBreakTimerManager(breakTimerManager);
+      }
     }
+
     await initializeNotificationSystem();
     console.log("Service worker initialization complete");
   } catch (error) {

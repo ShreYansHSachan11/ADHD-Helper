@@ -36,20 +36,33 @@ class BreakAnalyticsTracker {
     try {
       // Import dependencies if in service worker context
       if (typeof importScripts !== "undefined") {
-        importScripts(
-          "/services/storage-manager.js",
-          "/utils/break-error-handler.js"
-        );
-        this.storageManager = new StorageManager();
-        this.breakErrorHandler = new BreakErrorHandler();
+        try {
+          importScripts(
+            "/services/storage-manager.js",
+            "/utils/break-error-handler.js"
+          );
+          this.storageManager = typeof StorageManager.getInstance === 'function' ? 
+            StorageManager.getInstance() : new StorageManager();
+          this.breakErrorHandler = new BreakErrorHandler();
+        } catch (importError) {
+          console.warn("Could not import dependencies for BreakAnalyticsTracker:", importError);
+          await this.initializeFallbackMode();
+          return;
+        }
       } else {
-        this.storageManager = this.storageManager || new StorageManager();
-        this.breakErrorHandler = this.breakErrorHandler || new BreakErrorHandler();
+        // In popup context, try to use globally available classes
+        this.storageManager = this.storageManager || (typeof StorageManager !== 'undefined' ? 
+          (typeof StorageManager.getInstance === 'function' ? StorageManager.getInstance() : new StorageManager()) : null);
+        this.breakErrorHandler = this.breakErrorHandler || (typeof BreakErrorHandler !== 'undefined' ? new BreakErrorHandler() : null);
       }
       
-      // Initialize error handler
-      if (this.breakErrorHandler) {
+      // Initialize error handler if available
+      if (this.breakErrorHandler && typeof this.breakErrorHandler.init === 'function') {
         await this.breakErrorHandler.init();
+      } else if (!this.breakErrorHandler) {
+        console.warn("BreakErrorHandler not available, using fallback mode");
+        await this.initializeFallbackMode();
+        return;
       }
       
       // Initialize default settings with error handling
@@ -232,7 +245,7 @@ class BreakAnalyticsTracker {
     } catch (error) {
       console.error("Error recording break session:", error);
       
-      if (this.breakErrorHandler) {
+      if (this.breakErrorHandler && typeof this.breakErrorHandler.showUserFeedback === 'function') {
         this.breakErrorHandler.showUserFeedback(
           "Failed to record break session",
           "error",
@@ -818,9 +831,7 @@ class BreakAnalyticsTracker {
 // Export for use in service worker and other contexts
 if (typeof module !== "undefined" && module.exports) {
   module.exports = BreakAnalyticsTracker;
-} else if (typeof self !== "undefined") {
-  self.BreakAnalyticsTracker = BreakAnalyticsTracker;
+} else {
+  // Make available globally in service worker context
+  globalThis.BreakAnalyticsTracker = BreakAnalyticsTracker;
 }
-
-// ES6 export for testing
-export default BreakAnalyticsTracker;

@@ -515,6 +515,7 @@ class BreakNotificationSystem {
 // Export for use in service worker and other contexts
 if (typeof module !== "undefined" && module.exports) {
   module.exports = BreakNotificationSystem;
-} else if (typeof self !== "undefined") {
-  self.BreakNotificationSystem = BreakNotificationSystem;
+} else {
+  // Make available globally in service worker context
+  globalThis.BreakNotificationSystem = BreakNotificationSystem;
 }
