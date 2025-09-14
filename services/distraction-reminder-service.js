@@ -14,16 +14,16 @@ class DistractionReminderService {
 
     // Simple configuration
     this.config = {
-      distractionDelayMs: 3000, // Wait 3 seconds before showing reminder
-      reminderCooldownMs: 2 * 60 * 1000, // 2 minutes between reminders
-      maxRemindersPerSession: 10, // Max reminders per session
+      distractionDelayMs: 3000,
+      reminderCooldownMs: 30 * 1000, // 2 minutes between reminders
+      maxRemindersPerSession: 50, // Max reminders per session
     };
 
     // User preferences
     this.preferences = {
       enabled: true,
-      reminderStyle: 'standard',
-      customMessage: '',
+      reminderStyle: "standard",
+      customMessage: "",
     };
 
     // Dependencies
@@ -40,7 +40,7 @@ class DistractionReminderService {
       console.log("Initializing DistractionReminderService...");
 
       // Initialize dependencies
-      if (typeof StorageManager !== 'undefined') {
+      if (typeof StorageManager !== "undefined") {
         this.storageManager = new StorageManager();
       }
 
@@ -63,7 +63,7 @@ class DistractionReminderService {
     try {
       if (!this.storageManager) return;
 
-      const sessionData = await this.storageManager.get('currentSession');
+      const sessionData = await this.storageManager.get("currentSession");
       if (sessionData) {
         this.focusTabId = sessionData.focusTabId;
         this.focusTabUrl = sessionData.focusUrl;
@@ -102,7 +102,9 @@ class DistractionReminderService {
     try {
       if (!this.storageManager) return;
 
-      const stored = await this.storageManager.get('distractionReminderPreferences');
+      const stored = await this.storageManager.get(
+        "distractionReminderPreferences"
+      );
       if (stored) {
         this.preferences = { ...this.preferences, ...stored };
       }
@@ -121,10 +123,10 @@ class DistractionReminderService {
    */
   applyFrequencySettings() {
     const frequencyMultipliers = {
-      'low': 2.0,      // Double the cooldown times
-      'medium': 1.0,   // Default timing
-      'high': 0.5,     // Half the cooldown times
-      'adaptive': 1.0  // Will be adjusted dynamically
+      low: 2.0, // Double the cooldown times
+      medium: 1.0, // Default timing
+      high: 0.5, // Half the cooldown times
+      adaptive: 1.0, // Will be adjusted dynamically
     };
 
     const multiplier = frequencyMultipliers[this.preferences.frequency] || 1.0;
@@ -142,7 +144,12 @@ class DistractionReminderService {
         return; // Not enabled or no focus tab set
       }
 
-      console.log("DistractionReminderService: Tab activated:", tabId, "Focus tab:", this.focusTabId);
+      console.log(
+        "DistractionReminderService: Tab activated:",
+        tabId,
+        "Focus tab:",
+        this.focusTabId
+      );
 
       if (tabId === this.focusTabId) {
         // User returned to focus tab - clear any pending reminder
@@ -151,7 +158,9 @@ class DistractionReminderService {
       } else {
         // User switched away from focus tab - start distraction timer
         this.startDistractionTimer();
-        console.log("DistractionReminderService: User switched away from focus tab, starting timer");
+        console.log(
+          "DistractionReminderService: User switched away from focus tab, starting timer"
+        );
       }
     } catch (error) {
       console.error("Error handling tab activation:", error);
@@ -221,13 +230,18 @@ class DistractionReminderService {
 
       // Check if currently on focus tab
       if (sessionStats.isCurrentlyOnFocus) {
-        console.log("DistractionReminderService: User is currently focused, no reminder needed");
+        console.log(
+          "DistractionReminderService: User is currently focused, no reminder needed"
+        );
         return; // User is focused, no reminder needed
       }
 
       // Check if we're in a legitimate break period
       const isLegitimateBreak = await this.isLegitimateBreakTime();
-      console.log("DistractionReminderService: Is legitimate break:", isLegitimateBreak);
+      console.log(
+        "DistractionReminderService: Is legitimate break:",
+        isLegitimateBreak
+      );
 
       if (isLegitimateBreak) {
         return;
@@ -235,13 +249,15 @@ class DistractionReminderService {
 
       // Check if we should show a reminder based on smart timing
       const shouldShow = await this.shouldShowReminder(sessionStats);
-      console.log("DistractionReminderService: Should show reminder:", shouldShow);
+      console.log(
+        "DistractionReminderService: Should show reminder:",
+        shouldShow
+      );
 
       if (shouldShow) {
         console.log("DistractionReminderService: Showing distraction reminder");
         await this.showDistractionReminder(focusInfo, sessionStats);
       }
-
     } catch (error) {
       console.error("Error in distraction monitoring:", error);
     }
@@ -285,10 +301,11 @@ class DistractionReminderService {
     // Calculate dynamic cooldown based on reminder count and frequency setting
     let cooldownMs = this.config.baseReminderCooldownMs;
 
-    if (this.preferences.frequency === 'adaptive') {
+    if (this.preferences.frequency === "adaptive") {
       // Adaptive frequency: increase cooldown with each reminder
       cooldownMs = Math.min(
-        this.config.baseReminderCooldownMs * Math.pow(this.config.reminderEscalationFactor, this.reminderCount),
+        this.config.baseReminderCooldownMs *
+          Math.pow(this.config.reminderEscalationFactor, this.reminderCount),
         this.config.maxReminderCooldownMs
       );
     }
@@ -300,10 +317,10 @@ class DistractionReminderService {
     }
 
     // Additional logic for different reminder styles
-    if (this.preferences.reminderStyle === 'gentle') {
+    if (this.preferences.reminderStyle === "gentle") {
       // Gentle style: only remind if deviation count is significant
       return sessionStats.deviationCount >= 3;
-    } else if (this.preferences.reminderStyle === 'assertive') {
+    } else if (this.preferences.reminderStyle === "assertive") {
       // Assertive style: remind more frequently
       return sessionStats.deviationCount >= 1;
     }
@@ -327,7 +344,9 @@ class DistractionReminderService {
 
       // Check max reminders per session
       if (this.reminderCount >= this.config.maxRemindersPerSession) {
-        console.log("DistractionReminderService: Max reminders reached for this session");
+        console.log(
+          "DistractionReminderService: Max reminders reached for this session"
+        );
         return false;
       }
 
@@ -343,10 +362,7 @@ class DistractionReminderService {
         message: message,
         priority: 2,
         requireInteraction: true,
-        buttons: [
-          { title: "Return to Focus" },
-          { title: "Dismiss" }
-        ]
+        buttons: [{ title: "Return to Focus" }, { title: "Dismiss" }],
       };
 
       await chrome.notifications.create(notificationId, notificationOptions);
@@ -355,9 +371,10 @@ class DistractionReminderService {
       this.lastReminderTime = now;
       this.reminderCount++;
 
-      console.log(`DistractionReminderService: Notification shown (${this.reminderCount}/${this.config.maxRemindersPerSession})`);
+      console.log(
+        `DistractionReminderService: Notification shown (${this.reminderCount}/${this.config.maxRemindersPerSession})`
+      );
       return true;
-
     } catch (error) {
       console.error("Error showing distraction reminder:", error);
       return false;
@@ -374,14 +391,16 @@ class DistractionReminderService {
     }
 
     // Get focus domain for context
-    const focusDomain = this.focusTabUrl ? this.extractDomain(this.focusTabUrl) : 'your focus tab';
+    const focusDomain = this.focusTabUrl
+      ? this.extractDomain(this.focusTabUrl)
+      : "your focus tab";
 
     const messages = [
       `Your focus tab (${focusDomain}) is waiting for you! 🚀`,
       `Stay focused! Return to ${focusDomain} to continue your work.`,
       `Distraction detected! Time to get back to ${focusDomain}.`,
       `Focus reminder: You were working on ${focusDomain}. Ready to continue?`,
-      `Don't lose momentum! Your focus task on ${focusDomain} needs attention.`
+      `Don't lose momentum! Your focus task on ${focusDomain} needs attention.`,
     ];
 
     const randomIndex = Math.floor(Math.random() * messages.length);
@@ -395,7 +414,7 @@ class DistractionReminderService {
     const titles = {
       gentle: "Gentle Focus Reminder 🌱",
       standard: "Focus Reminder 🎯",
-      assertive: "Focus Alert! ⚡"
+      assertive: "Focus Alert! ⚡",
     };
 
     return titles[this.preferences.reminderStyle] || titles.standard;
@@ -406,41 +425,60 @@ class DistractionReminderService {
    */
   async createSystemNotification(notificationId, options) {
     try {
-      console.log("DistractionReminderService: Creating system notification:", notificationId);
+      console.log(
+        "DistractionReminderService: Creating system notification:",
+        notificationId
+      );
 
       // Check if Chrome notifications are available
-      if (typeof chrome !== 'undefined' && chrome.notifications) {
-        console.log("DistractionReminderService: Chrome notifications available");
+      if (typeof chrome !== "undefined" && chrome.notifications) {
+        console.log(
+          "DistractionReminderService: Chrome notifications available"
+        );
 
         // Check permission
         const permission = await chrome.notifications.getPermissionLevel();
-        console.log("DistractionReminderService: Notification permission:", permission);
+        console.log(
+          "DistractionReminderService: Notification permission:",
+          permission
+        );
 
-        if (permission !== 'granted') {
-          console.warn("DistractionReminderService: Notification permission not granted");
+        if (permission !== "granted") {
+          console.warn(
+            "DistractionReminderService: Notification permission not granted"
+          );
           return false;
         }
 
         // Create Chrome notification
-        console.log("DistractionReminderService: Creating Chrome notification with ID:", notificationId);
+        console.log(
+          "DistractionReminderService: Creating Chrome notification with ID:",
+          notificationId
+        );
         await chrome.notifications.create(notificationId, options);
-        console.log("DistractionReminderService: Chrome notification created successfully");
+        console.log(
+          "DistractionReminderService: Chrome notification created successfully"
+        );
 
         // Track active popup
         this.activePopups.set(notificationId, {
           createdAt: Date.now(),
-          options: options
+          options: options,
         });
 
         return true;
       }
 
       // Fallback for other environments
-      console.warn("DistractionReminderService: Chrome notifications not available, using fallback");
+      console.warn(
+        "DistractionReminderService: Chrome notifications not available, using fallback"
+      );
       return await this.createFallbackNotification(options);
-
     } catch (error) {
-      console.error("DistractionReminderService: Error creating system notification:", error);
+      console.error(
+        "DistractionReminderService: Error creating system notification:",
+        error
+      );
       return false;
     }
   }
@@ -451,11 +489,11 @@ class DistractionReminderService {
   async createFallbackNotification(options) {
     try {
       // Try browser Notification API
-      if ('Notification' in window && Notification.permission === 'granted') {
+      if ("Notification" in window && Notification.permission === "granted") {
         const notification = new Notification(options.title, {
           body: options.message,
           icon: options.iconUrl,
-          requireInteraction: false
+          requireInteraction: false,
         });
 
         // Auto-dismiss after configured time
@@ -529,7 +567,7 @@ class DistractionReminderService {
     try {
       // Start a break if break timer manager is available
       if (this.breakTimerManager) {
-        await this.breakTimerManager.startBreak('short', 5); // 5-minute break
+        await this.breakTimerManager.startBreak("short", 5); // 5-minute break
       }
 
       // Pause reminders during break
@@ -554,7 +592,8 @@ class DistractionReminderService {
   async handleDismiss() {
     try {
       // Increase cooldown for next reminder
-      this.lastReminderTime = Date.now() + (this.config.baseReminderCooldownMs * 0.5);
+      this.lastReminderTime =
+        Date.now() + this.config.baseReminderCooldownMs * 0.5;
 
       console.log("User dismissed reminder");
     } catch (error) {
@@ -567,7 +606,7 @@ class DistractionReminderService {
    */
   async dismissPopup(popupId) {
     try {
-      if (typeof chrome !== 'undefined' && chrome.notifications) {
+      if (typeof chrome !== "undefined" && chrome.notifications) {
         await chrome.notifications.clear(popupId);
       }
 
@@ -585,7 +624,7 @@ class DistractionReminderService {
   extractDomain(url) {
     try {
       const urlObj = new URL(url);
-      return urlObj.hostname.replace('www.', '');
+      return urlObj.hostname.replace("www.", "");
     } catch (error) {
       return url;
     }
@@ -598,11 +637,13 @@ class DistractionReminderService {
     try {
       if (!this.storageManager) return;
 
-      const stats = await this.storageManager.get('distractionReminderStats') || {
+      const stats = (await this.storageManager.get(
+        "distractionReminderStats"
+      )) || {
         totalReminders: 0,
         sessionsWithReminders: 0,
         averageRemindersPerSession: 0,
-        lastReminderTime: 0
+        lastReminderTime: 0,
       };
 
       stats.totalReminders++;
@@ -613,9 +654,10 @@ class DistractionReminderService {
         stats.sessionsWithReminders++;
       }
 
-      stats.averageRemindersPerSession = stats.totalReminders / Math.max(1, stats.sessionsWithReminders);
+      stats.averageRemindersPerSession =
+        stats.totalReminders / Math.max(1, stats.sessionsWithReminders);
 
-      await this.storageManager.set('distractionReminderStats', stats);
+      await this.storageManager.set("distractionReminderStats", stats);
     } catch (error) {
       console.error("Error saving reminder stats:", error);
     }
@@ -629,7 +671,10 @@ class DistractionReminderService {
       this.preferences = { ...this.preferences, ...newPreferences };
 
       if (this.storageManager) {
-        await this.storageManager.set('distractionReminderPreferences', this.preferences);
+        await this.storageManager.set(
+          "distractionReminderPreferences",
+          this.preferences
+        );
       }
 
       // Apply new settings
@@ -642,7 +687,10 @@ class DistractionReminderService {
         this.stopMonitoring();
       }
 
-      console.log("Distraction reminder preferences updated:", this.preferences);
+      console.log(
+        "Distraction reminder preferences updated:",
+        this.preferences
+      );
       return true;
     } catch (error) {
       console.error("Error updating preferences:", error);
@@ -671,9 +719,9 @@ class DistractionReminderService {
       sessionStats: {
         reminderCount: this.reminderCount,
         sessionStartTime: this.sessionStartTime,
-        lastReminderTime: this.lastReminderTime
+        lastReminderTime: this.lastReminderTime,
       },
-      activePopups: this.activePopups.size
+      activePopups: this.activePopups.size,
     };
   }
 
