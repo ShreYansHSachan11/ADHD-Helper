@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="popup.css" />
     <link rel="stylesheet" href="../utils/error-feedback.css" />
     <link rel="stylesheet" href="../utils/loading-styles.css" />
+    <link rel="stylesheet" href="components/distraction-reminder-settings.css" />
   </head>
   <body>
     <div class="container">
@@ -195,6 +196,46 @@
             </div>
           </div>
           <div class="panel-content">
+            <!-- Real-time Focus Session Visualization -->
+            <div class="focus-session-visualization" id="focusSessionVisualization" style="display: none">
+              <div class="session-header">
+                <div class="session-title">Focus Session</div>
+                <div class="session-live-indicator">
+                  <span class="live-dot"></span>
+                  <span>LIVE</span>
+                </div>
+              </div>
+              
+              <div class="focus-progress-ring">
+                <div class="progress-ring-bg"></div>
+                <div class="progress-ring-fill" id="progressRingFill"></div>
+                <div class="progress-ring-center">
+                  <span class="progress-time" id="progressTime">0m</span>
+                  <span class="progress-label">SESSION</span>
+                </div>
+              </div>
+              
+              <div class="focus-metrics-grid">
+                <div class="metric-card">
+                  <span class="metric-value" id="sessionTimeMetric">0m</span>
+                  <span class="metric-label">Time</span>
+                </div>
+                <div class="metric-card">
+                  <span class="metric-value" id="deviationMetric">0</span>
+                  <span class="metric-label">Deviations</span>
+                </div>
+                <div class="metric-card">
+                  <span class="metric-value" id="focusScoreMetric">100%</span>
+                  <span class="metric-label">Focus Score</span>
+                </div>
+              </div>
+              
+              <div class="focus-state-indicator" id="focusStateIndicator">
+                <span class="state-icon" id="stateIcon">🎯</span>
+                <span class="state-text" id="stateText">On Focus</span>
+              </div>
+            </div>
+
             <div class="focus-tab-display">
               <span class="focus-label">Focus Tab:</span>
               <span class="focus-url" id="focusUrl">Not set</span>
@@ -206,25 +247,37 @@
               style="display: none"
             >
               <div class="session-stat">
-                <span class="stat-label">Session Time:</span>
+                <span class="stat-label">Session Time</span>
                 <span class="stat-value" id="focusSessionTime">0m</span>
               </div>
               <div class="session-stat">
-                <span class="stat-label">Deviations:</span>
+                <span class="stat-label">Deviations</span>
                 <span class="stat-value" id="focusDeviationCount">0</span>
               </div>
               <div class="session-stat">
-                <span class="stat-label">Last Reminder:</span>
+                <span class="stat-label">Last Reminder</span>
                 <span class="stat-value" id="lastFocusReminder">Never</span>
               </div>
             </div>
 
             <div class="focus-controls">
               <button class="btn btn-secondary" id="setFocusBtn">
-                Set Current Tab as Focus
+                🎯 Set Current Tab as Focus
               </button>
-              <button class="btn btn-small" id="resetFocusBtn">Reset</button>
+              <button class="btn btn-small" id="resetFocusBtn">🔄 Reset</button>
+              <button class="btn btn-small" id="distractionSettingsBtn">⚙️ Reminder Settings</button>
+              <button class="btn btn-small" id="testDistractionBtn">🧪 Test Reminder</button>
             </div>
+            
+            <!-- Current Tab Info -->
+            <div class="current-tab-info" id="currentTabInfo" style="display: none;">
+              <div class="tab-warning">
+                ⚠️ Current tab cannot be used for focus tracking. Please navigate to a regular website.
+              </div>
+            </div>
+
+            <!-- Distraction Reminder Settings Container -->
+            <div id="distraction-reminder-settings" style="display: none;"></div>
 
             <div
               class="focus-deviation-history"
@@ -236,7 +289,7 @@
                 <!-- Deviation items will be populated here -->
               </div>
               <button class="btn btn-small btn-text" id="toggleHistoryBtn">
-                Show History
+                📊 Show History
               </button>
             </div>
           </div>
@@ -638,6 +691,7 @@
     <script src="components/break-analytics-display.js"></script>
     <script src="components/break-settings-ui.js"></script>
     <script src="components/api-settings-ui.js"></script>
+    <script src="components/distraction-reminder-settings.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>

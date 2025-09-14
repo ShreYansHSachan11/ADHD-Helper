@@ -673,6 +673,16 @@ class TabTracker {
         this.lastFocusReminderTime = now;
         await this.updateCurrentSession();
       }
+
+      // Also trigger distraction reminder service if available
+      if (this.distractionReminderService) {
+        try {
+          // The distraction reminder service will handle its own timing logic
+          await this.distractionReminderService.checkForDistractions();
+        } catch (error) {
+          console.error("Error triggering distraction reminder service:", error);
+        }
+      }
     } catch (error) {
       console.error("Error checking focus deviation:", error);
     }
@@ -1053,6 +1063,14 @@ class TabTracker {
   setBreakTimerManager(breakTimerManager) {
     this.breakTimerManager = breakTimerManager;
     console.log("Break timer manager integrated with TabTracker");
+  }
+
+  /**
+   * Set distraction reminder service reference for integration
+   */
+  setDistractionReminderService(distractionReminderService) {
+    this.distractionReminderService = distractionReminderService;
+    console.log("Distraction reminder service integrated with TabTracker");
   }
 
   /**

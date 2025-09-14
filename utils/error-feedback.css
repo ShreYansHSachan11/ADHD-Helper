@@ -1,109 +1,120 @@
-/* Error Feedback System Styles */
+/* Error Feedback System Styles - Material Design Aligned */
 
 .error-feedback-container {
   position: fixed;
-  top: 10px;
-  right: 10px;
+  top: 16px;
+  right: 16px;
   z-index: 10000;
-  max-width: 350px;
+  max-width: 320px;
   pointer-events: none;
 }
 
 .feedback-item {
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background: var(--md-sys-color-surface, #fafdfb);
+  border-radius: 12px;
+  box-shadow: var(--md-sys-elevation-level2, 0px 1px 2px 0px rgba(0, 0, 0, 0.3), 0px 2px 6px 2px rgba(0, 0, 0, 0.15));
   margin-bottom: 8px;
-  padding: 12px 16px;
+  padding: 16px;
   position: relative;
   pointer-events: auto;
-  animation: feedbackSlideIn 0.3s ease-out;
-  border-left: 4px solid #ccc;
+  animation: feedbackSlideIn 0.2s cubic-bezier(0.2, 0, 0, 1);
+  border: 1px solid var(--md-sys-color-outline-variant, #bec9c8);
   font-size: 14px;
-  line-height: 1.4;
+  line-height: 1.5;
+  font-family: 'Roboto', sans-serif;
 }
 
 .feedback-item.feedback-removing {
-  animation: feedbackSlideOut 0.3s ease-in forwards;
+  animation: feedbackSlideOut 0.2s cubic-bezier(0.2, 0, 0, 1) forwards;
 }
 
 /* Feedback types */
 .feedback-success {
-  border-left-color: #10b981;
-  background: #f0fdf4;
+  background: #d7f4d7;
+  color: #1b5e20;
+  border-color: #4caf50;
 }
 
 .feedback-error {
-  border-left-color: #ef4444;
-  background: #fef2f2;
+  background: var(--md-sys-color-error-container, #ffdad6);
+  color: var(--md-sys-color-on-error-container, #410002);
+  border-color: var(--md-sys-color-error, #ba1a1a);
 }
 
 .feedback-warning {
-  border-left-color: #f59e0b;
-  background: #fffbeb;
+  background: #fff3e0;
+  color: #e65100;
+  border-color: #f57c00;
 }
 
 .feedback-info {
-  border-left-color: #3b82f6;
-  background: #eff6ff;
+  background: var(--md-sys-color-primary-container, #6ff7f8);
+  color: var(--md-sys-color-on-primary-container, #002020);
+  border-color: var(--md-sys-color-primary, #006a6b);
 }
 
 /* Feedback content */
 .feedback-message {
   font-weight: 500;
-  color: #374151;
+  color: inherit;
   margin-bottom: 4px;
+  letter-spacing: 0.1px;
 }
 
 .feedback-context {
   font-size: 12px;
-  color: #6b7280;
+  color: inherit;
+  opacity: 0.8;
   margin-bottom: 8px;
+  letter-spacing: 0.1px;
 }
 
 .feedback-actions {
   display: flex;
   gap: 8px;
-  margin-top: 8px;
+  margin-top: 12px;
 }
 
 .feedback-action-btn {
-  background: #3b82f6;
-  color: white;
+  background: var(--md-sys-color-primary, #006a6b);
+  color: var(--md-sys-color-on-primary, #ffffff);
   border: none;
-  border-radius: 4px;
-  padding: 4px 12px;
+  border-radius: 20px;
+  padding: 8px 16px;
   font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  letter-spacing: 0.1px;
 }
 
 .feedback-action-btn:hover {
-  background: #2563eb;
+  box-shadow: var(--md-sys-elevation-level1, 0px 1px 2px 0px rgba(0, 0, 0, 0.3), 0px 1px 3px 1px rgba(0, 0, 0, 0.15));
 }
 
 .feedback-close-btn {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 12px;
+  right: 12px;
   background: none;
   border: none;
-  font-size: 18px;
-  color: #9ca3af;
+  font-size: 16px;
+  color: inherit;
+  opacity: 0.6;
   cursor: pointer;
-  padding: 0;
-  width: 20px;
-  height: 20px;
+  padding: 4px;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  transition: background-color 0.2s;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .feedback-close-btn:hover {
-  background: rgba(0, 0, 0, 0.1);
-  color: #374151;
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.08);
 }
 
 /* Animations */
@@ -134,58 +145,55 @@
   display: inline-block;
   width: 16px;
   height: 16px;
-  border: 2px solid #e5e7eb;
-  border-top: 2px solid #3b82f6;
+  border: 2px solid var(--md-sys-color-outline-variant, #bec9c8);
+  border-top: 2px solid var(--md-sys-color-primary, #006a6b);
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-right: 8px;
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
 /* Error states for form elements */
 .input-error {
-  border-color: #ef4444 !important;
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+  border-color: var(--md-sys-color-error, #ba1a1a) !important;
+  border-width: 2px !important;
 }
 
 .input-error:focus {
-  border-color: #ef4444 !important;
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2) !important;
+  border-color: var(--md-sys-color-error, #ba1a1a) !important;
+  outline: 2px solid var(--md-sys-color-error, #ba1a1a) !important;
+  outline-offset: 2px !important;
 }
 
 /* Status indicators */
 .status-indicator {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 12px;
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 6px 12px;
+  border-radius: 16px;
   font-weight: 500;
+  letter-spacing: 0.1px;
 }
 
 .status-success {
-  background: #dcfce7;
-  color: #166534;
+  background: #d7f4d7;
+  color: #1b5e20;
 }
 
 .status-error {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--md-sys-color-error-container, #ffdad6);
+  color: var(--md-sys-color-on-error-container, #410002);
 }
 
 .status-warning {
-  background: #fef3c7;
-  color: #92400e;
+  background: #fff3e0;
+  color: #e65100;
 }
 
 .status-info {
-  background: #dbeafe;
-  color: #1e40af;
+  background: var(--md-sys-color-primary-container, #6ff7f8);
+  color: var(--md-sys-color-on-primary-container, #002020);
 }
 
 .status-dot {
@@ -199,7 +207,7 @@
 .progress-bar {
   width: 100%;
   height: 4px;
-  background: #e5e7eb;
+  background: var(--md-sys-color-outline-variant, #bec9c8);
   border-radius: 2px;
   overflow: hidden;
   margin: 8px 0;
@@ -207,13 +215,13 @@
 
 .progress-fill {
   height: 100%;
-  background: #3b82f6;
+  background: var(--md-sys-color-primary, #006a6b);
   border-radius: 2px;
-  transition: width 0.3s ease;
+  transition: width 0.3s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .progress-indeterminate {
-  background: linear-gradient(90deg, transparent, #3b82f6, transparent);
+  background: linear-gradient(90deg, transparent, var(--md-sys-color-primary, #006a6b), transparent);
   animation: progressSlide 1.5s infinite;
 }
 

@@ -698,56 +698,103 @@ input:focus-visible,
   border-width: 2px;
 }
 
-/* Status Indicators */
+/* Focus Status Indicators - Material Design Aligned */
 .focus-status-indicator,
 .calendar-connection-status {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 12px;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--md-sys-color-surface-variant);
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
   color: var(--md-sys-color-on-surface-variant);
 }
 
+.focus-status-indicator:hover {
+  box-shadow: var(--md-sys-elevation-level2);
+  border-color: var(--md-sys-color-outline);
+}
+
+.status-dot,
 .connection-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: var(--md-sys-color-outline);
+  transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
 }
 
+.status-dot.active,
 .connection-dot.connected {
   background: var(--md-sys-color-primary);
+  animation: pulse-primary 2s infinite;
+}
+
+.status-dot.deviation {
+  background: #f57c00;
+  animation: pulse-warning 2s infinite;
+}
+
+.status-dot.inactive {
+  background: var(--md-sys-color-outline);
+  opacity: 0.6;
 }
 
 .connection-dot.error {
   background: var(--md-sys-color-error);
+  animation: pulse-primary 2s infinite;
 }
 
-/* Focus Tab Display */
+/* Focus Tab Display - Material Design Aligned */
 .focus-tab-display {
+  margin: 16px 0;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px;
+  gap: 12px;
+  padding: 16px;
   background: var(--md-sys-color-surface-variant);
-  border-radius: 8px;
+  border-radius: 12px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
   font-size: 14px;
 }
 
+.focus-tab-display:hover {
+  box-shadow: var(--md-sys-elevation-level2);
+  border-color: var(--md-sys-color-outline);
+}
+
 .focus-label {
+  font-size: 14px;
   color: var(--md-sys-color-on-surface-variant);
   font-weight: 500;
+  letter-spacing: 0.1px;
 }
 
 .focus-url {
+  font-size: 14px;
   color: var(--md-sys-color-on-surface);
-  font-family: monospace;
-  font-size: 12px;
+  font-family: 'Roboto Mono', 'SF Mono', 'Monaco', 'Inconsolata', monospace;
   word-break: break-all;
+  flex: 1;
+  padding: 8px 12px;
+  background: var(--md-sys-color-surface);
+  border-radius: 8px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
 
-/* Session Stats */
+.focus-url:hover {
+  border-color: var(--md-sys-color-outline);
+}
+
+/* Session Stats - Material Design Aligned */
 .focus-session-info {
+  margin: 16px 0;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 12px;
@@ -757,30 +804,441 @@ input:focus-visible,
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 12px;
+  padding: 16px;
   background: var(--md-sys-color-surface-variant);
-  border-radius: 8px;
+  border-radius: 12px;
   text-align: center;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  cursor: pointer;
+}
+
+.session-stat:hover {
+  box-shadow: var(--md-sys-elevation-level2);
+  border-color: var(--md-sys-color-outline);
 }
 
 .stat-label {
   font-size: 12px;
   color: var(--md-sys-color-on-surface-variant);
-  margin-bottom: 4px;
+  margin-bottom: 8px;
+  font-weight: 500;
+  letter-spacing: 0.1px;
 }
 
 .stat-value {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 500;
   color: var(--md-sys-color-on-surface);
+  transition: color 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
 
-/* Controls Layout */
+.session-stat:hover .stat-value {
+  color: var(--md-sys-color-primary);
+}
+
+/* Controls Layout - Material Design Aligned */
 .screen-time-controls,
 .focus-controls {
   display: flex;
-  gap: 8px;
+  gap: 12px;
   flex-wrap: wrap;
+  margin: 16px 0;
+}
+
+/* Focus Deviation History - Material Design Aligned */
+.focus-deviation-history {
+  margin: 16px 0;
+  padding: 16px;
+  background: var(--md-sys-color-surface-variant);
+  border-radius: 12px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  transition: box-shadow 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.focus-deviation-history:hover {
+  box-shadow: var(--md-sys-elevation-level2);
+}
+
+.history-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: 0.1px;
+}
+
+.history-title::before {
+  content: '📊';
+  font-size: 16px;
+}
+
+.deviation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--md-sys-color-outline) var(--md-sys-color-surface-variant);
+}
+
+.deviation-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.deviation-list::-webkit-scrollbar-track {
+  background: var(--md-sys-color-surface-variant);
+  border-radius: 3px;
+}
+
+.deviation-list::-webkit-scrollbar-thumb {
+  background: var(--md-sys-color-outline);
+  border-radius: 3px;
+}
+
+.deviation-item {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 12px;
+  background: var(--md-sys-color-surface);
+  border-radius: 8px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.deviation-item:hover {
+  box-shadow: var(--md-sys-elevation-level1);
+  border-color: var(--md-sys-color-outline);
+}
+
+.deviation-from,
+.deviation-to {
+  font-size: 12px;
+  font-family: 'Roboto Mono', 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+  color: var(--md-sys-color-on-surface);
+  padding: 6px 8px;
+  background: var(--md-sys-color-surface-variant);
+  border-radius: 4px;
+  word-break: break-all;
+  transition: background-color 0.2s cubic-bezier(0.2, 0, 0, 1);
+  font-weight: 400;
+}
+
+.deviation-from:hover,
+.deviation-to:hover {
+  background: var(--md-sys-color-outline-variant);
+}
+
+.deviation-arrow {
+  font-size: 14px;
+  color: #f57c00;
+  font-weight: 500;
+}
+
+.deviation-time {
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface-variant);
+  font-weight: 400;
+  text-align: right;
+  padding: 4px 8px;
+  background: var(--md-sys-color-surface-variant);
+  border-radius: 4px;
+}
+
+#toggleHistoryBtn {
+  margin-top: 16px;
+}
+
+/* Focus Session Visualization - Material Design Aligned */
+.focus-session-visualization {
+  margin: 16px 0;
+  padding: 16px;
+  background: var(--md-sys-color-surface-variant);
+  border-radius: 12px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  transition: box-shadow 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.focus-session-visualization:hover {
+  box-shadow: var(--md-sys-elevation-level1);
+}
+
+.session-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.session-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: 0.1px;
+}
+
+.session-title::before {
+  content: '🎯';
+  font-size: 16px;
+}
+
+.session-live-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--md-sys-color-primary);
+  font-weight: 500;
+  letter-spacing: 0.1px;
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--md-sys-color-primary);
+  border-radius: 50%;
+  animation: pulse-primary 2s infinite;
+}
+
+.focus-progress-ring {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 16px;
+}
+
+.progress-ring-bg,
+.progress-ring-fill {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.progress-ring-bg {
+  background: conic-gradient(from 0deg, var(--md-sys-color-outline-variant) 0deg, var(--md-sys-color-outline-variant) 360deg);
+  opacity: 0.3;
+}
+
+.progress-ring-fill {
+  background: conic-gradient(from -90deg, var(--md-sys-color-primary) 0deg, var(--md-sys-color-primary) var(--progress-angle, 0deg), transparent var(--progress-angle, 0deg));
+  transition: --progress-angle 0.3s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.progress-ring-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80px;
+  height: 80px;
+  background: var(--md-sys-color-surface);
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--md-sys-elevation-level1);
+}
+
+.progress-time {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
+  line-height: 1;
+}
+
+.progress-label {
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface-variant);
+  font-weight: 500;
+  letter-spacing: 0.1px;
+  margin-top: 4px;
+}
+
+.focus-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.metric-card {
+  padding: 12px;
+  background: var(--md-sys-color-surface);
+  border-radius: 8px;
+  text-align: center;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.metric-card:hover {
+  box-shadow: var(--md-sys-elevation-level1);
+  border-color: var(--md-sys-color-outline);
+}
+
+.metric-value {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.metric-label {
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface-variant);
+  font-weight: 500;
+  letter-spacing: 0.1px;
+}
+
+.focus-state-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  margin-top: 16px;
+  background: var(--md-sys-color-surface);
+  border-radius: 8px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.focus-state-indicator.active {
+  background: var(--md-sys-color-primary-container);
+  border-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary-container);
+}
+
+.focus-state-indicator.deviation {
+  background: var(--md-sys-color-error-container);
+  border-color: var(--md-sys-color-error);
+  color: var(--md-sys-color-on-error-container);
+}
+
+.state-icon {
+  font-size: 16px;
+}
+
+.state-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: inherit;
+  letter-spacing: 0.1px;
+}
+
+/* Responsive Design for Popup Window */
+@media (max-width: 400px) {
+  .focus-session-visualization {
+    padding: 16px;
+  }
+  
+  .focus-progress-ring {
+    width: 100px;
+    height: 100px;
+  }
+  
+  .progress-ring-center {
+    width: 70px;
+    height: 70px;
+  }
+  
+  .progress-time {
+    font-size: 14px;
+  }
+  
+  .focus-metrics-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  
+  .metric-card {
+    padding: 8px;
+  }
+  
+  .metric-value {
+    font-size: 16px;
+  }
+  
+  .deviation-item {
+    grid-template-columns: 1fr auto 1fr;
+    gap: 6px;
+    padding: 10px;
+  }
+  
+  .deviation-time {
+    grid-column: 1 / -1;
+    text-align: center;
+    margin-top: 4px;
+  }
+}
+
+/* Focus Loading States */
+.focus-loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.focus-loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid var(--md-sys-color-outline-variant);
+  border-top: 2px solid var(--md-sys-color-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Focus Accessibility */
+.focus-controls .btn:focus-visible,
+.session-stat:focus-visible,
+.deviation-item:focus-visible {
+  outline: 2px solid var(--md-sys-color-primary);
+  outline-offset: 2px;
+}
+
+/* Focus High Contrast Support */
+@media (prefers-contrast: high) {
+  .focus-session-visualization,
+  .focus-deviation-history,
+  .focus-tab-display,
+  .focus-status-indicator {
+    border-width: 2px;
+  }
+  
+  .metric-card,
+  .session-stat,
+  .deviation-item {
+    border-width: 2px;
+  }
+}
+  .focus-status-indicator,
+  .focus-tab-display,
+  .session-stat,
+  .deviation-item {
+    border-width: 2px;
+  }
+  
+  .status-dot,
+  .live-dot {
+    border: 2px solid currentColor;
+  }
 }
 
 .wellness-controls {

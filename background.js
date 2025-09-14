@@ -13,6 +13,7 @@ let geminiService = null;
 let pomodoroService = null;
 let breakTimerManager = null;
 let breakNotificationSystem = null;
+let distractionReminderService = null;
 
 // Import service dependencies
 try {
@@ -28,7 +29,8 @@ try {
     "/services/break-analytics-tracker.js",
     "/services/tab-tracker.js",
     "/services/gemini-service.js",
-    "/services/pomodoro-service.js"
+    "/services/pomodoro-service.js",
+    "/services/distraction-reminder-service.js"
   );
   console.log("All service dependencies loaded successfully");
 } catch (error) {
@@ -85,6 +87,13 @@ chrome.runtime.onInstalled.addListener(async (details) => {
       console.log("BreakNotificationSystem initialized successfully");
     }
 
+    // Initialize distraction reminder service
+    if (!distractionReminderService && typeof DistractionReminderService !== 'undefined') {
+      console.log("Initializing DistractionReminderService...");
+      distractionReminderService = new DistractionReminderService();
+      console.log("DistractionReminderService initialized successfully");
+    }
+
     // Initialize tab tracker (will integrate with break timer manager)
     if (!tabTracker && typeof TabTracker !== 'undefined') {
       console.log("Initializing TabTracker...");
@@ -104,6 +113,17 @@ chrome.runtime.onInstalled.addListener(async (details) => {
         if (breakTimerManager) {
           tabTracker.setBreakTimerManager(breakTimerManager);
         }
+        
+        // Set dependencies for distraction reminder service
+        if (distractionReminderService) {
+          distractionReminderService.setDependencies(tabTracker, breakTimerManager);
+        }
+        
+        // Set distraction reminder service reference in tab tracker
+        if (tabTracker && distractionReminderService) {
+          tabTracker.setDistractionReminderService(distractionReminderService);
+        }
+        
         console.log("TabTracker initialized successfully");
       } catch (error) {
         console.error("Error initializing TabTracker:", error);
@@ -161,6 +181,11 @@ chrome.runtime.onStartup.addListener(async () => {
       }
     }
 
+    // Initialize distraction reminder service
+    if (!distractionReminderService && typeof DistractionReminderService !== 'undefined') {
+      distractionReminderService = new DistractionReminderService();
+    }
+
     // Initialize tab tracker (will recover timer state)
     if (!tabTracker && typeof TabTracker !== 'undefined') {
       try {
@@ -179,6 +204,17 @@ chrome.runtime.onStartup.addListener(async () => {
         if (breakTimerManager) {
           tabTracker.setBreakTimerManager(breakTimerManager);
         }
+        
+        // Set dependencies for distraction reminder service
+        if (distractionReminderService) {
+          distractionReminderService.setDependencies(tabTracker, breakTimerManager);
+        }
+        
+        // Set distraction reminder service reference in tab tracker
+        if (tabTracker && distractionReminderService) {
+          tabTracker.setDistractionReminderService(distractionReminderService);
+        }
+        
         console.log("TabTracker initialized on startup");
       } catch (error) {
         console.error("Error initializing TabTracker on startup:", error);
@@ -685,9 +721,14 @@ async function handleMessage(message, sender, sendResponse) {
           const tab = tabs[0];
           if (
             tab.url.startsWith("chrome://") ||
-            tab.url.startsWith("chrome-extension://")
+            tab.url.startsWith("chrome-extension://") ||
+            tab.url.startsWith("edge://") ||
+            tab.url.startsWith("about:") ||
+            tab.url.startsWith("moz-extension://") ||
+            tab.url === "about:blank"
           ) {
-            throw new Error("Cannot set focus on restricted tabs");
+            const domain = new URL(tab.url).protocol;
+            throw new Error(`Cannot set focus on ${domain} pages. Please navigate to a regular website first.`);
           }
 
           await tabTracker.setFocusTab(tab.id, tab.url);
@@ -758,6 +799,33 @@ async function handleMessage(message, sender, sendResponse) {
           message.timeSpent
         );
         sendResponse({ success: breakSuccess });
+        break;
+
+      case "SHOW_FOCUS_NOTIFICATION":
+        try {
+          if (!distractionReminderService) {
+            console.warn("Distraction reminder service not initialized, falling back to basic notification");
+            // Fallback to basic notification
+            const notificationId = `focus-reminder-${Date.now()}`;
+            const success = await createNotification(notificationId, {
+              title: "Focus Reminder 🎯",
+              message: `You've moved away from your focus task. Ready to get back on track?`,
+              buttons: [{ title: "Return to Focus" }, { title: "Dismiss" }],
+            });
+            sendResponse({ success: success });
+            return;
+          }
+
+          // Use the distraction reminder service for intelligent notifications
+          const focusInfo = { url: message.focusUrl };
+          const sessionStats = { deviationCount: 1 }; // Basic stats for legacy compatibility
+          
+          await distractionReminderService.showDistractionReminder(focusInfo, sessionStats);
+          sendResponse({ success: true });
+        } catch (error) {
+          console.error("Error showing focus notification:", error);
+          sendResponse({ success: false, error: error.message });
+        }
         break;
 
       case "SHOW_BREAK_TIMER_NOTIFICATION":
@@ -1001,6 +1069,82 @@ async function handleMessage(message, sender, sendResponse) {
         }
         break;
 
+      case "GET_DISTRACTION_REMINDER_STATUS":
+        try {
+          if (!distractionReminderService) {
+            throw new Error("Distraction reminder service not initialized");
+          }
+
+          const status = distractionReminderService.getStatus();
+          sendResponse({ success: true, data: status });
+        } catch (error) {
+          console.error("Error getting distraction reminder status:", error);
+          sendResponse({ success: false, error: error.message });
+        }
+        break;
+
+      case "UPDATE_DISTRACTION_REMINDER_PREFERENCES":
+        try {
+          if (!distractionReminderService) {
+            throw new Error("Distraction reminder service not initialized");
+          }
+
+          const { preferences } = message;
+          const success = await distractionReminderService.updatePreferences(preferences);
+          sendResponse({ success: success });
+        } catch (error) {
+          console.error("Error updating distraction reminder preferences:", error);
+          sendResponse({ success: false, error: error.message });
+        }
+        break;
+
+      case "RESET_DISTRACTION_REMINDER_SESSION":
+        try {
+          if (!distractionReminderService) {
+            throw new Error("Distraction reminder service not initialized");
+          }
+
+          distractionReminderService.resetSession();
+          sendResponse({ success: true });
+        } catch (error) {
+          console.error("Error resetting distraction reminder session:", error);
+          sendResponse({ success: false, error: error.message });
+        }
+        break;
+
+      case "DISMISS_DISTRACTION_REMINDER":
+        try {
+          if (!distractionReminderService) {
+            throw new Error("Distraction reminder service not initialized");
+          }
+
+          const { popupId } = message;
+          const success = await distractionReminderService.dismissPopup(popupId);
+          sendResponse({ success: success });
+        } catch (error) {
+          console.error("Error dismissing distraction reminder:", error);
+          sendResponse({ success: false, error: error.message });
+        }
+        break;
+
+      case "TEST_DISTRACTION_REMINDER":
+        try {
+          if (!distractionReminderService) {
+            throw new Error("Distraction reminder service not initialized");
+          }
+
+          // Create a test reminder with mock data
+          const mockFocusInfo = { url: "https://example.com" };
+          const mockSessionStats = { deviationCount: 3 };
+          
+          await distractionReminderService.showDistractionReminder(mockFocusInfo, mockSessionStats);
+          sendResponse({ success: true });
+        } catch (error) {
+          console.error("Error testing distraction reminder:", error);
+          sendResponse({ success: false, error: error.message });
+        }
+        break;
+
       default:
         sendResponse({ success: false, error: "Unknown message type" });
     }
@@ -1040,6 +1184,12 @@ chrome.notifications.onClicked.addListener(async (notificationId) => {
 chrome.notifications.onButtonClicked.addListener(
   async (notificationId, buttonIndex) => {
     try {
+      // Handle distraction reminder notifications first
+      if (notificationId.includes("distraction-reminder") && distractionReminderService) {
+        await distractionReminderService.handleNotificationButtonClick(notificationId, buttonIndex);
+        return;
+      }
+      
       if (breakNotificationSystem) {
         await breakNotificationSystem.handleNotificationButtonClick(notificationId, buttonIndex);
       } else {

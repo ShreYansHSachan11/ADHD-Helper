@@ -1,17 +1,17 @@
-/* Loading Overlay Styles */
+/* Loading Overlay Styles - Material Design Aligned */
 .loading-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 10000;
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .loading-overlay.visible {
@@ -23,30 +23,32 @@
 }
 
 .loading-content {
-  background: white;
+  background: var(--md-sys-color-surface, #fafdfb);
   border-radius: 12px;
-  padding: 32px;
+  padding: 24px;
   text-align: center;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  max-width: 300px;
+  box-shadow: var(--md-sys-elevation-level3, 0px 1px 3px 0px rgba(0, 0, 0, 0.3), 0px 4px 8px 3px rgba(0, 0, 0, 0.15));
+  max-width: 280px;
   width: 90%;
+  border: 1px solid var(--md-sys-color-outline-variant, #bec9c8);
 }
 
 .loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid #e9ecef;
-  border-top: 4px solid #3498db;
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--md-sys-color-outline-variant, #bec9c8);
+  border-top: 3px solid var(--md-sys-color-primary, #006a6b);
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: 0 auto 16px;
 }
 
 .loading-message {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 500;
-  color: #2c3e50;
+  color: var(--md-sys-color-on-surface, #191c1c);
   margin-bottom: 16px;
+  letter-spacing: 0.1px;
 }
 
 .loading-progress {
@@ -55,25 +57,26 @@
 
 .progress-bar {
   width: 100%;
-  height: 8px;
-  background: #e9ecef;
-  border-radius: 4px;
+  height: 4px;
+  background: var(--md-sys-color-outline-variant, #bec9c8);
+  border-radius: 2px;
   overflow: hidden;
   margin-bottom: 8px;
 }
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #3498db, #2980b9);
-  border-radius: 4px;
-  transition: width 0.3s ease;
+  background: var(--md-sys-color-primary, #006a6b);
+  border-radius: 2px;
+  transition: width 0.3s cubic-bezier(0.2, 0, 0, 1);
   width: 0%;
 }
 
 .progress-text {
   font-size: 12px;
-  color: #666;
+  color: var(--md-sys-color-on-surface-variant, #3f4948);
   font-weight: 500;
+  letter-spacing: 0.1px;
 }
 
 @keyframes spin {
@@ -97,15 +100,14 @@
 /* High contrast mode */
 @media (prefers-contrast: high) {
   .loading-overlay {
-    background: rgba(0, 0, 0, 0.9);
+    background: rgba(0, 0, 0, 0.8);
   }
   
   .loading-content {
-    border: 2px solid #000;
+    border-width: 2px;
   }
   
   .loading-spinner {
-    border-color: #000;
-    border-top-color: #fff;
+    border-width: 4px;
   }
 }

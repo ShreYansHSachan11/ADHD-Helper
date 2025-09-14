@@ -201,6 +201,18 @@ class PopupManager {
     } catch (error) {
       console.error("Failed to initialize API settings UI:", error);
     }
+
+    // Initialize distraction reminder settings
+    try {
+      if (typeof DistractionReminderSettings !== 'undefined') {
+        this.distractionReminderSettings = new DistractionReminderSettings();
+        console.log("Distraction reminder settings initialized successfully");
+      } else {
+        console.warn("DistractionReminderSettings not available");
+      }
+    } catch (error) {
+      console.error("Failed to initialize distraction reminder settings:", error);
+    }
   }
 
   /**
@@ -369,6 +381,7 @@ class PopupManager {
     this.focusUrlEl = document.getElementById("focusUrl");
     this.setFocusBtn = document.getElementById("setFocusBtn");
     this.resetFocusBtn = document.getElementById("resetFocusBtn");
+    this.distractionSettingsBtn = document.getElementById("distractionSettingsBtn");
     this.focusStatusIndicator = document.getElementById("focusStatusIndicator");
     this.focusStatusDot = document.getElementById("focusStatusDot");
     this.focusStatusText = document.getElementById("focusStatusText");
@@ -491,6 +504,15 @@ class PopupManager {
     this.setFocusBtn?.addEventListener("click", () => this.handleSetFocus());
     this.resetFocusBtn?.addEventListener("click", () =>
       this.handleResetFocus()
+    );
+    this.distractionSettingsBtn?.addEventListener("click", () => 
+      this.toggleDistractionSettings()
+    );
+    
+    // Test distraction reminder button
+    const testDistractionBtn = document.getElementById("testDistractionBtn");
+    testDistractionBtn?.addEventListener("click", () => 
+      this.testDistractionReminder()
     );
     this.toggleHistoryBtn?.addEventListener("click", () =>
       this.toggleDeviationHistory()
@@ -856,9 +878,13 @@ class PopupManager {
       this.updateOverviewPanel();
     }, 1000);
 
-    // Set up periodic focus tracking updates (every 5 seconds)
+    // Set up periodic focus tracking updates (every 5 seconds for basic updates)
+    // Real-time updates will be handled separately when focus is active
     setInterval(() => {
-      this.loadFocusSessionStats();
+      if (!this.focusUpdateInterval) {
+        this.loadFocusSessionStats();
+        this.checkCurrentTabValidity(); // Also check tab validity periodically
+      }
     }, 5000);
   }
 
@@ -1675,6 +1701,9 @@ class PopupManager {
         this.updateFocusDisplay(focusInfo);
       }
 
+      // Check current tab validity
+      await this.checkCurrentTabValidity();
+
       // Get focus session statistics
       await this.loadFocusSessionStats();
 
@@ -1719,11 +1748,25 @@ class PopupManager {
       this.updateFocusStatus("active");
       this.focusSessionInfo.style.display = "block";
       this.focusDeviationHistory.style.display = "block";
+      
+      // Show the enhanced visualization
+      const visualization = document.getElementById("focusSessionVisualization");
+      if (visualization) {
+        visualization.style.display = "block";
+        this.startRealTimeUpdates();
+      }
     } else {
       this.focusUrlEl.textContent = "Not set";
       this.updateFocusStatus("inactive");
       this.focusSessionInfo.style.display = "none";
       this.focusDeviationHistory.style.display = "none";
+      
+      // Hide the enhanced visualization
+      const visualization = document.getElementById("focusSessionVisualization");
+      if (visualization) {
+        visualization.style.display = "none";
+        this.stopRealTimeUpdates();
+      }
     }
   }
 
@@ -1731,19 +1774,39 @@ class PopupManager {
     // Remove existing status classes
     this.focusStatusDot.classList.remove("active", "deviation", "inactive");
 
+    // Update status indicator
+    const stateIndicator = document.getElementById("focusStateIndicator");
+    const stateIcon = document.getElementById("stateIcon");
+    const stateText = document.getElementById("stateText");
+
     switch (status) {
       case "active":
         this.focusStatusDot.classList.add("active");
-        this.focusStatusText.textContent = "Active";
+        this.focusStatusText.textContent = "🟢 Active";
+        if (stateIndicator) {
+          stateIndicator.className = "focus-state-indicator active";
+          if (stateIcon) stateIcon.textContent = "🎯";
+          if (stateText) stateText.textContent = "On Focus";
+        }
         break;
       case "deviation":
         this.focusStatusDot.classList.add("deviation");
-        this.focusStatusText.textContent = "Off Focus";
+        this.focusStatusText.textContent = "🟡 Off Focus";
+        if (stateIndicator) {
+          stateIndicator.className = "focus-state-indicator deviation";
+          if (stateIcon) stateIcon.textContent = "⚠️";
+          if (stateText) stateText.textContent = "Distracted";
+        }
         break;
       case "inactive":
       default:
         this.focusStatusDot.classList.add("inactive");
-        this.focusStatusText.textContent = "Not Active";
+        this.focusStatusText.textContent = "⚫ Not Active";
+        if (stateIndicator) {
+          stateIndicator.className = "focus-state-indicator";
+          if (stateIcon) stateIcon.textContent = "⏸️";
+          if (stateText) stateText.textContent = "Inactive";
+        }
         break;
     }
   }
@@ -1754,37 +1817,91 @@ class PopupManager {
     const hours = Math.floor(sessionMinutes / 60);
     const minutes = sessionMinutes % 60;
 
-    if (hours > 0) {
-      this.focusSessionTime.textContent = `${hours}h ${minutes}m`;
-    } else {
-      this.focusSessionTime.textContent = `${minutes}m`;
+    const timeText = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+    
+    if (this.focusSessionTime) {
+      this.focusSessionTime.textContent = timeText;
     }
 
     // Update deviation count
-    this.focusDeviationCount.textContent = sessionData.deviationCount || 0;
+    if (this.focusDeviationCount) {
+      this.focusDeviationCount.textContent = sessionData.deviationCount || 0;
+    }
 
     // Update last reminder time
-    if (sessionData.lastReminderTime) {
-      const timeSince = Date.now() - sessionData.lastReminderTime;
-      const minutesSince = Math.floor(timeSince / (1000 * 60));
+    if (this.lastFocusReminder) {
+      if (sessionData.lastReminderTime) {
+        const timeSince = Date.now() - sessionData.lastReminderTime;
+        const minutesSince = Math.floor(timeSince / (1000 * 60));
 
-      if (minutesSince < 1) {
-        this.lastFocusReminder.textContent = "Just now";
-      } else if (minutesSince < 60) {
-        this.lastFocusReminder.textContent = `${minutesSince}m ago`;
+        if (minutesSince < 1) {
+          this.lastFocusReminder.textContent = "Just now";
+        } else if (minutesSince < 60) {
+          this.lastFocusReminder.textContent = `${minutesSince}m ago`;
+        } else {
+          const hoursSince = Math.floor(minutesSince / 60);
+          this.lastFocusReminder.textContent = `${hoursSince}h ago`;
+        }
       } else {
-        const hoursSince = Math.floor(minutesSince / 60);
-        this.lastFocusReminder.textContent = `${hoursSince}h ago`;
+        this.lastFocusReminder.textContent = "Never";
       }
-    } else {
-      this.lastFocusReminder.textContent = "Never";
     }
+
+    // Update enhanced visualization elements
+    this.updateVisualizationMetrics(sessionData, timeText);
 
     // Update status based on current state
     if (sessionData.isCurrentlyOnFocus) {
       this.updateFocusStatus("active");
     } else if (sessionData.deviationCount > 0) {
       this.updateFocusStatus("deviation");
+    }
+  }
+
+  updateVisualizationMetrics(sessionData, timeText) {
+    // Update progress ring
+    const progressTime = document.getElementById("progressTime");
+    const progressRingFill = document.getElementById("progressRingFill");
+    
+    if (progressTime) {
+      progressTime.textContent = timeText;
+    }
+
+    // Calculate progress angle (assuming 60 minutes = full circle)
+    const sessionMinutes = Math.floor(sessionData.sessionTime / (1000 * 60));
+    const progressAngle = Math.min((sessionMinutes / 60) * 360, 360);
+    
+    if (progressRingFill) {
+      progressRingFill.style.setProperty('--progress-angle', `${progressAngle}deg`);
+    }
+
+    // Update metric cards
+    const sessionTimeMetric = document.getElementById("sessionTimeMetric");
+    const deviationMetric = document.getElementById("deviationMetric");
+    const focusScoreMetric = document.getElementById("focusScoreMetric");
+
+    if (sessionTimeMetric) {
+      sessionTimeMetric.textContent = timeText;
+    }
+
+    if (deviationMetric) {
+      deviationMetric.textContent = sessionData.deviationCount || 0;
+    }
+
+    if (focusScoreMetric) {
+      // Calculate focus score based on deviations vs time
+      const deviations = sessionData.deviationCount || 0;
+      const focusScore = sessionMinutes > 0 ? Math.max(0, 100 - (deviations * 10)) : 100;
+      focusScoreMetric.textContent = `${focusScore}%`;
+      
+      // Add color coding
+      if (focusScore >= 80) {
+        focusScoreMetric.style.color = 'var(--md-sys-color-primary)';
+      } else if (focusScore >= 60) {
+        focusScoreMetric.style.color = '#ff8c42';
+      } else {
+        focusScoreMetric.style.color = '#ff6b35';
+      }
     }
   }
 
@@ -1800,40 +1917,243 @@ class PopupManager {
 
     this.toggleHistoryBtn.style.display = "block";
 
-    // Clear existing deviation items
-    this.deviationList.innerHTML = "";
+    // Clear existing deviation items with fade out animation
+    const existingItems = this.deviationList.querySelectorAll('.deviation-item');
+    existingItems.forEach((item, index) => {
+      setTimeout(() => {
+        item.style.opacity = '0';
+        item.style.transform = 'translateX(-20px)';
+        setTimeout(() => item.remove(), 200);
+      }, index * 50);
+    });
 
-    // Add recent deviations (limit to 5 most recent)
+    // Add recent deviations (limit to 5 most recent) with staggered animation
     const recentDeviations = historyData.deviations.slice(-5).reverse();
 
-    recentDeviations.forEach((deviation) => {
-      const deviationItem = document.createElement("div");
-      deviationItem.className = "deviation-item";
+    setTimeout(() => {
+      recentDeviations.forEach((deviation, index) => {
+        const deviationItem = document.createElement("div");
+        deviationItem.className = "deviation-item";
+        
+        // Start with hidden state for animation
+        deviationItem.style.opacity = '0';
+        deviationItem.style.transform = 'translateX(20px)';
 
-      const fromDomain = this.formatUrl(deviation.fromUrl);
-      const toDomain = this.formatUrl(deviation.toUrl);
-      const timeAgo = this.formatTimeAgo(deviation.timestamp);
+        const fromDomain = this.formatUrl(deviation.fromUrl);
+        const toDomain = this.formatUrl(deviation.toUrl);
+        const timeAgo = this.formatTimeAgo(deviation.timestamp);
 
-      deviationItem.innerHTML = `
-        <div class="deviation-from">${fromDomain}</div>
-        <span class="deviation-arrow">→</span>
-        <div class="deviation-to">${toDomain}</div>
-        <div class="deviation-time">${timeAgo}</div>
-      `;
+        deviationItem.innerHTML = `
+          <div class="deviation-from" title="${deviation.fromUrl}">${fromDomain}</div>
+          <span class="deviation-arrow">→</span>
+          <div class="deviation-to" title="${deviation.toUrl}">${toDomain}</div>
+          <div class="deviation-time">${timeAgo}</div>
+        `;
 
-      this.deviationList.appendChild(deviationItem);
-    });
+        this.deviationList.appendChild(deviationItem);
+
+        // Animate in with stagger
+        setTimeout(() => {
+          deviationItem.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+          deviationItem.style.opacity = '1';
+          deviationItem.style.transform = 'translateX(0)';
+        }, index * 100);
+
+        // Add click interaction for detailed view
+        deviationItem.addEventListener('click', () => {
+          this.showDeviationDetails(deviation);
+        });
+      });
+    }, existingItems.length * 50 + 100);
+  }
+
+  showDeviationDetails(deviation) {
+    // Create a temporary tooltip or modal for deviation details
+    const tooltip = document.createElement('div');
+    tooltip.className = 'deviation-tooltip';
+    tooltip.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--md-sys-color-surface);
+      border: 2px solid var(--md-sys-color-primary);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      z-index: 1000;
+      max-width: 300px;
+      opacity: 0;
+      transition: all 0.3s ease;
+    `;
+
+    const date = new Date(deviation.timestamp);
+    tooltip.innerHTML = `
+      <div style="font-weight: 600; margin-bottom: 8px; color: var(--md-sys-color-primary);">
+        Focus Deviation Details
+      </div>
+      <div style="margin-bottom: 8px;">
+        <strong>From:</strong> ${deviation.fromUrl}
+      </div>
+      <div style="margin-bottom: 8px;">
+        <strong>To:</strong> ${deviation.toUrl}
+      </div>
+      <div style="margin-bottom: 12px;">
+        <strong>Time:</strong> ${date.toLocaleString()}
+      </div>
+      <button id="closeTooltip" style="
+        background: var(--md-sys-color-primary);
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        width: 100%;
+      ">Close</button>
+    `;
+
+    document.body.appendChild(tooltip);
+
+    // Animate in
+    setTimeout(() => {
+      tooltip.style.opacity = '1';
+    }, 10);
+
+    // Close functionality
+    const closeBtn = tooltip.querySelector('#closeTooltip');
+    const closeTooltip = () => {
+      tooltip.style.opacity = '0';
+      setTimeout(() => tooltip.remove(), 300);
+    };
+
+    closeBtn.addEventListener('click', closeTooltip);
+    
+    // Close on outside click
+    setTimeout(() => {
+      document.addEventListener('click', function outsideClick(e) {
+        if (!tooltip.contains(e.target)) {
+          closeTooltip();
+          document.removeEventListener('click', outsideClick);
+        }
+      });
+    }, 100);
+
+    // Auto close after 5 seconds
+    setTimeout(closeTooltip, 5000);
+  }
+
+  /**
+   * Check if a URL is restricted (browser pages, extensions, etc.)
+   */
+  isRestrictedTab(url) {
+    return (
+      url.startsWith("chrome://") ||
+      url.startsWith("chrome-extension://") ||
+      url.startsWith("edge://") ||
+      url.startsWith("about:") ||
+      url.startsWith("moz-extension://") ||
+      url === "about:blank" ||
+      url.startsWith("file://")
+    );
+  }
+
+  /**
+   * Check if current tab is valid for focus tracking
+   */
+  async checkCurrentTabValidity() {
+    try {
+      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      const currentTabInfo = document.getElementById('currentTabInfo');
+      const setFocusBtn = document.getElementById('setFocusBtn');
+      
+      if (tabs.length > 0 && currentTabInfo && setFocusBtn) {
+        const currentTab = tabs[0];
+        const isRestricted = this.isRestrictedTab(currentTab.url);
+        
+        if (isRestricted) {
+          currentTabInfo.style.display = 'block';
+          setFocusBtn.disabled = true;
+          setFocusBtn.style.opacity = '0.5';
+          setFocusBtn.title = 'Cannot set focus on browser pages';
+        } else {
+          currentTabInfo.style.display = 'none';
+          setFocusBtn.disabled = false;
+          setFocusBtn.style.opacity = '1';
+          setFocusBtn.title = 'Set current tab as focus';
+        }
+      }
+    } catch (error) {
+      console.error("Error checking current tab validity:", error);
+    }
+  }
+
+  toggleDistractionSettings() {
+    if (this.distractionReminderSettings) {
+      const container = document.getElementById('distraction-reminder-settings');
+      const isVisible = container && container.style.display !== 'none';
+      
+      if (isVisible) {
+        // Hide settings
+        container.style.display = 'none';
+        this.distractionSettingsBtn.textContent = '⚙️ Reminder Settings';
+      } else {
+        // Show settings
+        if (container) {
+          container.style.display = 'block';
+          this.distractionSettingsBtn.textContent = '❌ Hide Settings';
+        }
+      }
+    }
+  }
+
+  async testDistractionReminder() {
+    try {
+      console.log("Testing distraction reminder...");
+      
+      // Direct test of distraction reminder service
+      const response = await chrome.runtime.sendMessage({
+        type: "TEST_DISTRACTION_REMINDER"
+      });
+      
+      if (response?.success) {
+        this.showFocusStatus("Test distraction reminder sent! Check for notification.", "success");
+      } else {
+        this.showFocusStatus("Failed to send test reminder: " + (response?.error || "Unknown error"), "error");
+      }
+      
+    } catch (error) {
+      console.error("Error testing distraction reminder:", error);
+      this.showFocusStatus("Error testing reminder: " + error.message, "error");
+    }
   }
 
   toggleDeviationHistory() {
     const isVisible = this.deviationList.style.display !== "none";
 
     if (isVisible) {
-      this.deviationList.style.display = "none";
-      this.toggleHistoryBtn.textContent = "Show History";
+      // Animate out
+      this.deviationList.style.opacity = '0';
+      this.deviationList.style.transform = 'translateY(-10px)';
+      this.deviationList.style.maxHeight = '0';
+      
+      setTimeout(() => {
+        this.deviationList.style.display = "none";
+        this.toggleHistoryBtn.innerHTML = "📊 Show History";
+      }, 300);
     } else {
+      // Animate in
       this.deviationList.style.display = "block";
-      this.toggleHistoryBtn.textContent = "Hide History";
+      this.deviationList.style.opacity = '0';
+      this.deviationList.style.transform = 'translateY(-10px)';
+      this.deviationList.style.maxHeight = '0';
+      
+      setTimeout(() => {
+        this.deviationList.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+        this.deviationList.style.opacity = '1';
+        this.deviationList.style.transform = 'translateY(0)';
+        this.deviationList.style.maxHeight = '200px';
+        this.toggleHistoryBtn.innerHTML = "📊 Hide History";
+      }, 10);
     }
   }
 
@@ -1854,6 +2174,16 @@ class PopupManager {
 
   async handleSetFocus() {
     try {
+      // First check if current tab is valid
+      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tabs.length > 0) {
+        const currentTab = tabs[0];
+        if (this.isRestrictedTab(currentTab.url)) {
+          this.showFocusStatus("Cannot set focus on browser pages. Please navigate to a regular website first.", "error");
+          return;
+        }
+      }
+      
       const response = await chrome.runtime.sendMessage({
         type: "SET_FOCUS_TAB",
       });
@@ -1861,13 +2191,30 @@ class PopupManager {
       if (response && response.success) {
         // Reload focus tracking data to update UI
         await this.loadFocusTrackingData();
+        
+        // Reset distraction reminder session for new focus tab
+        try {
+          await chrome.runtime.sendMessage({
+            type: "RESET_DISTRACTION_REMINDER_SESSION"
+          });
+        } catch (error) {
+          console.warn("Failed to reset distraction reminder session:", error);
+        }
+        
         this.showFocusStatus("Focus tab set successfully!", "success");
       } else {
-        this.showFocusStatus("Failed to set focus tab", "error");
+        // Show specific error message if available
+        const errorMessage = response?.error || "Failed to set focus tab";
+        this.showFocusStatus(errorMessage, "error");
       }
     } catch (error) {
       console.error("Failed to set focus tab:", error);
-      this.showFocusStatus("Failed to set focus tab", "error");
+      // Show user-friendly error message
+      let errorMessage = "Failed to set focus tab";
+      if (error.message && error.message.includes("restricted")) {
+        errorMessage = "Cannot set focus on browser pages. Please navigate to a regular website first.";
+      }
+      this.showFocusStatus(errorMessage, "error");
     }
   }
 
@@ -1883,6 +2230,23 @@ class PopupManager {
         this.updateFocusStatus("inactive");
         this.focusSessionInfo.style.display = "none";
         this.focusDeviationHistory.style.display = "none";
+        
+        // Hide enhanced visualization
+        const visualization = document.getElementById("focusSessionVisualization");
+        if (visualization) {
+          visualization.style.display = "none";
+          this.stopRealTimeUpdates();
+        }
+        
+        // Reset distraction reminder session
+        try {
+          await chrome.runtime.sendMessage({
+            type: "RESET_DISTRACTION_REMINDER_SESSION"
+          });
+        } catch (error) {
+          console.warn("Failed to reset distraction reminder session:", error);
+        }
+        
         this.showFocusStatus("Focus tracking reset", "success");
       } else {
         this.showFocusStatus("Failed to reset focus tab", "error");
@@ -1891,6 +2255,37 @@ class PopupManager {
       console.error("Failed to reset focus tab:", error);
       this.showFocusStatus("Failed to reset focus tab", "error");
     }
+  }
+
+  startRealTimeUpdates() {
+    // Clear any existing interval
+    if (this.focusUpdateInterval) {
+      clearInterval(this.focusUpdateInterval);
+    }
+
+    // Start real-time updates every 2 seconds for smooth animations
+    this.focusUpdateInterval = setInterval(() => {
+      this.loadFocusSessionStats();
+    }, 2000);
+
+    console.log("Started real-time focus tracking updates");
+  }
+
+  stopRealTimeUpdates() {
+    if (this.focusUpdateInterval) {
+      clearInterval(this.focusUpdateInterval);
+      this.focusUpdateInterval = null;
+      console.log("Stopped real-time focus tracking updates");
+    }
+  }
+
+  // Cleanup function for when popup is closed
+  cleanup() {
+    this.stopRealTimeUpdates();
+    
+    // Remove any temporary tooltips
+    const tooltips = document.querySelectorAll('.deviation-tooltip');
+    tooltips.forEach(tooltip => tooltip.remove());
   }
 
   showFocusStatus(message, type) {
@@ -2832,4 +3227,11 @@ document.getElementById("backgroundBtn").addEventListener("click", async () => {
 });
 
 // Initialize the popup when the script loads
-new PopupManager();
+const popupManager = new PopupManager();
+
+// Cleanup when popup is closed
+window.addEventListener('beforeunload', () => {
+  if (popupManager && typeof popupManager.cleanup === 'function') {
+    popupManager.cleanup();
+  }
+});
