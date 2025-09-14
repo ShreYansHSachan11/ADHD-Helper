@@ -191,9 +191,11 @@ class PopupManager {
    */
   setupApiSettingsUI() {
     try {
-      const apiSettingsContainer = document.getElementById('apiSettingsContainer');
-      if (apiSettingsContainer && typeof ApiSettingsUI !== 'undefined') {
-        this.apiSettingsUI = new ApiSettingsUI('apiSettingsContainer');
+      const apiSettingsContainer = document.getElementById(
+        "apiSettingsContainer"
+      );
+      if (apiSettingsContainer && typeof ApiSettingsUI !== "undefined") {
+        this.apiSettingsUI = new ApiSettingsUI("apiSettingsContainer");
         console.log("API settings UI initialized successfully");
       } else {
         console.warn("ApiSettingsUI not available or container not found");
@@ -204,14 +206,17 @@ class PopupManager {
 
     // Initialize distraction reminder settings
     try {
-      if (typeof DistractionReminderSettings !== 'undefined') {
+      if (typeof DistractionReminderSettings !== "undefined") {
         this.distractionReminderSettings = new DistractionReminderSettings();
         console.log("Distraction reminder settings initialized successfully");
       } else {
         console.warn("DistractionReminderSettings not available");
       }
     } catch (error) {
-      console.error("Failed to initialize distraction reminder settings:", error);
+      console.error(
+        "Failed to initialize distraction reminder settings:",
+        error
+      );
     }
   }
 
@@ -358,19 +363,19 @@ class PopupManager {
     this.timeLimitInput = document.getElementById("timeLimitInput");
     this.takeBreakBtn = document.getElementById("takeBreakBtn");
     this.resetScreenTimeBtn = document.getElementById("resetScreenTimeBtn");
-    
+
     // Break status elements
     this.breakStatus = document.getElementById("breakStatus");
     this.workControls = document.getElementById("workControls");
     this.breakType = document.getElementById("breakType");
     this.breakTimeRemaining = document.getElementById("breakTimeRemaining");
     this.endBreakBtn = document.getElementById("endBreakBtn");
-    
+
     // Break type modal elements
     this.breakTypeModal = document.getElementById("breakTypeModal");
     this.closeBreakTypeBtn = document.getElementById("closeBreakTypeBtn");
     this.breakTypeButtons = document.querySelectorAll(".break-type-btn");
-    
+
     // Break timer manager instance
     this.breakTimerManager = null;
     this.breakUpdateInterval = null;
@@ -381,7 +386,9 @@ class PopupManager {
     this.focusUrlEl = document.getElementById("focusUrl");
     this.setFocusBtn = document.getElementById("setFocusBtn");
     this.resetFocusBtn = document.getElementById("resetFocusBtn");
-    this.distractionSettingsBtn = document.getElementById("distractionSettingsBtn");
+    this.distractionSettingsBtn = document.getElementById(
+      "distractionSettingsBtn"
+    );
     this.focusStatusIndicator = document.getElementById("focusStatusIndicator");
     this.focusStatusDot = document.getElementById("focusStatusDot");
     this.focusStatusText = document.getElementById("focusStatusText");
@@ -486,13 +493,15 @@ class PopupManager {
     this.resetScreenTimeBtn?.addEventListener("click", () =>
       this.resetScreenTimeData()
     );
-    
+
     // Break control event listeners
     this.endBreakBtn?.addEventListener("click", () => this.handleEndBreak());
-    this.closeBreakTypeBtn?.addEventListener("click", () => this.closeBreakTypeModal());
-    
+    this.closeBreakTypeBtn?.addEventListener("click", () =>
+      this.closeBreakTypeModal()
+    );
+
     // Break type selection event listeners
-    this.breakTypeButtons?.forEach(btn => {
+    this.breakTypeButtons?.forEach((btn) => {
       btn.addEventListener("click", () => {
         const breakType = btn.dataset.breakType;
         const duration = parseInt(btn.dataset.duration);
@@ -505,13 +514,13 @@ class PopupManager {
     this.resetFocusBtn?.addEventListener("click", () =>
       this.handleResetFocus()
     );
-    this.distractionSettingsBtn?.addEventListener("click", () => 
+    this.distractionSettingsBtn?.addEventListener("click", () =>
       this.toggleDistractionSettings()
     );
-    
+
     // Test distraction reminder button
     const testDistractionBtn = document.getElementById("testDistractionBtn");
-    testDistractionBtn?.addEventListener("click", () => 
+    testDistractionBtn?.addEventListener("click", () =>
       this.testDistractionReminder()
     );
     this.toggleHistoryBtn?.addEventListener("click", () =>
@@ -567,7 +576,7 @@ class PopupManager {
       whiteNoiseBtn3.addEventListener("click", () => {
         whiteNoisePanel.style.display =
           whiteNoisePanel.style.display === "none" ||
-            whiteNoisePanel.style.display === ""
+          whiteNoisePanel.style.display === ""
             ? "block"
             : "none";
       });
@@ -628,7 +637,7 @@ class PopupManager {
 
     // Keyboard navigation
     document.addEventListener("keydown", (e) => this.handleKeydown(e));
-    
+
     // Cleanup on page unload
     window.addEventListener("beforeunload", () => this.cleanup());
   }
@@ -642,22 +651,22 @@ class PopupManager {
         clearInterval(this.breakUpdateInterval);
         this.breakUpdateInterval = null;
       }
-      
+
       if (this.breakControlsUI) {
         this.breakControlsUI.destroy();
         this.breakControlsUI = null;
       }
-      
+
       if (this.breakAnalyticsDisplay) {
         this.breakAnalyticsDisplay.destroy();
         this.breakAnalyticsDisplay = null;
       }
-      
+
       if (this.breakSettingsUI) {
         this.breakSettingsUI.destroy();
         this.breakSettingsUI = null;
       }
-      
+
       if (this.apiSettingsUI) {
         this.apiSettingsUI.destroy();
         this.apiSettingsUI = null;
@@ -673,7 +682,9 @@ class PopupManager {
   showError(message) {
     try {
       if (this.errorHandler) {
-        this.errorHandler.showUserFeedback(message, "error", { duration: 4000 });
+        this.errorHandler.showUserFeedback(message, "error", {
+          duration: 4000,
+        });
       } else {
         console.error("Error:", message);
         // Fallback: show alert if no error handler
@@ -1027,17 +1038,18 @@ class PopupManager {
   async initializeBreakTimer() {
     try {
       // Initialize break controls UI if container exists
-      const controlsContainer = document.getElementById('breakControlsContainer');
-      if (controlsContainer && typeof BreakControlsUI !== 'undefined') {
-        this.breakControlsUI = new BreakControlsUI('breakControlsContainer');
+      const controlsContainer = document.getElementById(
+        "breakControlsContainer"
+      );
+      if (controlsContainer && typeof BreakControlsUI !== "undefined") {
+        this.breakControlsUI = new BreakControlsUI("breakControlsContainer");
         console.log("Break controls UI initialized successfully");
       } else {
         console.warn("BreakControlsUI not available or container not found");
       }
-      
+
       // Initialize break analytics display
       await this.initializeBreakAnalytics();
-      
     } catch (error) {
       console.error("Failed to initialize break timer components:", error);
     }
@@ -1048,8 +1060,10 @@ class PopupManager {
    */
   async initializeBreakAnalytics() {
     try {
-      if (typeof BreakAnalyticsDisplay !== 'undefined') {
-        this.breakAnalyticsDisplay = new BreakAnalyticsDisplay('breakAnalyticsContainer');
+      if (typeof BreakAnalyticsDisplay !== "undefined") {
+        this.breakAnalyticsDisplay = new BreakAnalyticsDisplay(
+          "breakAnalyticsContainer"
+        );
         console.log("Break analytics display initialized successfully");
       } else {
         console.warn("BreakAnalyticsDisplay not available");
@@ -1064,14 +1078,14 @@ class PopupManager {
    */
   async initializeBreakSettings() {
     try {
-      if (typeof BreakSettingsUI !== 'undefined') {
-        this.breakSettingsUI = new BreakSettingsUI('breakSettingsContainer');
-        
+      if (typeof BreakSettingsUI !== "undefined") {
+        this.breakSettingsUI = new BreakSettingsUI("breakSettingsContainer");
+
         // Listen for settings changes
-        document.addEventListener('breakSettingsChanged', (event) => {
+        document.addEventListener("breakSettingsChanged", (event) => {
           this.handleBreakSettingsChanged(event.detail);
         });
-        
+
         console.log("Break settings UI initialized successfully");
       } else {
         console.warn("BreakSettingsUI not available");
@@ -1087,7 +1101,7 @@ class PopupManager {
   startBreakControlsUpdates() {
     // Update immediately
     this.updateBreakControlsUI();
-    
+
     // Update every second
     this.breakUpdateInterval = setInterval(() => {
       this.updateBreakControlsUI();
@@ -1101,49 +1115,52 @@ class PopupManager {
     try {
       // Get break timer status from background script
       const response = await chrome.runtime.sendMessage({
-        type: "GET_BREAK_TIMER_STATUS"
+        type: "GET_BREAK_TIMER_STATUS",
       });
-      
+
       if (!response || !response.success) {
         console.warn("Failed to get break timer status");
         return;
       }
-      
+
       const status = response.data;
       if (!status) return;
-      
+
       // Update work timer display
       const workTimeMinutes = Math.floor(status.currentWorkTime / (1000 * 60));
-      const workTimeSeconds = Math.floor((status.currentWorkTime % (1000 * 60)) / 1000);
+      const workTimeSeconds = Math.floor(
+        (status.currentWorkTime % (1000 * 60)) / 1000
+      );
       const workTimeDisplay = `${workTimeMinutes}m ${workTimeSeconds}s`;
-      
+
       if (this.currentTimeEl) {
         this.currentTimeEl.textContent = workTimeDisplay;
-        
+
         // Add visual indicators based on work time
-        this.currentTimeEl.classList.remove('time-warning', 'time-danger');
+        this.currentTimeEl.classList.remove("time-warning", "time-danger");
         if (status.isThresholdExceeded) {
-          this.currentTimeEl.classList.add('time-danger');
+          this.currentTimeEl.classList.add("time-danger");
         } else if (workTimeMinutes >= 20) {
-          this.currentTimeEl.classList.add('time-warning');
+          this.currentTimeEl.classList.add("time-warning");
         }
       }
-      
+
       // Update break status display
       if (status.isOnBreak) {
         this.showBreakStatus(status);
       } else {
         this.showWorkControls(status);
       }
-      
+
       // Update work time threshold input
       if (this.timeLimitInput && status.workTimeThreshold) {
-        const thresholdMinutes = Math.floor(status.workTimeThreshold / (1000 * 60));
+        const thresholdMinutes = Math.floor(
+          status.workTimeThreshold / (1000 * 60)
+        );
         if (parseInt(this.timeLimitInput.value) !== thresholdMinutes) {
           this.timeLimitInput.value = thresholdMinutes;
         }
       }
-      
     } catch (error) {
       console.error("Error updating break controls UI:", error);
     }
@@ -1155,27 +1172,32 @@ class PopupManager {
   showBreakStatus(status) {
     try {
       if (this.breakStatus && this.workControls) {
-        this.breakStatus.style.display = 'block';
-        this.workControls.style.display = 'none';
-        
+        this.breakStatus.style.display = "block";
+        this.workControls.style.display = "none";
+
         // Update break type display
         if (this.breakType && status.breakType) {
           const breakTypeLabels = {
-            short: 'Short Break',
-            medium: 'Medium Break', 
-            long: 'Long Break'
+            short: "Short Break",
+            medium: "Medium Break",
+            long: "Long Break",
           };
-          this.breakType.textContent = breakTypeLabels[status.breakType] || status.breakType;
+          this.breakType.textContent =
+            breakTypeLabels[status.breakType] || status.breakType;
         }
-        
+
         // Update remaining time display
         if (this.breakTimeRemaining) {
           const remainingMs = status.remainingBreakTime;
           const remainingMinutes = Math.floor(remainingMs / (1000 * 60));
-          const remainingSeconds = Math.floor((remainingMs % (1000 * 60)) / 1000);
-          this.breakTimeRemaining.textContent = `${remainingMinutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+          const remainingSeconds = Math.floor(
+            (remainingMs % (1000 * 60)) / 1000
+          );
+          this.breakTimeRemaining.textContent = `${remainingMinutes}:${remainingSeconds
+            .toString()
+            .padStart(2, "0")}`;
         }
-        
+
         // Enable end break button
         if (this.endBreakBtn) {
           this.endBreakBtn.disabled = false;
@@ -1192,22 +1214,22 @@ class PopupManager {
   showWorkControls(status) {
     try {
       if (this.breakStatus && this.workControls) {
-        this.breakStatus.style.display = 'none';
-        this.workControls.style.display = 'block';
-        
+        this.breakStatus.style.display = "none";
+        this.workControls.style.display = "block";
+
         // Enable/disable take break button based on timer state
         if (this.takeBreakBtn) {
           this.takeBreakBtn.disabled = !status.isWorkTimerActive;
-          
+
           // Update button text based on work time
           if (status.isThresholdExceeded) {
-            this.takeBreakBtn.textContent = 'Take Break Now (Recommended)';
-            this.takeBreakBtn.classList.add('btn-primary');
-            this.takeBreakBtn.classList.remove('btn-secondary');
+            this.takeBreakBtn.textContent = "Take Break Now (Recommended)";
+            this.takeBreakBtn.classList.add("btn-primary");
+            this.takeBreakBtn.classList.remove("btn-secondary");
           } else {
-            this.takeBreakBtn.textContent = 'Take Break Now';
-            this.takeBreakBtn.classList.add('btn-secondary');
-            this.takeBreakBtn.classList.remove('btn-primary');
+            this.takeBreakBtn.textContent = "Take Break Now";
+            this.takeBreakBtn.classList.add("btn-secondary");
+            this.takeBreakBtn.classList.remove("btn-primary");
           }
         }
       }
@@ -1225,10 +1247,9 @@ class PopupManager {
         console.error("Break timer manager not available");
         return;
       }
-      
+
       // Show break type selection modal
       this.showBreakTypeModal();
-      
     } catch (error) {
       console.error("Error handling take break:", error);
       this.showError("Failed to start break. Please try again.");
@@ -1241,10 +1262,11 @@ class PopupManager {
   showBreakTypeModal() {
     try {
       if (this.breakTypeModal) {
-        this.breakTypeModal.style.display = 'flex';
-        
+        this.breakTypeModal.style.display = "flex";
+
         // Focus first break type button for accessibility
-        const firstButton = this.breakTypeModal.querySelector('.break-type-btn');
+        const firstButton =
+          this.breakTypeModal.querySelector(".break-type-btn");
         if (firstButton) {
           firstButton.focus();
         }
@@ -1260,7 +1282,7 @@ class PopupManager {
   closeBreakTypeModal() {
     try {
       if (this.breakTypeModal) {
-        this.breakTypeModal.style.display = 'none';
+        this.breakTypeModal.style.display = "none";
       }
     } catch (error) {
       console.error("Error closing break type modal:", error);
@@ -1274,24 +1296,26 @@ class PopupManager {
     try {
       // Close modal first
       this.closeBreakTypeModal();
-      
+
       // Start the selected break via background script
       const response = await chrome.runtime.sendMessage({
         type: "START_BREAK",
         breakType: breakType,
-        durationMinutes: duration
+        durationMinutes: duration,
       });
-      
+
       if (response && response.success) {
         console.log(`Started ${breakType} break for ${duration} minutes`);
-        
+
         // Update UI immediately
         await this.updateBreakControlsUI();
-        
+
         // Show success message
         if (this.errorHandler) {
           this.errorHandler.showUserFeedback(
-            `${breakType.charAt(0).toUpperCase() + breakType.slice(1)} break started! Enjoy your ${duration}-minute break.`,
+            `${
+              breakType.charAt(0).toUpperCase() + breakType.slice(1)
+            } break started! Enjoy your ${duration}-minute break.`,
             "success",
             { duration: 3000 }
           );
@@ -1300,7 +1324,6 @@ class PopupManager {
         console.error("Failed to start break:", response?.error);
         this.showError("Failed to start break. Please try again.");
       }
-      
     } catch (error) {
       console.error("Error handling break type selection:", error);
       this.showError("Failed to start break. Please try again.");
@@ -1314,15 +1337,15 @@ class PopupManager {
     try {
       // End the break via background script
       const response = await chrome.runtime.sendMessage({
-        type: "END_BREAK"
+        type: "END_BREAK",
       });
-      
+
       if (response && response.success) {
         console.log("Break ended successfully");
-        
+
         // Update UI immediately
         await this.updateBreakControlsUI();
-        
+
         // Show success message
         if (this.errorHandler) {
           this.errorHandler.showUserFeedback(
@@ -1335,7 +1358,6 @@ class PopupManager {
         console.error("Failed to end break:", response?.error);
         this.showError("Failed to end break. Please try again.");
       }
-      
     } catch (error) {
       console.error("Error handling end break:", error);
       this.showError("Failed to end break. Please try again.");
@@ -1348,24 +1370,27 @@ class PopupManager {
   async handleBreakSettingsChanged(newSettings) {
     try {
       console.log("Break settings changed:", newSettings);
-      
+
       // Update work time threshold via background script
       if (newSettings.workTimeThresholdMinutes) {
         const response = await chrome.runtime.sendMessage({
           type: "UPDATE_WORK_TIME_THRESHOLD",
-          minutes: newSettings.workTimeThresholdMinutes
+          minutes: newSettings.workTimeThresholdMinutes,
         });
-        
+
         if (response && response.success) {
           // Update the time limit input in the UI to reflect the new setting
           if (this.timeLimitInput) {
             this.timeLimitInput.value = newSettings.workTimeThresholdMinutes;
           }
         } else {
-          console.error("Failed to update work time threshold:", response?.error);
+          console.error(
+            "Failed to update work time threshold:",
+            response?.error
+          );
         }
       }
-      
+
       // Show feedback to user
       if (this.errorHandler) {
         this.errorHandler.showUserFeedback(
@@ -1374,7 +1399,6 @@ class PopupManager {
           { duration: 2000 }
         );
       }
-      
     } catch (error) {
       console.error("Error handling break settings change:", error);
       this.showError("Failed to apply new settings. Please try again.");
@@ -1389,14 +1413,15 @@ class PopupManager {
         // Update work time threshold via background script
         const response = await chrome.runtime.sendMessage({
           type: "UPDATE_WORK_TIME_THRESHOLD",
-          minutes: newLimit
+          minutes: newLimit,
         });
-        
+
         if (response && response.success) {
           console.log("Work time threshold updated:", newLimit);
-          
+
           // Also update legacy screen time settings for compatibility
-          const settings = (await chrome.storage.local.get("screenTimeSettings")) || {};
+          const settings =
+            (await chrome.storage.local.get("screenTimeSettings")) || {};
           const currentSettings = settings.screenTimeSettings || {
             limitMinutes: 30,
             enabled: true,
@@ -1404,11 +1429,19 @@ class PopupManager {
           };
 
           currentSettings.limitMinutes = newLimit;
-          await chrome.storage.local.set({ screenTimeSettings: currentSettings });
-          
-          this.showScreenTimeStatus("Time limit updated successfully!", "success");
+          await chrome.storage.local.set({
+            screenTimeSettings: currentSettings,
+          });
+
+          this.showScreenTimeStatus(
+            "Time limit updated successfully!",
+            "success"
+          );
         } else {
-          console.error("Failed to update work time threshold:", response?.error);
+          console.error(
+            "Failed to update work time threshold:",
+            response?.error
+          );
           this.showScreenTimeStatus("Failed to save time limit", "error");
         }
       } catch (error) {
@@ -1450,12 +1483,12 @@ class PopupManager {
   async handleBreakTypeSelection(breakType, duration) {
     try {
       this.closeBreakTypeModal();
-      
+
       // Start the selected break
       const response = await chrome.runtime.sendMessage({
         type: "START_BREAK",
         breakType: breakType,
-        durationMinutes: duration
+        durationMinutes: duration,
       });
 
       if (response && response.success) {
@@ -1474,7 +1507,7 @@ class PopupManager {
   async handleEndBreak() {
     try {
       const response = await chrome.runtime.sendMessage({
-        type: "CANCEL_BREAK"
+        type: "CANCEL_BREAK",
       });
 
       if (response && response.success) {
@@ -1497,19 +1530,28 @@ class PopupManager {
         type: "GET_INTEGRATED_TIMER_STATUS",
       });
 
-      if (integratedResponse && integratedResponse.success && integratedResponse.data) {
+      if (
+        integratedResponse &&
+        integratedResponse.success &&
+        integratedResponse.data
+      ) {
         const integratedData = integratedResponse.data;
-        
+
         // Use break timer data if available, otherwise fall back to tab stats
-        if (integratedData.breakTimer && integratedData.breakTimer.currentWorkTime !== undefined) {
-          const workTimeMinutes = Math.floor(integratedData.breakTimer.currentWorkTime / (1000 * 60));
+        if (
+          integratedData.breakTimer &&
+          integratedData.breakTimer.currentWorkTime !== undefined
+        ) {
+          const workTimeMinutes = Math.floor(
+            integratedData.breakTimer.currentWorkTime / (1000 * 60)
+          );
           this.updateCurrentTime(workTimeMinutes);
-          
+
           // Update break controls UI is handled separately
           return;
         }
       }
-      
+
       // Fallback to legacy tab stats
       const response = await chrome.runtime.sendMessage({
         type: "GET_TAB_STATS",
@@ -1534,7 +1576,6 @@ class PopupManager {
         this.updateCurrentTime(0);
         this.updateBreakReminderCount(0);
       }
-      
     } catch (error) {
       console.error("Failed to get current time:", error);
       this.updateCurrentTime(0);
@@ -1592,8 +1633,9 @@ class PopupManager {
     }
 
     if (count > 0) {
-      reminderCountEl.textContent = `(${count} reminder${count > 1 ? "s" : ""
-        })`;
+      reminderCountEl.textContent = `(${count} reminder${
+        count > 1 ? "s" : ""
+      })`;
       reminderCountEl.style.display = "inline";
     } else {
       reminderCountEl.style.display = "none";
@@ -1748,9 +1790,11 @@ class PopupManager {
       this.updateFocusStatus("active");
       this.focusSessionInfo.style.display = "block";
       this.focusDeviationHistory.style.display = "block";
-      
+
       // Show the enhanced visualization
-      const visualization = document.getElementById("focusSessionVisualization");
+      const visualization = document.getElementById(
+        "focusSessionVisualization"
+      );
       if (visualization) {
         visualization.style.display = "block";
         this.startRealTimeUpdates();
@@ -1760,9 +1804,11 @@ class PopupManager {
       this.updateFocusStatus("inactive");
       this.focusSessionInfo.style.display = "none";
       this.focusDeviationHistory.style.display = "none";
-      
+
       // Hide the enhanced visualization
-      const visualization = document.getElementById("focusSessionVisualization");
+      const visualization = document.getElementById(
+        "focusSessionVisualization"
+      );
       if (visualization) {
         visualization.style.display = "none";
         this.stopRealTimeUpdates();
@@ -1818,7 +1864,7 @@ class PopupManager {
     const minutes = sessionMinutes % 60;
 
     const timeText = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
-    
+
     if (this.focusSessionTime) {
       this.focusSessionTime.textContent = timeText;
     }
@@ -1862,7 +1908,7 @@ class PopupManager {
     // Update progress ring
     const progressTime = document.getElementById("progressTime");
     const progressRingFill = document.getElementById("progressRingFill");
-    
+
     if (progressTime) {
       progressTime.textContent = timeText;
     }
@@ -1870,9 +1916,12 @@ class PopupManager {
     // Calculate progress angle (assuming 60 minutes = full circle)
     const sessionMinutes = Math.floor(sessionData.sessionTime / (1000 * 60));
     const progressAngle = Math.min((sessionMinutes / 60) * 360, 360);
-    
+
     if (progressRingFill) {
-      progressRingFill.style.setProperty('--progress-angle', `${progressAngle}deg`);
+      progressRingFill.style.setProperty(
+        "--progress-angle",
+        `${progressAngle}deg`
+      );
     }
 
     // Update metric cards
@@ -1891,16 +1940,17 @@ class PopupManager {
     if (focusScoreMetric) {
       // Calculate focus score based on deviations vs time
       const deviations = sessionData.deviationCount || 0;
-      const focusScore = sessionMinutes > 0 ? Math.max(0, 100 - (deviations * 10)) : 100;
+      const focusScore =
+        sessionMinutes > 0 ? Math.max(0, 100 - deviations * 10) : 100;
       focusScoreMetric.textContent = `${focusScore}%`;
-      
+
       // Add color coding
       if (focusScore >= 80) {
-        focusScoreMetric.style.color = 'var(--md-sys-color-primary)';
+        focusScoreMetric.style.color = "var(--md-sys-color-primary)";
       } else if (focusScore >= 60) {
-        focusScoreMetric.style.color = '#ff8c42';
+        focusScoreMetric.style.color = "#ff8c42";
       } else {
-        focusScoreMetric.style.color = '#ff6b35';
+        focusScoreMetric.style.color = "#ff6b35";
       }
     }
   }
@@ -1918,11 +1968,12 @@ class PopupManager {
     this.toggleHistoryBtn.style.display = "block";
 
     // Clear existing deviation items with fade out animation
-    const existingItems = this.deviationList.querySelectorAll('.deviation-item');
+    const existingItems =
+      this.deviationList.querySelectorAll(".deviation-item");
     existingItems.forEach((item, index) => {
       setTimeout(() => {
-        item.style.opacity = '0';
-        item.style.transform = 'translateX(-20px)';
+        item.style.opacity = "0";
+        item.style.transform = "translateX(-20px)";
         setTimeout(() => item.remove(), 200);
       }, index * 50);
     });
@@ -1934,10 +1985,10 @@ class PopupManager {
       recentDeviations.forEach((deviation, index) => {
         const deviationItem = document.createElement("div");
         deviationItem.className = "deviation-item";
-        
+
         // Start with hidden state for animation
-        deviationItem.style.opacity = '0';
-        deviationItem.style.transform = 'translateX(20px)';
+        deviationItem.style.opacity = "0";
+        deviationItem.style.transform = "translateX(20px)";
 
         const fromDomain = this.formatUrl(deviation.fromUrl);
         const toDomain = this.formatUrl(deviation.toUrl);
@@ -1954,13 +2005,14 @@ class PopupManager {
 
         // Animate in with stagger
         setTimeout(() => {
-          deviationItem.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-          deviationItem.style.opacity = '1';
-          deviationItem.style.transform = 'translateX(0)';
+          deviationItem.style.transition =
+            "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)";
+          deviationItem.style.opacity = "1";
+          deviationItem.style.transform = "translateX(0)";
         }, index * 100);
 
         // Add click interaction for detailed view
-        deviationItem.addEventListener('click', () => {
+        deviationItem.addEventListener("click", () => {
           this.showDeviationDetails(deviation);
         });
       });
@@ -1969,8 +2021,8 @@ class PopupManager {
 
   showDeviationDetails(deviation) {
     // Create a temporary tooltip or modal for deviation details
-    const tooltip = document.createElement('div');
-    tooltip.className = 'deviation-tooltip';
+    const tooltip = document.createElement("div");
+    tooltip.className = "deviation-tooltip";
     tooltip.style.cssText = `
       position: fixed;
       top: 50%;
@@ -2016,24 +2068,24 @@ class PopupManager {
 
     // Animate in
     setTimeout(() => {
-      tooltip.style.opacity = '1';
+      tooltip.style.opacity = "1";
     }, 10);
 
     // Close functionality
-    const closeBtn = tooltip.querySelector('#closeTooltip');
+    const closeBtn = tooltip.querySelector("#closeTooltip");
     const closeTooltip = () => {
-      tooltip.style.opacity = '0';
+      tooltip.style.opacity = "0";
       setTimeout(() => tooltip.remove(), 300);
     };
 
-    closeBtn.addEventListener('click', closeTooltip);
-    
+    closeBtn.addEventListener("click", closeTooltip);
+
     // Close on outside click
     setTimeout(() => {
-      document.addEventListener('click', function outsideClick(e) {
+      document.addEventListener("click", function outsideClick(e) {
         if (!tooltip.contains(e.target)) {
           closeTooltip();
-          document.removeEventListener('click', outsideClick);
+          document.removeEventListener("click", outsideClick);
         }
       });
     }, 100);
@@ -2062,24 +2114,27 @@ class PopupManager {
    */
   async checkCurrentTabValidity() {
     try {
-      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-      const currentTabInfo = document.getElementById('currentTabInfo');
-      const setFocusBtn = document.getElementById('setFocusBtn');
-      
+      const tabs = await chrome.tabs.query({
+        active: true,
+        currentWindow: true,
+      });
+      const currentTabInfo = document.getElementById("currentTabInfo");
+      const setFocusBtn = document.getElementById("setFocusBtn");
+
       if (tabs.length > 0 && currentTabInfo && setFocusBtn) {
         const currentTab = tabs[0];
         const isRestricted = this.isRestrictedTab(currentTab.url);
-        
+
         if (isRestricted) {
-          currentTabInfo.style.display = 'block';
+          currentTabInfo.style.display = "block";
           setFocusBtn.disabled = true;
-          setFocusBtn.style.opacity = '0.5';
-          setFocusBtn.title = 'Cannot set focus on browser pages';
+          setFocusBtn.style.opacity = "0.5";
+          setFocusBtn.title = "Cannot set focus on browser pages";
         } else {
-          currentTabInfo.style.display = 'none';
+          currentTabInfo.style.display = "none";
           setFocusBtn.disabled = false;
-          setFocusBtn.style.opacity = '1';
-          setFocusBtn.title = 'Set current tab as focus';
+          setFocusBtn.style.opacity = "1";
+          setFocusBtn.title = "Set current tab as focus";
         }
       }
     } catch (error) {
@@ -2089,18 +2144,20 @@ class PopupManager {
 
   toggleDistractionSettings() {
     if (this.distractionReminderSettings) {
-      const container = document.getElementById('distraction-reminder-settings');
-      const isVisible = container && container.style.display !== 'none';
-      
+      const container = document.getElementById(
+        "distraction-reminder-settings"
+      );
+      const isVisible = container && container.style.display !== "none";
+
       if (isVisible) {
         // Hide settings
-        container.style.display = 'none';
-        this.distractionSettingsBtn.textContent = '⚙️ Reminder Settings';
+        container.style.display = "none";
+        this.distractionSettingsBtn.textContent = "⚙️ Reminder Settings";
       } else {
         // Show settings
         if (container) {
-          container.style.display = 'block';
-          this.distractionSettingsBtn.textContent = '❌ Hide Settings';
+          container.style.display = "block";
+          this.distractionSettingsBtn.textContent = "❌ Hide Settings";
         }
       }
     }
@@ -2109,19 +2166,24 @@ class PopupManager {
   async testDistractionReminder() {
     try {
       console.log("Testing distraction reminder...");
-      
+
       // Direct test of distraction reminder service
       const response = await chrome.runtime.sendMessage({
-        type: "TEST_DISTRACTION_REMINDER"
+        type: "TEST_DISTRACTION_REMINDER",
       });
-      
+
       if (response?.success) {
-        const message = response.message || "Test notifications sent! Check for immediate notification and another in 10 seconds.";
+        const message =
+          response.message ||
+          "Test notifications sent! Check for immediate notification and another in 10 seconds.";
         this.showFocusStatus(message, "success");
       } else {
-        this.showFocusStatus("Failed to send test reminder: " + (response?.error || "Unknown error"), "error");
+        this.showFocusStatus(
+          "Failed to send test reminder: " +
+            (response?.error || "Unknown error"),
+          "error"
+        );
       }
-      
     } catch (error) {
       console.error("Error testing distraction reminder:", error);
       this.showFocusStatus("Error testing reminder: " + error.message, "error");
@@ -2133,10 +2195,10 @@ class PopupManager {
 
     if (isVisible) {
       // Animate out
-      this.deviationList.style.opacity = '0';
-      this.deviationList.style.transform = 'translateY(-10px)';
-      this.deviationList.style.maxHeight = '0';
-      
+      this.deviationList.style.opacity = "0";
+      this.deviationList.style.transform = "translateY(-10px)";
+      this.deviationList.style.maxHeight = "0";
+
       setTimeout(() => {
         this.deviationList.style.display = "none";
         this.toggleHistoryBtn.innerHTML = "📊 Show History";
@@ -2144,15 +2206,16 @@ class PopupManager {
     } else {
       // Animate in
       this.deviationList.style.display = "block";
-      this.deviationList.style.opacity = '0';
-      this.deviationList.style.transform = 'translateY(-10px)';
-      this.deviationList.style.maxHeight = '0';
-      
+      this.deviationList.style.opacity = "0";
+      this.deviationList.style.transform = "translateY(-10px)";
+      this.deviationList.style.maxHeight = "0";
+
       setTimeout(() => {
-        this.deviationList.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-        this.deviationList.style.opacity = '1';
-        this.deviationList.style.transform = 'translateY(0)';
-        this.deviationList.style.maxHeight = '200px';
+        this.deviationList.style.transition =
+          "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)";
+        this.deviationList.style.opacity = "1";
+        this.deviationList.style.transform = "translateY(0)";
+        this.deviationList.style.maxHeight = "200px";
         this.toggleHistoryBtn.innerHTML = "📊 Hide History";
       }, 10);
     }
@@ -2176,15 +2239,21 @@ class PopupManager {
   async handleSetFocus() {
     try {
       // First check if current tab is valid
-      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      const tabs = await chrome.tabs.query({
+        active: true,
+        currentWindow: true,
+      });
       if (tabs.length > 0) {
         const currentTab = tabs[0];
         if (this.isRestrictedTab(currentTab.url)) {
-          this.showFocusStatus("Cannot set focus on browser pages. Please navigate to a regular website first.", "error");
+          this.showFocusStatus(
+            "Cannot set focus on browser pages. Please navigate to a regular website first.",
+            "error"
+          );
           return;
         }
       }
-      
+
       const response = await chrome.runtime.sendMessage({
         type: "SET_FOCUS_TAB",
       });
@@ -2192,16 +2261,16 @@ class PopupManager {
       if (response && response.success) {
         // Reload focus tracking data to update UI
         await this.loadFocusTrackingData();
-        
+
         // Reset distraction reminder session for new focus tab
         try {
           await chrome.runtime.sendMessage({
-            type: "RESET_DISTRACTION_REMINDER_SESSION"
+            type: "RESET_DISTRACTION_REMINDER_SESSION",
           });
         } catch (error) {
           console.warn("Failed to reset distraction reminder session:", error);
         }
-        
+
         this.showFocusStatus("Focus tab set successfully!", "success");
       } else {
         // Show specific error message if available
@@ -2213,7 +2282,8 @@ class PopupManager {
       // Show user-friendly error message
       let errorMessage = "Failed to set focus tab";
       if (error.message && error.message.includes("restricted")) {
-        errorMessage = "Cannot set focus on browser pages. Please navigate to a regular website first.";
+        errorMessage =
+          "Cannot set focus on browser pages. Please navigate to a regular website first.";
       }
       this.showFocusStatus(errorMessage, "error");
     }
@@ -2231,23 +2301,25 @@ class PopupManager {
         this.updateFocusStatus("inactive");
         this.focusSessionInfo.style.display = "none";
         this.focusDeviationHistory.style.display = "none";
-        
+
         // Hide enhanced visualization
-        const visualization = document.getElementById("focusSessionVisualization");
+        const visualization = document.getElementById(
+          "focusSessionVisualization"
+        );
         if (visualization) {
           visualization.style.display = "none";
           this.stopRealTimeUpdates();
         }
-        
+
         // Reset distraction reminder session
         try {
           await chrome.runtime.sendMessage({
-            type: "RESET_DISTRACTION_REMINDER_SESSION"
+            type: "RESET_DISTRACTION_REMINDER_SESSION",
           });
         } catch (error) {
           console.warn("Failed to reset distraction reminder session:", error);
         }
-        
+
         this.showFocusStatus("Focus tracking reset", "success");
       } else {
         this.showFocusStatus("Failed to reset focus tab", "error");
@@ -2283,10 +2355,10 @@ class PopupManager {
   // Cleanup function for when popup is closed
   cleanup() {
     this.stopRealTimeUpdates();
-    
+
     // Remove any temporary tooltips
-    const tooltips = document.querySelectorAll('.deviation-tooltip');
-    tooltips.forEach(tooltip => tooltip.remove());
+    const tooltips = document.querySelectorAll(".deviation-tooltip");
+    tooltips.forEach((tooltip) => tooltip.remove());
   }
 
   showFocusStatus(message, type) {
@@ -2493,8 +2565,9 @@ class PopupManager {
     };
 
     if (this.priorityInfo) {
-      this.priorityInfo.innerHTML = `<small>${infoTexts[priority] || infoTexts.medium
-        }</small>`;
+      this.priorityInfo.innerHTML = `<small>${
+        infoTexts[priority] || infoTexts.medium
+      }</small>`;
     }
   }
 
@@ -2791,7 +2864,8 @@ class PopupManager {
         }
 
         console.log(
-          `White noise ${result.isPlaying ? "started" : "stopped"}: ${result.soundName
+          `White noise ${result.isPlaying ? "started" : "stopped"}: ${
+            result.soundName
           }`
         );
       } else {
@@ -3064,7 +3138,7 @@ class PopupManager {
 
       if (response && response.success && response.data) {
         const status = response.data;
-        
+
         if (status.isOnBreak) {
           // Show break status, hide work controls
           this.showBreakStatus(status);
@@ -3086,23 +3160,30 @@ class PopupManager {
     if (this.breakStatus && this.workControls) {
       this.breakStatus.style.display = "block";
       this.workControls.style.display = "none";
-      
+
       // Update break type display
       if (this.breakType) {
         const breakTypeLabels = {
           short: "Short Break",
-          medium: "Medium Break", 
-          long: "Long Break"
+          medium: "Medium Break",
+          long: "Long Break",
         };
-        this.breakType.textContent = breakTypeLabels[status.breakType] || "Break";
+        this.breakType.textContent =
+          breakTypeLabels[status.breakType] || "Break";
       }
-      
+
       // Update remaining time display
       if (this.breakTimeRemaining && status.remainingBreakTime) {
-        const remainingMinutes = Math.ceil(status.remainingBreakTime / (1000 * 60));
+        const remainingMinutes = Math.ceil(
+          status.remainingBreakTime / (1000 * 60)
+        );
         const minutes = Math.floor(remainingMinutes);
-        const seconds = Math.floor((status.remainingBreakTime % (1000 * 60)) / 1000);
-        this.breakTimeRemaining.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        const seconds = Math.floor(
+          (status.remainingBreakTime % (1000 * 60)) / 1000
+        );
+        this.breakTimeRemaining.textContent = `${minutes}:${seconds
+          .toString()
+          .padStart(2, "0")}`;
       }
     }
   }
@@ -3231,8 +3312,110 @@ document.getElementById("backgroundBtn").addEventListener("click", async () => {
 const popupManager = new PopupManager();
 
 // Cleanup when popup is closed
-window.addEventListener('beforeunload', () => {
-  if (popupManager && typeof popupManager.cleanup === 'function') {
+window.addEventListener("beforeunload", () => {
+  if (popupManager && typeof popupManager.cleanup === "function") {
     popupManager.cleanup();
   }
 });
+const priorityConfig = {
+  low: [24], // 1 reminder, 24h before
+  medium: [48, 4], // 2 reminders, 2 days and 4 hours before
+  high: [72, 24, 4], // 3 reminders, 3 days, 1 day, 4 hours before
+};
+
+const taskInput = document.getElementById("reminderTaskInput");
+const deadlineInput = document.getElementById("reminderDeadlineInput");
+const prioritySelect = document.getElementById("prioritySelect");
+const buttonsContainer = document.getElementById("reminderButtonsContainer");
+const downloadICSBtn = document.getElementById("downloadICSBtn");
+
+// Update buttons on priority change
+prioritySelect.addEventListener("change", renderReminderButtons);
+renderReminderButtons();
+
+// Render Google Calendar buttons
+function renderReminderButtons() {
+  buttonsContainer.innerHTML = "";
+  const selectedPriority = prioritySelect.value;
+  const offsets = priorityConfig[selectedPriority];
+
+  offsets.forEach((hoursBefore, idx) => {
+    const btn = document.createElement("button");
+    btn.textContent = `Add Reminder ${
+      idx + 1
+    } (${hoursBefore}h before deadline)`;
+    btn.addEventListener("click", () => createGoogleCalendarEvent(hoursBefore));
+    buttonsContainer.appendChild(btn);
+  });
+}
+
+// Google Calendar event
+function formatDateUTC(date) {
+  return date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+}
+
+function createGoogleCalendarEvent(hoursBefore) {
+  const taskName = taskInput.value || "Untitled Task";
+  const deadlineStr = deadlineInput.value;
+  if (!deadlineStr) {
+    alert("Please enter a deadline.");
+    return;
+  }
+  const deadline = new Date(deadlineStr);
+  const start = new Date(deadline.getTime() - hoursBefore * 60 * 60 * 1000);
+  const end = new Date(start.getTime() + 15 * 60 * 1000);
+
+  const url =
+    `https://calendar.google.com/calendar/render?action=TEMPLATE` +
+    `&text=${encodeURIComponent("Reminder: " + taskName)}` +
+    `&details=${encodeURIComponent(hoursBefore + "h before deadline")}` +
+    `&dates=${formatDateUTC(start)}/${formatDateUTC(end)}` +
+    `&location=${encodeURIComponent("Nudge")}`;
+
+  window.open(url, "_blank");
+}
+
+// ICS generation
+downloadICSBtn.addEventListener("click", () => {
+  const taskName = taskInput.value || "Untitled Task";
+  const deadlineStr = deadlineInput.value;
+  if (!deadlineStr) {
+    alert("Please enter a deadline.");
+    return;
+  }
+  const deadline = new Date(deadlineStr);
+  const selectedPriority = prioritySelect.value;
+  const offsets = priorityConfig[selectedPriority];
+  const reminders = offsets.map((hoursBefore) => {
+    const start = new Date(deadline.getTime() - hoursBefore * 60 * 60 * 1000);
+    const end = new Date(start.getTime() + 15 * 60 * 1000);
+    return { start, end, label: `${hoursBefore}h before deadline` };
+  });
+
+  generateICS(taskName, reminders);
+});
+
+function generateICS(taskName, reminders) {
+  let icsContent = `BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Nudge//EN\n`;
+
+  reminders.forEach((rem, idx) => {
+    icsContent += `BEGIN:VEVENT\n`;
+    icsContent += `UID:${idx}@nudge\n`;
+    icsContent += `DTSTAMP:${formatDateUTC(new Date())}\n`;
+    icsContent += `DTSTART:${formatDateUTC(rem.start)}\n`;
+    icsContent += `DTEND:${formatDateUTC(rem.end)}\n`;
+    icsContent += `SUMMARY:Reminder: ${taskName}\n`;
+    icsContent += `DESCRIPTION:${rem.label}\n`;
+    icsContent += `END:VEVENT\n`;
+  });
+
+  icsContent += `END:VCALENDAR`;
+
+  const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${taskName.replace(/\s+/g, "_")}_reminders.ics`;
+  link.click();
+  URL.revokeObjectURL(url);
+}

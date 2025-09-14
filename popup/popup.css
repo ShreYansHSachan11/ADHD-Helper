@@ -5339,3 +5339,71 @@ Additional animations for enhanced task breakdown UI */
 #saveTaskBtn {
   display: none;
 }
+.calendar-reminder-form {
+  max-width: 400px;
+  margin: 20px auto;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-family: sans-serif;
+  background-color: #f9f9f9;
+}
+
+.reminder-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.reminder-input {
+  padding: 8px 10px;
+  font-size: 14px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+
+.priority-and-create {
+  margin-bottom: 15px;
+}
+
+.priority-select {
+  padding: 6px 10px;
+  font-size: 14px;
+  border-radius: 5px;
+}
+
+.reminder-buttons button {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 8px;
+  font-size: 14px;
+  border-radius: 5px;
+  border: none;
+  background-color: #007bff;
+  color: #fff;
+  cursor: pointer;
+}
+
+.reminder-buttons button:hover {
+  background-color: #0056b3;
+}
+#downloadICSBtn {
+  width: 100%;
+  padding: 8px;
+  margin-top: 10px;
+  font-size: 14px;
+  border-radius: 5px;
+  border: none;
+  background-color: #28a745;
+  color: #fff;
+  cursor: pointer;
+}
+
+#downloadICSBtn:hover {
+  background-color: #218838;
+}
+.calendar-connection-status {
+  display: none;
+}
