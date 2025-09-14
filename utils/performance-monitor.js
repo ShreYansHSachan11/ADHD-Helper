@@ -113,8 +113,11 @@ class PerformanceMonitor {
       console.warn(`Slow tab update: ${updateTime.toFixed(2)}ms for tab ${tabId}`);
     }
 
-    // Performance mark for debugging
-    if ('performance' in window && performance.mark) {
+    // Performance mark for debugging (check if we're in a browser context)
+    if (typeof window !== 'undefined' && 'performance' in window && performance.mark) {
+      performance.mark(`tab-update-${tabId}-${Date.now()}`);
+    } else if (typeof performance !== 'undefined' && performance.mark) {
+      // Service worker context
       performance.mark(`tab-update-${tabId}-${Date.now()}`);
     }
   }

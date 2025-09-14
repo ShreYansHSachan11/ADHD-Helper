@@ -242,13 +242,19 @@ class LazyLoader {
       // Preload CSS files
       const cssLinks = doc.querySelectorAll('link[rel="stylesheet"]');
       const cssPromises = Array.from(cssLinks).map((link) => {
-        return this.preloadResource(link.href, "style");
+        // Resolve relative URLs to chrome-extension:// URLs
+        const href = link.getAttribute('href');
+        const resolvedUrl = href.startsWith('http') ? href : `external-pages/${href}`;
+        return this.preloadResource(chrome.runtime.getURL(resolvedUrl), "style");
       });
 
       // Preload JavaScript files
       const scriptTags = doc.querySelectorAll("script[src]");
       const scriptPromises = Array.from(scriptTags).map((script) => {
-        return this.preloadResource(script.src, "script");
+        // Resolve relative URLs to chrome-extension:// URLs
+        const src = script.getAttribute('src');
+        const resolvedUrl = src.startsWith('http') ? src : `external-pages/${src}`;
+        return this.preloadResource(chrome.runtime.getURL(resolvedUrl), "script");
       });
 
       await Promise.all([...cssPromises, ...scriptPromises]);

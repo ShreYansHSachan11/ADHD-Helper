@@ -669,19 +669,11 @@ class TabTracker {
       );
 
       if (now - this.lastFocusReminderTime >= cooldownMs) {
-        await this.showFocusReminder(this.focusTabUrl);
+        // Focus reminder is now handled directly in background script
+        // Just update the timing for compatibility
         this.lastFocusReminderTime = now;
         await this.updateCurrentSession();
-      }
-
-      // Also trigger distraction reminder service if available
-      if (this.distractionReminderService) {
-        try {
-          // The distraction reminder service will handle its own timing logic
-          await this.distractionReminderService.checkForDistractions();
-        } catch (error) {
-          console.error("Error triggering distraction reminder service:", error);
-        }
+        console.log("Focus deviation detected - background script will handle reminder");
       }
     } catch (error) {
       console.error("Error checking focus deviation:", error);
@@ -773,40 +765,8 @@ class TabTracker {
     }
   }
 
-  /**
-   * Show focus reminder notification
-   */
-  async showFocusReminder(focusUrl) {
-    try {
-      // Get current tab URL for context
-      let currentUrl = null;
-      try {
-        const tabs = await chrome.tabs.query({
-          active: true,
-          currentWindow: true,
-        });
-        if (tabs.length > 0) {
-          currentUrl = tabs[0].url;
-        }
-      } catch (error) {
-        console.warn("Could not get current tab URL for focus reminder");
-      }
-
-      // Send message to background script to show notification
-      try {
-        await chrome.runtime.sendMessage({
-          type: "SHOW_FOCUS_NOTIFICATION",
-          focusUrl: focusUrl,
-          currentUrl: currentUrl,
-        });
-        console.log("Focus reminder request sent for", focusUrl);
-      } catch (error) {
-        console.error("Error sending focus reminder request:", error);
-      }
-    } catch (error) {
-      console.error("Error showing focus reminder:", error);
-    }
-  }
+  // Focus reminder is now handled directly in background script
+  // This method is no longer needed
 
   /**
    * Update current session data in storage
@@ -1065,13 +1025,8 @@ class TabTracker {
     console.log("Break timer manager integrated with TabTracker");
   }
 
-  /**
-   * Set distraction reminder service reference for integration
-   */
-  setDistractionReminderService(distractionReminderService) {
-    this.distractionReminderService = distractionReminderService;
-    console.log("Distraction reminder service integrated with TabTracker");
-  }
+  // Distraction reminder service integration is no longer needed
+  // Focus reminders are handled directly in background script
 
   /**
    * Get integrated timer status combining tab tracking and break timer data

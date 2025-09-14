@@ -15,6 +15,21 @@ let breakTimerManager = null;
 let breakNotificationSystem = null;
 let distractionReminderService = null;
 
+// Distraction Reminder Variables (directly in background)
+let focusTabId = null;
+let focusTabUrl = null;
+let distractionTimer = null;
+let lastReminderTime = 0;
+let reminderCount = 0;
+let distractionReminderEnabled = true;
+
+// Distraction Reminder Config
+const DISTRACTION_CONFIG = {
+  distractionDelayMs: 3000, // 3 seconds delay before showing reminder
+  reminderCooldownMs: 2 * 60 * 1000, // 2 minutes between reminders
+  maxRemindersPerSession: 10, // Max reminders per session
+};
+
 // Import service dependencies
 try {
   importScripts(
@@ -29,8 +44,7 @@ try {
     "/services/break-analytics-tracker.js",
     "/services/tab-tracker.js",
     "/services/gemini-service.js",
-    "/services/pomodoro-service.js",
-    "/services/distraction-reminder-service.js"
+    "/services/pomodoro-service.js"
   );
   console.log("All service dependencies loaded successfully");
 } catch (error) {
@@ -87,12 +101,8 @@ chrome.runtime.onInstalled.addListener(async (details) => {
       console.log("BreakNotificationSystem initialized successfully");
     }
 
-    // Initialize distraction reminder service
-    if (!distractionReminderService && typeof DistractionReminderService !== 'undefined') {
-      console.log("Initializing DistractionReminderService...");
-      distractionReminderService = new DistractionReminderService();
-      console.log("DistractionReminderService initialized successfully");
-    }
+    // Initialize distraction reminder (direct in background)
+    initializeDistractionReminder();
 
     // Initialize tab tracker (will integrate with break timer manager)
     if (!tabTracker && typeof TabTracker !== 'undefined') {
@@ -113,17 +123,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
         if (breakTimerManager) {
           tabTracker.setBreakTimerManager(breakTimerManager);
         }
-        
-        // Set dependencies for distraction reminder service
-        if (distractionReminderService) {
-          distractionReminderService.setDependencies(tabTracker, breakTimerManager);
-        }
-        
-        // Set distraction reminder service reference in tab tracker
-        if (tabTracker && distractionReminderService) {
-          tabTracker.setDistractionReminderService(distractionReminderService);
-        }
-        
+
         console.log("TabTracker initialized successfully");
       } catch (error) {
         console.error("Error initializing TabTracker:", error);
@@ -145,6 +145,8 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 
     // Initialize notification system
     await initializeNotificationSystem();
+
+    // Distraction reminder is now initialized directly in background
 
     console.log("Background service worker initialized successfully with integrated work time tracking");
   } catch (error) {
@@ -181,10 +183,8 @@ chrome.runtime.onStartup.addListener(async () => {
       }
     }
 
-    // Initialize distraction reminder service
-    if (!distractionReminderService && typeof DistractionReminderService !== 'undefined') {
-      distractionReminderService = new DistractionReminderService();
-    }
+    // Initialize distraction reminder (direct in background)
+    initializeDistractionReminder();
 
     // Initialize tab tracker (will recover timer state)
     if (!tabTracker && typeof TabTracker !== 'undefined') {
@@ -204,17 +204,7 @@ chrome.runtime.onStartup.addListener(async () => {
         if (breakTimerManager) {
           tabTracker.setBreakTimerManager(breakTimerManager);
         }
-        
-        // Set dependencies for distraction reminder service
-        if (distractionReminderService) {
-          distractionReminderService.setDependencies(tabTracker, breakTimerManager);
-        }
-        
-        // Set distraction reminder service reference in tab tracker
-        if (tabTracker && distractionReminderService) {
-          tabTracker.setDistractionReminderService(distractionReminderService);
-        }
-        
+
         console.log("TabTracker initialized on startup");
       } catch (error) {
         console.error("Error initializing TabTracker on startup:", error);
@@ -308,6 +298,12 @@ async function initializeNotificationSystem() {
     await chrome.alarms.create("break_timer_check", {
       delayInMinutes: 1,
       periodInMinutes: 1
+    });
+
+    // Set up periodic distraction reminder checking
+    await chrome.alarms.create("distraction-reminder-check", {
+      delayInMinutes: 0.5, // Check every 30 seconds
+      periodInMinutes: 0.5
     });
 
     console.log("Notification system initialized, permission:", permission);
@@ -464,6 +460,8 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     await handleBreakAlarm(alarm);
   } else if (alarm.name === "break_timer_check") {
     await handleBreakTimerCheck();
+  } else if (alarm.name === "distraction-reminder-check") {
+    await handleDistractionReminderCheck();
   }
 });
 
@@ -647,6 +645,318 @@ async function handleBreakTimerCheck() {
 }
 
 /**
+ * Handle periodic distraction reminder checks
+ */
+async function handleDistractionReminderCheck() {
+  try {
+    console.log("=== DISTRACTION REMINDER CHECK ===");
+    console.log("Enabled:", distractionReminderEnabled);
+    console.log("Focus tab ID:", focusTabId);
+    console.log("Focus tab URL:", focusTabUrl);
+    
+    if (!distractionReminderEnabled) {
+      console.log("Distraction reminder disabled, skipping check");
+      return;
+    }
+    
+    if (!focusTabId) {
+      console.log("No focus tab set, skipping check");
+      return;
+    }
+
+    // Check if the focus tab is currently active
+    let focusTabInfo;
+    try {
+      focusTabInfo = await chrome.tabs.get(focusTabId);
+      console.log("Focus tab info:", focusTabInfo.active, focusTabInfo.url);
+    } catch (error) {
+      console.log("Focus tab no longer exists:", error.message);
+      // Focus tab was closed, reset
+      focusTabId = null;
+      focusTabUrl = null;
+      clearDistractionTimer();
+      return;
+    }
+    
+    // If focus tab is currently active, clear any pending timer
+    if (focusTabInfo.active) {
+      console.log("Focus tab is currently active, clearing timer");
+      clearDistractionTimer();
+      return;
+    }
+
+    console.log("Focus tab is NOT currently active");
+    console.log("Distraction timer active:", !!distractionTimer);
+    
+    // If focus tab is not active and no timer is running, start one
+    if (!distractionTimer) {
+      console.log("Starting distraction timer");
+      startDistractionTimer();
+    } else {
+      console.log("Distraction timer already running");
+    }
+    
+    console.log("=== END DISTRACTION REMINDER CHECK ===");
+
+  } catch (error) {
+    console.error("Error in distraction reminder check:", error);
+  }
+}
+
+/**
+ * Initialize distraction reminder directly in background script
+ */
+function initializeDistractionReminder() {
+  console.log("Initializing distraction reminder in background script");
+
+  // Load focus tab info from storage
+  loadFocusTabInfo();
+
+  // Set up tab change listeners
+  chrome.tabs.onActivated.addListener(async (activeInfo) => {
+    await handleTabActivated(activeInfo.tabId);
+  });
+
+  // Listen for window focus changes
+  chrome.windows.onFocusChanged.addListener(async (windowId) => {
+    if (windowId === chrome.windows.WINDOW_ID_NONE) {
+      // Browser lost focus - clear any pending timers
+      clearDistractionTimer();
+    }
+  });
+
+  console.log("Distraction reminder initialized successfully");
+}
+
+/**
+ * Load focus tab info from storage
+ */
+async function loadFocusTabInfo() {
+  try {
+    if (!storageManager) return;
+
+    const sessionData = await storageManager.get('currentSession');
+    if (sessionData) {
+      focusTabId = sessionData.focusTabId;
+      focusTabUrl = sessionData.focusUrl;
+      console.log("Loaded focus tab:", focusTabId, focusTabUrl);
+    }
+  } catch (error) {
+    console.error("Error loading focus tab info:", error);
+  }
+}
+
+/**
+ * Handle tab activation (user switches tabs)
+ */
+async function handleTabActivated(tabId) {
+  try {
+    console.log("=== TAB ACTIVATION ===");
+    console.log("Tab activated:", tabId);
+    console.log("Distraction reminder enabled:", distractionReminderEnabled);
+    console.log("Focus tab ID:", focusTabId);
+    
+    if (!distractionReminderEnabled) {
+      console.log("Distraction reminder disabled, ignoring tab activation");
+      return;
+    }
+    
+    if (!focusTabId) {
+      console.log("No focus tab set, ignoring tab activation");
+      return;
+    }
+
+    if (tabId === focusTabId) {
+      // User returned to focus tab - clear any pending reminder
+      console.log("User returned to focus tab, clearing timer");
+      clearDistractionTimer();
+    } else {
+      // User switched away from focus tab - start distraction timer
+      console.log("User switched away from focus tab, starting timer");
+      startDistractionTimer();
+    }
+    console.log("=== END TAB ACTIVATION ===");
+  } catch (error) {
+    console.error("Error handling tab activation:", error);
+  }
+}
+
+/**
+ * Start distraction timer (3 second delay before showing reminder)
+ */
+function startDistractionTimer() {
+  // Clear any existing timer
+  clearDistractionTimer();
+
+  // Start new timer
+  distractionTimer = setTimeout(async () => {
+    await showDistractionReminder();
+  }, DISTRACTION_CONFIG.distractionDelayMs);
+
+  console.log("Distraction timer started");
+}
+
+/**
+ * Clear distraction timer
+ */
+function clearDistractionTimer() {
+  if (distractionTimer) {
+    clearTimeout(distractionTimer);
+    distractionTimer = null;
+    console.log("Distraction timer cleared");
+  }
+}
+
+/**
+ * Show distraction reminder notification
+ */
+async function showDistractionReminder() {
+  try {
+    console.log("=== DISTRACTION REMINDER DEBUG ===");
+    console.log("Focus tab ID:", focusTabId);
+    console.log("Focus tab URL:", focusTabUrl);
+    console.log("Distraction reminder enabled:", distractionReminderEnabled);
+    
+    const now = Date.now();
+
+    // Check cooldown period
+    const timeSinceLastReminder = now - lastReminderTime;
+    console.log("Time since last reminder:", timeSinceLastReminder, "ms");
+    console.log("Cooldown period:", DISTRACTION_CONFIG.reminderCooldownMs, "ms");
+    
+    if (timeSinceLastReminder < DISTRACTION_CONFIG.reminderCooldownMs) {
+      console.log("Still in cooldown period, skipping reminder");
+      return false;
+    }
+
+    // Check max reminders per session
+    console.log("Current reminder count:", reminderCount);
+    console.log("Max reminders per session:", DISTRACTION_CONFIG.maxRemindersPerSession);
+    
+    if (reminderCount >= DISTRACTION_CONFIG.maxRemindersPerSession) {
+      console.log("Max reminders reached for this session");
+      return false;
+    }
+
+    console.log("All checks passed, proceeding to show distraction reminder");
+
+    // Check notification permission first
+    try {
+      const permission = await chrome.notifications.getPermissionLevel();
+      console.log("Notification permission level:", permission);
+      
+      if (permission !== "granted") {
+        console.warn("Notification permission not granted, cannot show distraction reminder");
+        return false;
+      }
+    } catch (permError) {
+      console.error("Error checking notification permission:", permError);
+      return false;
+    }
+
+    const notificationId = `distraction-reminder-${now}`;
+    const focusDomain = focusTabUrl ? extractDomain(focusTabUrl) : 'your focus tab';
+
+    const messages = [
+      `Your focus tab (${focusDomain}) is waiting for you! 🚀`,
+      `Stay focused! Return to ${focusDomain} to continue your work.`,
+      `Distraction detected! Time to get back to ${focusDomain}.`,
+      `Focus reminder: You were working on ${focusDomain}. Ready to continue?`,
+    ];
+
+    const message = messages[Math.floor(Math.random() * messages.length)];
+
+    const notificationOptions = {
+      type: "basic",
+      iconUrl: "/assets/icons/icon48.png", // Fixed path with leading slash
+      title: "🎯 Stay Focused!",
+      message: message,
+      priority: 2,
+      requireInteraction: true,
+      buttons: [
+        { title: "Return to Focus" },
+        { title: "Dismiss" }
+      ]
+    };
+
+    console.log("Creating notification with ID:", notificationId);
+    console.log("Notification options:", notificationOptions);
+
+    try {
+      await chrome.notifications.create(notificationId, notificationOptions);
+      console.log("✅ Notification created successfully with ID:", notificationId);
+    } catch (createError) {
+      console.error("❌ Failed to create notification:", createError);
+      
+      // Try with simpler options as fallback
+      const fallbackOptions = {
+        type: "basic",
+        iconUrl: "/assets/icons/icon48.png",
+        title: "🎯 Stay Focused!",
+        message: message
+      };
+      
+      console.log("Trying fallback notification options:", fallbackOptions);
+      await chrome.notifications.create(notificationId, fallbackOptions);
+      console.log("✅ Fallback notification created successfully");
+    }
+
+    // Update tracking
+    lastReminderTime = now;
+    reminderCount++;
+
+    console.log(`✅ Distraction reminder shown (${reminderCount}/${DISTRACTION_CONFIG.maxRemindersPerSession})`);
+    console.log("=== END DISTRACTION REMINDER DEBUG ===");
+    return true;
+
+  } catch (error) {
+    console.error("❌ Error showing distraction reminder:", error);
+    console.log("=== END DISTRACTION REMINDER DEBUG ===");
+    return false;
+  }
+}
+
+/**
+ * Extract domain from URL
+ */
+function extractDomain(url) {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.hostname.replace('www.', '');
+  } catch (error) {
+    return url;
+  }
+}
+
+/**
+ * Handle distraction reminder notification button clicks
+ */
+async function handleDistractionReminderButtonClick(notificationId, buttonIndex) {
+  try {
+    // Clear the notification
+    await chrome.notifications.clear(notificationId);
+
+    if (buttonIndex === 0) {
+      // "Return to Focus" button
+      if (focusTabId) {
+        try {
+          await chrome.tabs.update(focusTabId, { active: true });
+          console.log("Switched to focus tab from notification");
+        } catch (error) {
+          console.error("Error switching to focus tab:", error);
+        }
+      }
+    }
+    // Button index 1 is "Dismiss" - just clear the notification (already done above)
+
+  } catch (error) {
+    console.error("Error handling distraction reminder button click:", error);
+  }
+}
+
+
+
+/**
  * Format Pomodoro session type for display
  */
 function formatPomodoroSessionType(type) {
@@ -732,6 +1042,13 @@ async function handleMessage(message, sender, sendResponse) {
           }
 
           await tabTracker.setFocusTab(tab.id, tab.url);
+
+          // Set focus tab for distraction reminder
+          focusTabId = tab.id;
+          focusTabUrl = tab.url;
+          reminderCount = 0; // Reset reminder count for new session
+          console.log("Focus tab set for distraction reminder:", focusTabId, focusTabUrl);
+
           sendResponse({ success: true });
         } catch (error) {
           console.error("Error setting focus tab:", error);
@@ -742,6 +1059,14 @@ async function handleMessage(message, sender, sendResponse) {
       case "RESET_FOCUS_TAB":
         if (tabTracker) {
           await tabTracker.resetFocusTab();
+
+          // Reset focus tab for distraction reminder
+          focusTabId = null;
+          focusTabUrl = null;
+          reminderCount = 0;
+          clearDistractionTimer();
+          console.log("Focus tab reset for distraction reminder");
+
           sendResponse({ success: true });
         } else {
           sendResponse({
@@ -801,32 +1126,7 @@ async function handleMessage(message, sender, sendResponse) {
         sendResponse({ success: breakSuccess });
         break;
 
-      case "SHOW_FOCUS_NOTIFICATION":
-        try {
-          if (!distractionReminderService) {
-            console.warn("Distraction reminder service not initialized, falling back to basic notification");
-            // Fallback to basic notification
-            const notificationId = `focus-reminder-${Date.now()}`;
-            const success = await createNotification(notificationId, {
-              title: "Focus Reminder 🎯",
-              message: `You've moved away from your focus task. Ready to get back on track?`,
-              buttons: [{ title: "Return to Focus" }, { title: "Dismiss" }],
-            });
-            sendResponse({ success: success });
-            return;
-          }
-
-          // Use the distraction reminder service for intelligent notifications
-          const focusInfo = { url: message.focusUrl };
-          const sessionStats = { deviationCount: 1 }; // Basic stats for legacy compatibility
-          
-          await distractionReminderService.showDistractionReminder(focusInfo, sessionStats);
-          sendResponse({ success: true });
-        } catch (error) {
-          console.error("Error showing focus notification:", error);
-          sendResponse({ success: false, error: error.message });
-        }
-        break;
+      // SHOW_FOCUS_NOTIFICATION is no longer needed - handled directly by tab listeners
 
       case "SHOW_BREAK_TIMER_NOTIFICATION":
         try {
@@ -1129,16 +1429,37 @@ async function handleMessage(message, sender, sendResponse) {
 
       case "TEST_DISTRACTION_REMINDER":
         try {
-          if (!distractionReminderService) {
-            throw new Error("Distraction reminder service not initialized");
+          console.log("Testing distraction reminder notification...");
+
+          // Create a direct test notification to verify the system works
+          const testNotificationId = `test-distraction-reminder-${Date.now()}`;
+
+          const testNotification = {
+            type: "basic",
+            iconUrl: "assets/icons/icon48.png",
+            title: "🎯 Test Focus Reminder",
+            message: "This is a test distraction reminder. If you see this, the system is working!",
+            priority: 2,
+            requireInteraction: true,
+            buttons: [
+              { title: "Return to Focus" },
+              { title: "Take Break" },
+              { title: "Dismiss" }
+            ]
+          };
+
+          await chrome.notifications.create(testNotificationId, testNotification);
+          console.log("Test notification created successfully");
+
+          // Also test the direct distraction reminder
+          if (focusTabId) {
+            setTimeout(async () => {
+              await showDistractionReminder();
+            }, 2000); // Show in 2 seconds
+            console.log("Direct distraction reminder test scheduled");
           }
 
-          // Create a test reminder with mock data
-          const mockFocusInfo = { url: "https://example.com" };
-          const mockSessionStats = { deviationCount: 3 };
-          
-          await distractionReminderService.showDistractionReminder(mockFocusInfo, mockSessionStats);
-          sendResponse({ success: true });
+          sendResponse({ success: true, message: "Test notification shown immediately. If focus tab is set, another will appear in 2 seconds." });
         } catch (error) {
           console.error("Error testing distraction reminder:", error);
           sendResponse({ success: false, error: error.message });
@@ -1159,6 +1480,22 @@ async function handleMessage(message, sender, sendResponse) {
  */
 chrome.notifications.onClicked.addListener(async (notificationId) => {
   try {
+    // Handle distraction reminder notifications
+    if (notificationId.includes("distraction-reminder")) {
+      await chrome.notifications.clear(notificationId);
+      
+      // Return to focus tab when notification is clicked
+      if (focusTabId) {
+        try {
+          await chrome.tabs.update(focusTabId, { active: true });
+          console.log("Switched to focus tab from notification click");
+        } catch (error) {
+          console.error("Error switching to focus tab:", error);
+        }
+      }
+      return;
+    }
+
     if (breakNotificationSystem) {
       await breakNotificationSystem.handleNotificationClick(notificationId);
     } else {
@@ -1185,11 +1522,11 @@ chrome.notifications.onButtonClicked.addListener(
   async (notificationId, buttonIndex) => {
     try {
       // Handle distraction reminder notifications first
-      if (notificationId.includes("distraction-reminder") && distractionReminderService) {
-        await distractionReminderService.handleNotificationButtonClick(notificationId, buttonIndex);
+      if (notificationId.includes("distraction-reminder")) {
+        await handleDistractionReminderButtonClick(notificationId, buttonIndex);
         return;
       }
-      
+
       if (breakNotificationSystem) {
         await breakNotificationSystem.handleNotificationButtonClick(notificationId, buttonIndex);
       } else {

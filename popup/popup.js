@@ -2116,7 +2116,8 @@ class PopupManager {
       });
       
       if (response?.success) {
-        this.showFocusStatus("Test distraction reminder sent! Check for notification.", "success");
+        const message = response.message || "Test notifications sent! Check for immediate notification and another in 10 seconds.";
+        this.showFocusStatus(message, "success");
       } else {
         this.showFocusStatus("Failed to send test reminder: " + (response?.error || "Unknown error"), "error");
       }
