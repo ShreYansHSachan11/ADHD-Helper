@@ -187,6 +187,23 @@ class PopupManager {
   }
 
   /**
+   * Setup API settings UI for task breakdown feature
+   */
+  setupApiSettingsUI() {
+    try {
+      const apiSettingsContainer = document.getElementById('apiSettingsContainer');
+      if (apiSettingsContainer && typeof ApiSettingsUI !== 'undefined') {
+        this.apiSettingsUI = new ApiSettingsUI('apiSettingsContainer');
+        console.log("API settings UI initialized successfully");
+      } else {
+        console.warn("ApiSettingsUI not available or container not found");
+      }
+    } catch (error) {
+      console.error("Failed to initialize API settings UI:", error);
+    }
+  }
+
+  /**
    * Setup Pomodoro timer component
    */
   setupPomodoroTimer() {
@@ -618,6 +635,11 @@ class PopupManager {
         this.breakSettingsUI.destroy();
         this.breakSettingsUI = null;
       }
+      
+      if (this.apiSettingsUI) {
+        this.apiSettingsUI.destroy();
+        this.apiSettingsUI = null;
+      }
     } catch (error) {
       console.error("Error during cleanup:", error);
     }
@@ -901,6 +923,10 @@ class PopupManager {
       case "task-breakdown":
         if (!this.taskManager && typeof TaskManager !== "undefined") {
           this.setupLazyTaskManager();
+        }
+        // Initialize API settings UI for task breakdown
+        if (!this.apiSettingsUI && typeof ApiSettingsUI !== "undefined") {
+          this.setupApiSettingsUI();
         }
         break;
       case "breathing":

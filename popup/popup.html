@@ -286,30 +286,76 @@
             <h2>AI Task Breakdown</h2>
           </div>
           <div class="panel-content">
-            <div class="task-input-group">
-              <input
-                type="text"
-                id="taskNameInput"
-                placeholder="Enter task name"
-                class="task-input"
-              />
-              <input
-                type="datetime-local"
-                id="taskDeadlineInput"
-                class="task-input"
-              />
+            
+            <!-- API Settings Container -->
+            <div class="api-settings-container" id="apiSettingsContainer">
+              <!-- API settings will be populated by ApiSettingsUI component -->
             </div>
-            <button class="btn btn-primary" id="getBreakdownBtn">
-              Get AI Breakdown
-            </button>
-            <div
-              class="task-breakdown"
-              id="taskBreakdown"
-              style="display: none"
-            >
-              <h3>Task Breakdown:</h3>
-              <ul id="breakdownList"></ul>
+            
+            <!-- Task Input Section -->
+            <div class="task-input-section">
+              <div class="task-input-group">
+                <input
+                  type="text"
+                  id="taskNameInput"
+                  placeholder="Enter task name or description"
+                  class="task-input"
+                  maxlength="500"
+                />
+                <input
+                  type="datetime-local"
+                  id="taskDeadlineInput"
+                  class="task-input"
+                  title="Optional deadline for the task"
+                />
+              </div>
+              <div class="task-input-actions">
+                <button class="btn btn-primary" id="getBreakdownBtn">
+                  Get AI Breakdown
+                </button>
+                <button class="btn btn-secondary btn-small" id="clearTaskBtn">
+                  Clear
+                </button>
+              </div>
+              <div class="character-count" id="characterCount">
+                <span id="charCount">0</span>/500 characters
+              </div>
             </div>
+            
+            <!-- Task Breakdown Display -->
+            <div class="task-breakdown" id="taskBreakdown" style="display: none">
+              <div class="breakdown-header">
+                <h3>Task Breakdown:</h3>
+                <button class="btn btn-small btn-secondary" id="exportToCalendarBtn">
+                  📅 Add to Calendar
+                </button>
+              </div>
+              <div class="breakdown-content">
+                <ul id="breakdownList"></ul>
+              </div>
+              <div class="breakdown-actions">
+                <button class="btn btn-small btn-secondary" id="saveTaskBtn">
+                  Save Task
+                </button>
+                <button class="btn btn-small btn-secondary" id="regenerateBtn">
+                  Regenerate
+                </button>
+              </div>
+            </div>
+            
+            <!-- Task History -->
+            <div class="task-history" id="taskHistory">
+              <div class="history-header">
+                <h3>Recent Tasks</h3>
+                <button class="btn btn-small btn-secondary" id="clearHistoryBtn">
+                  Clear History
+                </button>
+              </div>
+              <div class="history-list" id="historyList">
+                <!-- Task history will be populated here -->
+              </div>
+            </div>
+            
           </div>
         </div>
 
@@ -591,6 +637,7 @@
     <script src="components/break-controls-ui.js"></script>
     <script src="components/break-analytics-display.js"></script>
     <script src="components/break-settings-ui.js"></script>
+    <script src="components/api-settings-ui.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>

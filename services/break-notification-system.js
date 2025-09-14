@@ -30,17 +30,12 @@ class BreakNotificationSystem {
    */
   async init() {
     try {
-      // Import dependencies if in service worker context
-      if (typeof importScripts !== "undefined") {
-        importScripts(
-          "/services/storage-manager.js",
-          "/utils/break-error-handler.js"
-        );
+      // Initialize dependencies (avoid duplicate imports)
+      if (typeof StorageManager !== 'undefined') {
         this.storageManager = new StorageManager();
+      }
+      if (typeof BreakErrorHandler !== 'undefined') {
         this.breakErrorHandler = new BreakErrorHandler();
-      } else {
-        this.storageManager = this.storageManager || new StorageManager();
-        this.breakErrorHandler = this.breakErrorHandler || new BreakErrorHandler();
       }
       
       // Initialize error handler

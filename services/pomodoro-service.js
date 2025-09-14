@@ -5,7 +5,15 @@
 
 class PomodoroService {
   constructor() {
-    this.storageManager = window.storageManager || new StorageManager();
+    // Initialize storage manager safely for both popup and service worker contexts
+    if (typeof window !== 'undefined' && window.storageManager) {
+      this.storageManager = window.storageManager;
+    } else if (typeof StorageManager !== 'undefined') {
+      this.storageManager = new StorageManager();
+    } else {
+      console.warn('StorageManager not available in PomodoroService');
+      this.storageManager = null;
+    }
     this.isRunning = false;
     this.currentSession = null;
     this.timer = null;

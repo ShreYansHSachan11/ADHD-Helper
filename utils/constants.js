@@ -119,7 +119,7 @@ const STORAGE_KEYS = {
 const API = {
   GEMINI: {
     BASE_URL:
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent",
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent",
     MAX_RETRIES: 3,
     TIMEOUT_MS: 10000,
     RATE_LIMIT_DELAY_MS: 1000,

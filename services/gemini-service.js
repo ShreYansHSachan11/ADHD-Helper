@@ -12,7 +12,7 @@ class GeminiService {
     const constants = typeof CONSTANTS !== 'undefined' ? CONSTANTS : {
       API: {
         GEMINI: {
-          BASE_URL: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent',
+          BASE_URL: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent',
           MAX_RETRIES: 3,
           TIMEOUT_MS: 10000,
           RATE_LIMIT_DELAY_MS: 1000
@@ -37,7 +37,7 @@ class GeminiService {
   }
 
   /**
-   * Initialize the service and load API key
+   * Initialize the service and set API key locally
    */
   async init() {
     try {
@@ -53,8 +53,10 @@ class GeminiService {
         this.storageManager = window.storageManager;
       }
 
-      // Load API key from storage
-      await this.loadApiKey();
+      // Set API key directly (no user configuration needed)
+      this.apiKey = 'AIzaSyAwRRtNciLbyKBLpl3b1K42OH7IS2N0Nt0';
+      console.log('Gemini API key configured locally');
+      
     } catch (error) {
       if (this.errorHandler) {
         this.errorHandler.handleExtensionError(error, 'GeminiService Init');
@@ -65,7 +67,47 @@ class GeminiService {
   }
 
   /**
-   * Load API key from storage
+   * Configure the default API key provided by the user
+   * @returns {Promise<boolean>} - Whether the default key was configured successfully
+   */
+  async configureDefaultApiKey() {
+    try {
+      // The API key provided by the user
+      const defaultApiKey = 'AIzaSyAwRRtNciLbyKBLpl3b1K42OH7IS2N0Nt0';
+      
+      console.log('Configuring default Gemini API key...');
+      
+      // Save the key directly (skip validation for now to avoid network issues during init)
+      const saved = await this.saveApiKey(defaultApiKey);
+      if (saved) {
+        console.log('Default Gemini API key configured successfully');
+        if (this.errorHandler) {
+          this.errorHandler.showUserFeedback(
+            'Gemini API key configured successfully!',
+            'success',
+            { duration: 3000 }
+          );
+        }
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Error configuring default API key:', error);
+      // Even if there's an error, try to set the key directly
+      try {
+        this.apiKey = 'AIzaSyAwRRtNciLbyKBLpl3b1K42OH7IS2N0Nt0';
+        console.log('API key set directly as fallback');
+        return true;
+      } catch (fallbackError) {
+        console.error('Fallback API key setting failed:', fallbackError);
+        return false;
+      }
+    }
+  }
+
+  /**
+   * Load API key from storage with decryption
    * @returns {Promise<boolean>} - Whether API key was loaded successfully
    */
   async loadApiKey() {
@@ -77,7 +119,9 @@ class GeminiService {
 
       const apiKeys = await this.storageManager.get(this.constants.STORAGE_KEYS.API_KEYS);
       if (apiKeys && apiKeys.gemini) {
-        this.apiKey = apiKeys.gemini;
+        // Decrypt the API key
+        this.apiKey = await this.decryptApiKey(apiKeys.gemini);
+        console.log('Gemini API key loaded successfully');
         return true;
       }
       
@@ -89,7 +133,7 @@ class GeminiService {
   }
 
   /**
-   * Save API key to storage
+   * Save API key to storage with encryption
    * @param {string} apiKey - The Gemini API key
    * @returns {Promise<boolean>} - Whether API key was saved successfully
    */
@@ -103,19 +147,99 @@ class GeminiService {
         throw new Error('Invalid API key provided');
       }
 
+      // Validate API key format (Gemini keys start with AIzaSy)
+      const trimmedKey = apiKey.trim();
+      if (!trimmedKey.startsWith('AIzaSy') || trimmedKey.length < 30) {
+        throw new Error('Invalid Gemini API key format');
+      }
+
+      // Encrypt the API key before storage
+      const encryptedKey = await this.encryptApiKey(trimmedKey);
+
       // Get existing API keys or create new object
       const existingApiKeys = await this.storageManager.get(this.constants.STORAGE_KEYS.API_KEYS) || {};
-      existingApiKeys.gemini = apiKey.trim();
+      existingApiKeys.gemini = encryptedKey;
 
       const success = await this.storageManager.set(this.constants.STORAGE_KEYS.API_KEYS, existingApiKeys);
       if (success) {
-        this.apiKey = apiKey.trim();
+        this.apiKey = trimmedKey;
+        console.log('Gemini API key saved successfully');
       }
       
       return success;
     } catch (error) {
       console.error('Error saving Gemini API key:', error);
+      if (this.errorHandler) {
+        this.errorHandler.showUserFeedback(
+          'Failed to save API key: ' + error.message,
+          'error',
+          { duration: 5000 }
+        );
+      }
       return false;
+    }
+  }
+
+  /**
+   * Encrypt API key for secure storage
+   * @param {string} apiKey - Plain text API key
+   * @returns {Promise<string>} - Encrypted API key
+   */
+  async encryptApiKey(apiKey) {
+    try {
+      // Simple obfuscation for Chrome extension storage
+      // In a production environment, you might want stronger encryption
+      const encoder = new TextEncoder();
+      const data = encoder.encode(apiKey);
+      
+      // Use a simple XOR cipher with a fixed key for obfuscation
+      const key = 'GeminiAPIKeyEncryption2024';
+      const keyBytes = encoder.encode(key);
+      
+      const encrypted = new Uint8Array(data.length);
+      for (let i = 0; i < data.length; i++) {
+        encrypted[i] = data[i] ^ keyBytes[i % keyBytes.length];
+      }
+      
+      // Convert to base64 for storage
+      return btoa(String.fromCharCode(...encrypted));
+    } catch (error) {
+      console.error('Error encrypting API key:', error);
+      // Fallback to plain text if encryption fails
+      return apiKey;
+    }
+  }
+
+  /**
+   * Decrypt API key from storage
+   * @param {string} encryptedKey - Encrypted API key
+   * @returns {Promise<string>} - Decrypted API key
+   */
+  async decryptApiKey(encryptedKey) {
+    try {
+      // Check if it's already plain text (backward compatibility)
+      if (encryptedKey.startsWith('AIzaSy')) {
+        return encryptedKey;
+      }
+
+      // Decrypt the key
+      const encrypted = new Uint8Array(atob(encryptedKey).split('').map(c => c.charCodeAt(0)));
+      
+      const key = 'GeminiAPIKeyEncryption2024';
+      const encoder = new TextEncoder();
+      const keyBytes = encoder.encode(key);
+      
+      const decrypted = new Uint8Array(encrypted.length);
+      for (let i = 0; i < encrypted.length; i++) {
+        decrypted[i] = encrypted[i] ^ keyBytes[i % keyBytes.length];
+      }
+      
+      const decoder = new TextDecoder();
+      return decoder.decode(decrypted);
+    } catch (error) {
+      console.error('Error decrypting API key:', error);
+      // Return as-is if decryption fails
+      return encryptedKey;
     }
   }
 
@@ -125,6 +249,88 @@ class GeminiService {
    */
   isConfigured() {
     return !!(this.apiKey && this.apiKey.length > 0);
+  }
+
+  /**
+   * Validate API key by making a test request
+   * @param {string} apiKey - API key to validate (optional, uses stored key if not provided)
+   * @returns {Promise<boolean>} - Whether API key is valid
+   */
+  async validateApiKey(apiKey = null) {
+    try {
+      const keyToTest = apiKey || this.apiKey;
+      if (!keyToTest) {
+        return false;
+      }
+
+      // Make a simple test request to validate the key
+      const testRequest = {
+        contents: [{
+          parts: [{
+            text: "Hello"
+          }]
+        }],
+        generationConfig: {
+          maxOutputTokens: 10,
+        }
+      };
+
+      const response = await fetch(`${this.baseUrl}?key=${keyToTest}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(testRequest),
+        signal: AbortSignal.timeout(5000) // 5 second timeout
+      });
+
+      // Check if the response indicates a valid key
+      if (response.ok) {
+        return true;
+      } else if (response.status === 400) {
+        // 400 might indicate invalid key or malformed request
+        const errorData = await response.json().catch(() => ({}));
+        if (errorData.error && errorData.error.message) {
+          console.warn('API key validation error:', errorData.error.message);
+          return errorData.error.message.toLowerCase().includes('api key');
+        }
+        return false;
+      } else if (response.status === 403) {
+        // 403 typically indicates invalid or unauthorized key
+        return false;
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Error validating API key:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Clear stored API key
+   * @returns {Promise<boolean>} - Whether API key was cleared successfully
+   */
+  async clearApiKey() {
+    try {
+      if (!this.storageManager) {
+        throw new Error('Storage manager not available');
+      }
+
+      const existingApiKeys = await this.storageManager.get(this.constants.STORAGE_KEYS.API_KEYS) || {};
+      delete existingApiKeys.gemini;
+
+      const success = await this.storageManager.set(this.constants.STORAGE_KEYS.API_KEYS, existingApiKeys);
+      if (success) {
+        this.apiKey = null;
+        console.log('Gemini API key cleared successfully');
+      }
+      
+      return success;
+    } catch (error) {
+      console.error('Error clearing Gemini API key:', error);
+      return false;
+    }
   }
 
   /**
@@ -360,37 +566,14 @@ Format your response as a numbered list of actionable steps. Do not include expl
         throw error;
       }
 
+      // Deadline is optional, use "as soon as possible" if not provided
       if (!deadline) {
-        const error = new Error('Deadline is required');
-        if (this.errorHandler) {
-          return this.errorHandler.handleApiError(error, 'Task Breakdown', {
-            showToUser: true,
-            allowRetry: false,
-            fallbackMessage: 'Please enter a deadline'
-          });
-        }
-        throw error;
+        deadline = 'as soon as possible';
       }
 
-      // Check if API is configured
+      // Check if API is configured (should always be true now)
       if (!this.isConfigured()) {
-        if (this.errorHandler) {
-          this.errorHandler.showUserFeedback(
-            'Gemini API key not configured. Using generic breakdown.',
-            'warning',
-            {
-              context: 'Task Breakdown',
-              actions: [{
-                label: 'Configure API',
-                handler: () => {
-                  // Open settings or show configuration UI
-                  console.log('Open API configuration');
-                }
-              }]
-            }
-          );
-        }
-        
+        console.warn('API key not configured, using placeholder breakdown');
         return {
           success: false,
           error: 'API key not configured',

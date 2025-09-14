@@ -117,9 +117,11 @@ class TaskManager {
   /**
    * Initialize Gemini service
    */
-  initializeGeminiService() {
+  async initializeGeminiService() {
     if (typeof GeminiService !== 'undefined') {
       this.geminiService = new GeminiService();
+      await this.geminiService.init();
+      console.log('GeminiService initialized successfully');
     } else if (typeof window !== 'undefined' && window.geminiService) {
       this.geminiService = window.geminiService;
     } else {
@@ -199,6 +201,7 @@ class TaskManager {
       this.geminiService = window.geminiService;
     } else if (typeof GeminiService !== 'undefined') {
       this.geminiService = new GeminiService();
+      await this.geminiService.init();
     }
   }
 
@@ -282,20 +285,64 @@ class TaskManager {
   }
 
   /**
-   * Set up event listeners
+   * Set up event listeners with enhanced interactions
    */
   setupEventListeners() {
-    // Task breakdown button
+    // Task breakdown button with enhanced interactions
     if (this.elements.getBreakdownBtn) {
       this.elements.getBreakdownBtn.addEventListener('click', () => this.handleGetBreakdown());
+      
+      // Add hover sound effect (optional)
+      this.elements.getBreakdownBtn.addEventListener('mouseenter', () => {
+        this.elements.getBreakdownBtn.style.transform = 'translateY(-2px) scale(1.02)';
+      });
+      
+      this.elements.getBreakdownBtn.addEventListener('mouseleave', () => {
+        if (!this.elements.getBreakdownBtn.classList.contains('loading')) {
+          this.elements.getBreakdownBtn.style.transform = '';
+        }
+      });
     }
 
-    // Enter key on task name input
+    // Enhanced task name input interactions
     if (this.elements.taskNameInput) {
       this.elements.taskNameInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
           this.handleGetBreakdown();
         }
+      });
+      
+      // Character count and validation feedback with animations
+      this.elements.taskNameInput.addEventListener('input', (e) => {
+        this.updateCharacterCount();
+        this.validateTaskInputRealTime();
+        this.saveCurrentTaskDraft();
+        this.addInputAnimation();
+      });
+      
+      // Enhanced focus effects with section highlighting
+      this.elements.taskNameInput.addEventListener('focus', () => {
+        const section = document.querySelector('.task-input-section');
+        if (section) {
+          section.classList.add('focused');
+        }
+        this.elements.taskNameInput.parentElement?.classList.add('focused');
+      });
+      
+      this.elements.taskNameInput.addEventListener('blur', () => {
+        const section = document.querySelector('.task-input-section');
+        if (section) {
+          section.classList.remove('focused');
+        }
+        this.elements.taskNameInput.parentElement?.classList.remove('focused');
+      });
+    }
+
+    // Deadline input enhancements
+    if (this.elements.taskDeadlineInput) {
+      this.elements.taskDeadlineInput.addEventListener('change', () => {
+        this.validateTaskInputRealTime();
+        this.saveCurrentTaskDraft();
       });
     }
 
@@ -305,12 +352,127 @@ class TaskManager {
       toggleHistoryBtn.addEventListener('click', () => this.toggleTaskHistory());
     }
 
-    // Auto-save task inputs
-    if (this.elements.taskNameInput) {
-      this.elements.taskNameInput.addEventListener('input', () => this.saveCurrentTaskDraft());
+    // Clear task button
+    const clearTaskBtn = document.getElementById('clearTaskBtn');
+    if (clearTaskBtn) {
+      clearTaskBtn.addEventListener('click', () => this.handleClearInputs());
     }
-    if (this.elements.taskDeadlineInput) {
-      this.elements.taskDeadlineInput.addEventListener('change', () => this.saveCurrentTaskDraft());
+  }
+
+  /**
+   * Update character count display with enhanced animations
+   */
+  updateCharacterCount() {
+    try {
+      const charCountEl = document.getElementById('charCount');
+      if (!charCountEl || !this.elements.taskNameInput) return;
+      
+      const currentLength = this.elements.taskNameInput.value.length;
+      const maxLength = 500;
+      
+      // Animate the count change
+      const oldCount = parseInt(charCountEl.textContent) || 0;
+      if (oldCount !== currentLength) {
+        charCountEl.style.transform = 'scale(1.1)';
+        setTimeout(() => {
+          charCountEl.style.transform = 'scale(1)';
+        }, 150);
+      }
+      
+      charCountEl.textContent = currentLength;
+      
+      const charCountContainer = charCountEl.parentElement;
+      if (charCountContainer) {
+        charCountContainer.classList.remove('warning');
+        
+        if (currentLength > maxLength * 0.8) {
+          charCountContainer.classList.add('warning');
+          
+          // Add warning animation
+          if (currentLength > maxLength * 0.9) {
+            charCountContainer.style.animation = 'shake 0.5s ease-in-out';
+            setTimeout(() => {
+              charCountContainer.style.animation = '';
+            }, 500);
+          }
+        }
+      }
+      
+    } catch (error) {
+      console.error('Error updating character count:', error);
+    }
+  }
+
+  /**
+   * Add input animation for better feedback
+   */
+  addInputAnimation() {
+    try {
+      if (!this.elements.taskNameInput) return;
+      
+      // Add subtle pulse animation on input
+      this.elements.taskNameInput.style.boxShadow = '0 0 0 4px rgba(0, 106, 107, 0.2)';
+      setTimeout(() => {
+        this.elements.taskNameInput.style.boxShadow = '';
+      }, 200);
+      
+    } catch (error) {
+      console.error('Error adding input animation:', error);
+    }
+  }
+
+  /**
+   * Real-time input validation with visual feedback
+   */
+  validateTaskInputRealTime() {
+    try {
+      if (!this.elements.taskNameInput) return;
+      
+      const taskName = this.elements.taskNameInput.value.trim();
+      
+      // Remove previous validation classes
+      this.elements.taskNameInput.classList.remove('valid', 'invalid');
+      
+      if (taskName.length === 0) {
+        // No validation styling for empty input
+        return;
+      }
+      
+      if (taskName.length >= 3 && taskName.length <= 500) {
+        this.elements.taskNameInput.classList.add('valid');
+      } else {
+        this.elements.taskNameInput.classList.add('invalid');
+      }
+      
+    } catch (error) {
+      console.error('Error in real-time validation:', error);
+    }
+  }
+
+  /**
+   * Handle clear inputs button click
+   */
+  handleClearInputs() {
+    try {
+      if (this.elements.taskNameInput) {
+        this.elements.taskNameInput.value = '';
+        this.elements.taskNameInput.classList.remove('valid', 'invalid');
+      }
+      
+      if (this.elements.taskDeadlineInput) {
+        this.elements.taskDeadlineInput.value = '';
+      }
+      
+      this.updateCharacterCount();
+      this.clearTaskDraft();
+      
+      // Focus back to task input
+      if (this.elements.taskNameInput) {
+        this.elements.taskNameInput.focus();
+      }
+      
+    } catch (error) {
+      console.error('Error clearing inputs:', error);
     }
   }
 
@@ -413,55 +575,47 @@ class TaskManager {
       };
     }
 
-    // Check deadline
-    if (!deadline) {
-      return {
-        valid: false,
-        error: 'Deadline is required',
-        field: 'deadline',
-        element: this.elements.taskDeadlineInput
-      };
-    }
+    // Check deadline (optional)
+    if (deadline) {
+      const deadlineDate = new Date(deadline);
+      const now = new Date();
+      
+      if (isNaN(deadlineDate.getTime())) {
+        return {
+          valid: false,
+          error: 'Invalid deadline format',
+          field: 'deadline',
+          element: this.elements.taskDeadlineInput
+        };
+      }
 
-    // Validate deadline is in the future
-    const deadlineDate = new Date(deadline);
-    const now = new Date();
-    
-    if (isNaN(deadlineDate.getTime())) {
-      return {
-        valid: false,
-        error: 'Invalid deadline format',
-        field: 'deadline',
-        element: this.elements.taskDeadlineInput
-      };
-    }
+      if (deadlineDate <= now) {
+        return {
+          valid: false,
+          error: 'Deadline must be in the future',
+          field: 'deadline',
+          element: this.elements.taskDeadlineInput
+        };
+      }
 
-    if (deadlineDate <= now) {
-      return {
-        valid: false,
-        error: 'Deadline must be in the future',
-        field: 'deadline',
-        element: this.elements.taskDeadlineInput
-      };
-    }
-
-    // Check if deadline is too far in the future (more than 5 years)
-    const fiveYearsFromNow = new Date();
-    fiveYearsFromNow.setFullYear(fiveYearsFromNow.getFullYear() + 5);
-    
-    if (deadlineDate > fiveYearsFromNow) {
-      return {
-        valid: false,
-        error: 'Deadline is too far in the future (maximum 5 years)',
-        field: 'deadline',
-        element: this.elements.taskDeadlineInput
-      };
+      // Check if deadline is too far in the future (more than 5 years)
+      const fiveYearsFromNow = new Date();
+      fiveYearsFromNow.setFullYear(fiveYearsFromNow.getFullYear() + 5);
+      
+      if (deadlineDate > fiveYearsFromNow) {
+        return {
+          valid: false,
+          error: 'Deadline is too far in the future (maximum 5 years)',
+          field: 'deadline',
+          element: this.elements.taskDeadlineInput
+        };
+      }
     }
 
     return {
       valid: true,
       taskName,
-      deadline
+      deadline: deadline || 'as soon as possible'
     };
   }
 
@@ -625,36 +779,114 @@ class TaskManager {
   }
 
   /**
-   * Set loading state with visual feedback
+   * Set loading state with enhanced visual feedback and animations
    */
   setLoadingState(isLoading) {
     if (!this.elements.getBreakdownBtn) return;
     
     if (isLoading) {
+      // Enhanced loading button state
       this.elements.getBreakdownBtn.classList.add('loading');
       this.elements.getBreakdownBtn.disabled = true;
-      this.elements.getBreakdownBtn.textContent = 'Generating...';
+      this.elements.getBreakdownBtn.innerHTML = '<span class="btn-icon">✨</span>Generating...';
       
-      // Disable inputs during loading
+      // Add pulsing animation to button
+      this.elements.getBreakdownBtn.style.animation = 'pulse 2s infinite';
+      
+      // Disable inputs with smooth transition
       if (this.elements.taskNameInput) {
         this.elements.taskNameInput.disabled = true;
+        this.elements.taskNameInput.style.transition = 'opacity 0.3s ease';
+        this.elements.taskNameInput.style.opacity = '0.6';
       }
       if (this.elements.taskDeadlineInput) {
         this.elements.taskDeadlineInput.disabled = true;
+        this.elements.taskDeadlineInput.style.transition = 'opacity 0.3s ease';
+        this.elements.taskDeadlineInput.style.opacity = '0.6';
       }
       
+      // Add loading shimmer effect to the container
+      const taskInputSection = document.querySelector('.task-input-section');
+      if (taskInputSection) {
+        taskInputSection.classList.add('loading-state');
+      }
+      
+      // Add progress indicator
+      this.showLoadingProgress();
+      
     } else {
+      // Reset button state with animation
       this.elements.getBreakdownBtn.classList.remove('loading');
       this.elements.getBreakdownBtn.disabled = false;
-      this.elements.getBreakdownBtn.textContent = 'Get AI Breakdown';
+      this.elements.getBreakdownBtn.innerHTML = '<span class="btn-icon">🤖</span>Get AI Breakdown';
+      this.elements.getBreakdownBtn.style.animation = '';
       
-      // Re-enable inputs
+      // Re-enable inputs with smooth transition
       if (this.elements.taskNameInput) {
         this.elements.taskNameInput.disabled = false;
+        this.elements.taskNameInput.style.opacity = '1';
       }
       if (this.elements.taskDeadlineInput) {
         this.elements.taskDeadlineInput.disabled = false;
+        this.elements.taskDeadlineInput.style.opacity = '1';
       }
+      
+      // Remove loading shimmer effect
+      const taskInputSection = document.querySelector('.task-input-section');
+      if (taskInputSection) {
+        taskInputSection.classList.remove('loading-state');
+      }
+      
+      // Hide progress indicator
+      this.hideLoadingProgress();
+    }
+  }
+
+  /**
+   * Show loading progress indicator
+   */
+  showLoadingProgress() {
+    try {
+      let progressEl = document.getElementById('taskLoadingProgress');
+      if (!progressEl) {
+        progressEl = document.createElement('div');
+        progressEl.id = 'taskLoadingProgress';
+        progressEl.className = 'task-loading-progress';
+        progressEl.innerHTML = `
+          <div class="loading-bar">
+            <div class="loading-fill"></div>
+          </div>
+          <div class="loading-text">Generating AI breakdown...</div>
+        `;
+        
+        const taskInputSection = document.querySelector('.task-input-section');
+        if (taskInputSection) {
+          taskInputSection.appendChild(progressEl);
+        }
+      }
+      
+      progressEl.style.display = 'block';
+      progressEl.style.animation = 'fadeIn 0.3s ease';
+      
+    } catch (error) {
+      console.error('Error showing loading progress:', error);
+    }
+  }
+
+  /**
+   * Hide loading progress indicator
+   */
+  hideLoadingProgress() {
+    try {
+      const progressEl = document.getElementById('taskLoadingProgress');
+      if (progressEl) {
+        progressEl.style.animation = 'fadeOut 0.3s ease';
+        setTimeout(() => {
+          progressEl.style.display = 'none';
+        }, 300);
+      }
+    } catch (error) {
+      console.error('Error hiding loading progress:', error);
     }
   }
 
@@ -706,7 +938,7 @@ class TaskManager {
   }
 
   /**
-   * Display task breakdown in the UI
+   * Display task breakdown in the UI with enhanced styling and interactions
    */
   displayTaskBreakdown(task) {
     if (!this.elements.breakdownList || !this.elements.taskBreakdown) {
@@ -716,18 +948,18 @@ class TaskManager {
     // Clear existing breakdown
     this.elements.breakdownList.innerHTML = '';
 
-    // Add task header
+    // Add task header with enhanced styling
     const taskHeader = document.createElement('div');
     taskHeader.className = 'task-breakdown-header';
     taskHeader.innerHTML = `
-      <h3>Task: ${this.escapeHtml(task.name)}</h3>
+      <h3>${this.escapeHtml(task.name)}</h3>
       <div class="task-meta">
-        <span class="task-deadline">Due: ${this.formatDeadline(task.deadline)}</span>
+        <span class="task-deadline">${this.formatDeadline(task.deadline)}</span>
         ${task.isPlaceholder ? '<span class="task-placeholder-badge">Generic Breakdown</span>' : '<span class="task-ai-badge">AI Generated</span>'}
       </div>
     `;
 
-    // Create breakdown list
+    // Create breakdown list with enhanced styling
     const breakdownSteps = document.createElement('ol');
     breakdownSteps.className = 'breakdown-steps';
 
@@ -735,35 +967,98 @@ class TaskManager {
       task.breakdown.forEach((step, index) => {
         const stepItem = document.createElement('li');
         stepItem.className = 'breakdown-step';
-        stepItem.innerHTML = `
-          <div class="step-content">
-            <span class="step-text">${this.escapeHtml(step)}</span>
-            <div class="step-actions">
-              <button class="btn btn-small step-complete-btn" data-step="${index}" title="Mark as complete">
-                ✓
-              </button>
-            </div>
+        stepItem.setAttribute('tabindex', '0');
+        stepItem.setAttribute('role', 'button');
+        stepItem.setAttribute('aria-label', `Step ${index + 1}: ${step}`);
+        
+        const stepContent = document.createElement('div');
+        stepContent.className = 'step-content';
+        stepContent.innerHTML = `
+          <span class="step-text">${this.escapeHtml(step)}</span>
+          <div class="step-actions">
+            <button class="step-complete-btn" data-step="${index}" title="Mark step ${index + 1} as complete" aria-label="Mark step ${index + 1} as complete">
+              ✓
+            </button>
           </div>
         `;
+        
+        stepItem.appendChild(stepContent);
         breakdownSteps.appendChild(stepItem);
+        
+        // Enhanced click handler for step completion with animations
+        stepContent.addEventListener('click', (e) => {
+          if (!e.target.classList.contains('step-complete-btn')) {
+            this.toggleStepCompletion(stepItem, index);
+          }
+        });
+        
+        // Enhanced keyboard support with visual feedback
+        stepItem.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            this.toggleStepCompletion(stepItem, index);
+          }
+        });
+        
+        // Add hover effects for better interactivity
+        stepContent.addEventListener('mouseenter', () => {
+          stepItem.style.transform = 'translateX(5px)';
+          stepItem.style.transition = 'transform 0.2s ease';
+        });
+        
+        stepContent.addEventListener('mouseleave', () => {
+          stepItem.style.transform = '';
+        });
       });
     }
 
-    // Add action buttons
+    // Add progress indicator
+    const progressIndicator = document.createElement('div');
+    progressIndicator.className = 'task-progress';
+    progressIndicator.innerHTML = `
+      <div class="progress-bar">
+        <div class="progress-fill" style="width: 0%"></div>
+      </div>
+      <span class="progress-text">0%</span>
+    `;
+
+    // Add action buttons with enhanced styling
     const actionButtons = document.createElement('div');
     actionButtons.className = 'task-actions';
     actionButtons.innerHTML = `
-      <button class="btn btn-secondary" id="saveTaskBtn">Save Task</button>
-      <button class="btn btn-small" id="regenerateTaskBtn">Regenerate</button>
-      <button class="btn btn-small btn-text" id="clearTaskBtn">Clear</button>
+      <button class="btn btn-primary" id="saveTaskBtn" title="Save this task breakdown">
+        <span class="btn-icon">💾</span> Save Task
+      </button>
+      <button class="btn btn-secondary" id="regenerateTaskBtn" title="Generate a new breakdown">
+        <span class="btn-icon">🔄</span> Regenerate
+      </button>
+      <button class="btn btn-text" id="clearTaskBtn" title="Clear this breakdown">
+        <span class="btn-icon">🗑️</span> Clear
+      </button>
     `;
 
     // Assemble the breakdown display
     this.elements.taskBreakdown.innerHTML = '';
     this.elements.taskBreakdown.appendChild(taskHeader);
     this.elements.taskBreakdown.appendChild(breakdownSteps);
+    this.elements.taskBreakdown.appendChild(progressIndicator);
     this.elements.taskBreakdown.appendChild(actionButtons);
+
+    // Set up event listeners for action buttons
+    this.setupBreakdownActionListeners();
+
+    // Set up step completion listeners
+    this.setupStepCompletionListeners();
+
+    // Initialize progress tracking with animation
+    this.updateTaskProgress();
+    
+    // Show breakdown with enhanced animation
     this.elements.taskBreakdown.style.display = 'block';
+    this.elements.taskBreakdown.style.animation = 'slideInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+    
+    // Add celebration effect for successful generation
+    this.addSuccessAnimation();
 
     // Add event listeners for action buttons
     this.setupBreakdownEventListeners();
@@ -802,12 +1097,34 @@ class TaskManager {
   }
 
   /**
-   * Toggle step completion status
+   * Toggle step completion status with enhanced animations
    */
-  toggleStepCompletion(stepIndex) {
-    const stepItem = document.querySelector(`.step-complete-btn[data-step="${stepIndex}"]`).closest('.breakdown-step');
+  toggleStepCompletion(stepItem, stepIndex) {
+    if (!stepItem) {
+      stepItem = document.querySelector(`.step-complete-btn[data-step="${stepIndex}"]`)?.closest('.breakdown-step');
+    }
+    
     if (stepItem) {
-      stepItem.classList.toggle('completed');
+      const isCompleted = stepItem.classList.contains('completed');
+      
+      if (!isCompleted) {
+        // Completing the step - add celebration animation
+        stepItem.classList.add('completed');
+        
+        // Add completion animation
+        stepItem.style.animation = 'completeStep 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+        
+        // Show completion feedback
+        this.showStepCompletionFeedback(stepItem, stepIndex);
+        
+        // Play completion sound effect (if available)
+        this.playCompletionSound();
+        
+      } else {
+        // Uncompleting the step
+        stepItem.classList.remove('completed');
+        stepItem.style.animation = '';
+      }
       
       // Update current task completion status
       if (this.currentTask) {
@@ -815,13 +1132,185 @@ class TaskManager {
           this.currentTask.completedSteps = [];
         }
         
-        const isCompleted = stepItem.classList.contains('completed');
-        if (isCompleted && !this.currentTask.completedSteps.includes(stepIndex)) {
+        const newIsCompleted = stepItem.classList.contains('completed');
+        if (newIsCompleted && !this.currentTask.completedSteps.includes(stepIndex)) {
           this.currentTask.completedSteps.push(stepIndex);
-        } else if (!isCompleted) {
+        } else if (!newIsCompleted) {
           this.currentTask.completedSteps = this.currentTask.completedSteps.filter(i => i !== stepIndex);
         }
+        
+        // Update progress with animation
+        this.updateTaskProgress();
       }
+    }
+  }
+
+  /**
+   * Show step completion feedback
+   */
+  showStepCompletionFeedback(stepItem, stepIndex) {
+    try {
+      // Create floating completion indicator
+      const feedback = document.createElement('div');
+      feedback.className = 'step-completion-feedback';
+      feedback.innerHTML = '✨ Completed!';
+      feedback.style.cssText = `
+        position: absolute;
+        top: -30px;
+        right: 10px;
+        background: linear-gradient(135deg, #4caf50, #66bb6a);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        z-index: 10;
+        animation: floatUp 2s ease-out forwards;
+        pointer-events: none;
+      `;
+      
+      stepItem.style.position = 'relative';
+      stepItem.appendChild(feedback);
+      
+      // Remove feedback after animation
+      setTimeout(() => {
+        if (feedback.parentNode) {
+          feedback.parentNode.removeChild(feedback);
+        }
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Error showing step completion feedback:', error);
+    }
+  }
+
+  /**
+   * Play completion sound effect (optional)
+   */
+  playCompletionSound() {
+    try {
+      // Create a subtle completion sound using Web Audio API
+      if (typeof AudioContext !== 'undefined' || typeof webkitAudioContext !== 'undefined') {
+        const audioContext = new (AudioContext || webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(1200, audioContext.currentTime + 0.1);
+        
+        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.1);
+      }
+    } catch (error) {
+      // Silently fail if audio is not available
+      console.debug('Audio not available for completion sound');
+    }
+  }
+
+  /**
+   * Update task progress with enhanced animations
+   */
+  updateTaskProgress() {
+    try {
+      const progressBar = document.querySelector('.progress-fill');
+      const progressText = document.querySelector('.progress-text');
+      
+      if (!progressBar || !progressText || !this.currentTask) return;
+      
+      const totalSteps = this.currentTask.breakdown ? this.currentTask.breakdown.length : 0;
+      const completedSteps = this.currentTask.completedSteps ? this.currentTask.completedSteps.length : 0;
+      const percentage = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
+      
+      // Animate progress bar
+      progressBar.style.width = `${percentage}%`;
+      
+      // Animate progress text with scaling effect
+      progressText.classList.add('updating');
+      setTimeout(() => {
+        progressText.textContent = `${percentage}%`;
+        progressText.classList.remove('updating');
+      }, 150);
+      
+      // Add celebration effect when task is completed
+      if (percentage === 100 && completedSteps > 0) {
+        this.celebrateTaskCompletion();
+      }
+      
+    } catch (error) {
+      console.error('Error updating task progress:', error);
+    }
+  }
+
+  /**
+   * Add success animation for task generation
+   */
+  addSuccessAnimation() {
+    try {
+      const taskBreakdown = this.elements.taskBreakdown;
+      if (!taskBreakdown) return;
+      
+      // Add success glow effect
+      taskBreakdown.style.boxShadow = '0 0 30px rgba(76, 175, 80, 0.3)';
+      setTimeout(() => {
+        taskBreakdown.style.boxShadow = '';
+      }, 1000);
+      
+    } catch (error) {
+      console.error('Error adding success animation:', error);
+    }
+  }
+
+  /**
+   * Celebrate task completion with animations
+   */
+  celebrateTaskCompletion() {
+    try {
+      // Add confetti-like effect
+      const taskBreakdown = this.elements.taskBreakdown;
+      if (!taskBreakdown) return;
+      
+      // Create celebration overlay
+      const celebration = document.createElement('div');
+      celebration.className = 'task-completion-celebration';
+      celebration.innerHTML = '🎉 Task Completed! 🎉';
+      celebration.style.cssText = `
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: linear-gradient(135deg, #4caf50, #66bb6a);
+        color: white;
+        padding: 16px 24px;
+        border-radius: 20px;
+        font-size: 16px;
+        font-weight: 700;
+        z-index: 100;
+        animation: celebrationPop 3s ease-out forwards;
+        box-shadow: 0 8px 32px rgba(76, 175, 80, 0.4);
+        pointer-events: none;
+      `;
+      
+      taskBreakdown.style.position = 'relative';
+      taskBreakdown.appendChild(celebration);
+      
+      // Remove celebration after animation
+      setTimeout(() => {
+        if (celebration.parentNode) {
+          celebration.parentNode.removeChild(celebration);
+        }
+      }, 3000);
+      
+      // Play celebration sound
+      this.playCompletionSound();
+      
+    } catch (error) {
+      console.error('Error celebrating task completion:', error);
     }
   }
 
@@ -1443,6 +1932,270 @@ class TaskManager {
              typeof task.createdAt === 'string' &&
              Array.isArray(task.breakdown);
     }).slice(0, 50); // Limit to 50 most recent tasks
+  }
+
+  /**
+   * Toggle step completion with smooth animations
+   */
+  toggleStepCompletion(stepElement, stepIndex) {
+    try {
+      const isCompleted = stepElement.classList.contains('completed');
+      
+      if (isCompleted) {
+        stepElement.classList.remove('completed');
+        stepElement.setAttribute('aria-label', `Step ${stepIndex + 1}: Not completed`);
+      } else {
+        stepElement.classList.add('completed');
+        stepElement.setAttribute('aria-label', `Step ${stepIndex + 1}: Completed`);
+        
+        // Add completion animation
+        const stepContent = stepElement.querySelector('.step-content');
+        if (stepContent) {
+          stepContent.style.animation = 'completionPulse 0.6s ease-out';
+          
+          setTimeout(() => {
+            stepContent.style.animation = '';
+          }, 600);
+        }
+      }
+      
+      // Update progress
+      this.updateTaskProgress();
+      
+      // Save completion state if task is saved
+      if (this.currentTask) {
+        this.saveStepCompletion(stepIndex, !isCompleted);
+      }
+      
+    } catch (error) {
+      console.error('Error toggling step completion:', error);
+    }
+  }
+
+  /**
+   * Update task progress indicator
+   */
+  updateTaskProgress() {
+    try {
+      const progressBar = document.querySelector('.progress-fill');
+      const progressText = document.querySelector('.progress-text');
+      
+      if (!progressBar || !progressText) return;
+      
+      const totalSteps = document.querySelectorAll('.breakdown-step').length;
+      const completedSteps = document.querySelectorAll('.breakdown-step.completed').length;
+      
+      if (totalSteps === 0) return;
+      
+      const percentage = Math.round((completedSteps / totalSteps) * 100);
+      
+      // Animate progress bar
+      progressBar.style.width = `${percentage}%`;
+      progressText.textContent = `${percentage}%`;
+      
+      // Add completion celebration if 100%
+      if (percentage === 100) {
+        this.celebrateTaskCompletion();
+      }
+      
+    } catch (error) {
+      console.error('Error updating task progress:', error);
+    }
+  }
+
+  /**
+   * Celebrate task completion with visual feedback
+   */
+  celebrateTaskCompletion() {
+    try {
+      const taskBreakdown = this.elements.taskBreakdown;
+      if (!taskBreakdown) return;
+      
+      // Add celebration class for animation
+      taskBreakdown.classList.add('task-completed');
+      
+      // Show completion message
+      if (this.errorHandler) {
+        this.errorHandler.showUserFeedback(
+          '🎉 Congratulations! Task completed!',
+          'success',
+          { 
+            duration: 4000,
+            context: 'Task Completion'
+          }
+        );
+      }
+      
+      // Remove celebration class after animation
+      setTimeout(() => {
+        taskBreakdown.classList.remove('task-completed');
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Error celebrating task completion:', error);
+    }
+  }
+
+  /**
+   * Setup event listeners for breakdown action buttons
+   */
+  setupBreakdownActionListeners() {
+    try {
+      const saveBtn = document.getElementById('saveTaskBtn');
+      const regenerateBtn = document.getElementById('regenerateTaskBtn');
+      const clearBtn = document.getElementById('clearTaskBtn');
+      
+      if (saveBtn) {
+        saveBtn.addEventListener('click', () => this.handleSaveTask());
+      }
+      
+      if (regenerateBtn) {
+        regenerateBtn.addEventListener('click', () => this.handleRegenerateTask());
+      }
+      
+      if (clearBtn) {
+        clearBtn.addEventListener('click', () => this.handleClearTask());
+      }
+      
+    } catch (error) {
+      console.error('Error setting up breakdown action listeners:', error);
+    }
+  }
+
+  /**
+   * Setup event listeners for step completion
+   */
+  setupStepCompletionListeners() {
+    try {
+      const stepButtons = document.querySelectorAll('.step-complete-btn');
+      
+      stepButtons.forEach((button, index) => {
+        button.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const stepElement = button.closest('.breakdown-step');
+          this.toggleStepCompletion(stepElement, index);
+        });
+      });
+      
+    } catch (error) {
+      console.error('Error setting up step completion listeners:', error);
+    }
+  }
+
+  /**
+   * Handle save task button click
+   */
+  async handleSaveTask() {
+    try {
+      if (!this.currentTask) {
+        this.showStatus('No task to save', 'warning');
+        return;
+      }
+      
+      await this.saveTaskWithErrorHandling(this.currentTask);
+      
+      if (this.errorHandler) {
+        this.errorHandler.showUserFeedback(
+          'Task saved successfully!',
+          'success',
+          { duration: 2000 }
+        );
+      } else {
+        this.showStatus('Task saved successfully!', 'success');
+      }
+      
+    } catch (error) {
+      console.error('Error saving task:', error);
+      this.showStatus('Failed to save task', 'error');
+    }
+  }
+
+  /**
+   * Handle regenerate task button click
+   */
+  async handleRegenerateTask() {
+    try {
+      if (!this.currentTask) {
+        this.showStatus('No task to regenerate', 'warning');
+        return;
+      }
+      
+      const confirmed = confirm('Are you sure you want to regenerate this task breakdown? This will replace the current breakdown.');
+      if (!confirmed) return;
+      
+      // Clear current breakdown
+      this.elements.taskBreakdown.style.display = 'none';
+      
+      // Regenerate with same task data
+      await this.handleGetBreakdown();
+      
+    } catch (error) {
+      console.error('Error regenerating task:', error);
+      this.showStatus('Failed to regenerate task', 'error');
+    }
+  }
+
+  /**
+   * Handle clear task button click
+   */
+  handleClearTask() {
+    try {
+      const confirmed = confirm('Are you sure you want to clear this task breakdown?');
+      if (!confirmed) return;
+      
+      // Clear breakdown display
+      this.elements.taskBreakdown.style.display = 'none';
+      this.elements.taskBreakdown.innerHTML = '';
+      
+      // Clear current task
+      this.currentTask = null;
+      
+      // Clear inputs
+      if (this.elements.taskNameInput) {
+        this.elements.taskNameInput.value = '';
+      }
+      if (this.elements.taskDeadlineInput) {
+        this.elements.taskDeadlineInput.value = '';
+      }
+      
+      // Clear draft
+      this.clearTaskDraft();
+      
+      if (this.errorHandler) {
+        this.errorHandler.showUserFeedback(
+          'Task breakdown cleared',
+          'info',
+          { duration: 2000 }
+        );
+      } else {
+        this.showStatus('Task breakdown cleared', 'info');
+      }
+      
+    } catch (error) {
+      console.error('Error clearing task:', error);
+    }
+  }
+
+  /**
+   * Save step completion state
+   */
+  async saveStepCompletion(stepIndex, isCompleted) {
+    try {
+      if (!this.currentTask) return;
+      
+      if (!this.currentTask.completedSteps) {
+        this.currentTask.completedSteps = {};
+      }
+      
+      this.currentTask.completedSteps[stepIndex] = isCompleted;
+      this.currentTask.updatedAt = new Date().toISOString();
+      
+      // Save to storage
+      await this.saveTaskWithErrorHandling(this.currentTask);
+      
+    } catch (error) {
+      console.error('Error saving step completion:', error);
+    }
   }
 }
 

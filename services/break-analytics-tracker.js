@@ -34,26 +34,18 @@ class BreakAnalyticsTracker {
    */
   async init() {
     try {
-      // Import dependencies if in service worker context
-      if (typeof importScripts !== "undefined") {
-        try {
-          importScripts(
-            "/services/storage-manager.js",
-            "/utils/break-error-handler.js"
-          );
-          this.storageManager = typeof StorageManager.getInstance === 'function' ? 
-            StorageManager.getInstance() : new StorageManager();
-          this.breakErrorHandler = new BreakErrorHandler();
-        } catch (importError) {
-          console.warn("Could not import dependencies for BreakAnalyticsTracker:", importError);
-          await this.initializeFallbackMode();
-          return;
-        }
+      // Initialize dependencies (avoid duplicate imports)
+      if (typeof StorageManager !== 'undefined') {
+        this.storageManager = typeof StorageManager.getInstance === 'function' ? 
+          StorageManager.getInstance() : new StorageManager();
       } else {
-        // In popup context, try to use globally available classes
-        this.storageManager = this.storageManager || (typeof StorageManager !== 'undefined' ? 
-          (typeof StorageManager.getInstance === 'function' ? StorageManager.getInstance() : new StorageManager()) : null);
-        this.breakErrorHandler = this.breakErrorHandler || (typeof BreakErrorHandler !== 'undefined' ? new BreakErrorHandler() : null);
+        this.storageManager = null;
+      }
+      
+      if (typeof BreakErrorHandler !== 'undefined') {
+        this.breakErrorHandler = new BreakErrorHandler();
+      } else {
+        this.breakErrorHandler = null;
       }
       
       // Initialize error handler if available

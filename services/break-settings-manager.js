@@ -31,12 +31,11 @@ class BreakSettingsManager {
    */
   async init() {
     try {
-      // Import dependencies if in service worker context
-      if (typeof importScripts !== "undefined") {
-        importScripts("/services/storage-manager.js");
+      // Initialize storage manager (avoid duplicate imports)
+      if (typeof StorageManager !== 'undefined') {
         this.storageManager = new StorageManager();
       } else {
-        this.storageManager = this.storageManager || new StorageManager();
+        console.warn('StorageManager not available');
       }
       
       // Load existing settings or initialize defaults
