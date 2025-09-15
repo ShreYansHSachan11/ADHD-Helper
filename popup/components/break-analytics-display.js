@@ -23,34 +23,89 @@ class BreakAnalyticsDisplay {
       this.container = document.getElementById(this.containerId);
       if (!this.container) {
         console.error(`Analytics container not found: ${this.containerId}`);
+        // Try to create container if it doesn't exist
+        this.createContainerIfMissing();
         return;
       }
 
-      // Initialize analytics tracker
-      if (typeof BreakAnalyticsTracker !== 'undefined') {
-        this.analyticsTracker = new BreakAnalyticsTracker();
-        await this.analyticsTracker.init();
-      } else {
-        console.error('BreakAnalyticsTracker not available');
+      // Initialize analytics tracker with error handling
+      try {
+        if (typeof BreakAnalyticsTracker !== 'undefined') {
+          this.analyticsTracker = new BreakAnalyticsTracker();
+          await this.analyticsTracker.init();
+        } else {
+          console.warn('BreakAnalyticsTracker not available, using fallback mode');
+          this.initializeFallbackMode();
+          return;
+        }
+      } catch (error) {
+        console.warn('Failed to initialize BreakAnalyticsTracker, using fallback:', error);
+        this.initializeFallbackMode();
         return;
       }
 
       // Create the UI
       this.createAnalyticsUI();
       
-      // Load initial data
-      await this.loadAnalyticsData();
+      // Load initial data with error handling
+      try {
+        await this.loadAnalyticsData();
+      } catch (error) {
+        console.error('Failed to load initial analytics data:', error);
+        this.showError();
+      }
       
       // Set up periodic updates (every 30 seconds)
       this.updateInterval = setInterval(() => {
-        this.loadAnalyticsData();
+        this.loadAnalyticsData().catch(error => {
+          console.error('Failed to update analytics data:', error);
+        });
       }, 30000);
       
       console.log('Break Analytics Display initialized successfully');
     } catch (error) {
       console.error('Failed to initialize Break Analytics Display:', error);
+      this.initializeFallbackMode();
     }
   }
+
+  /**
+   * Create container if missing
+   */
+  createContainerIfMissing() {
+    const breakReminderPanel = document.getElementById('break-reminderPanel');
+    if (breakReminderPanel) {
+      const analyticsContainer = document.createElement('div');
+      analyticsContainer.id = this.containerId;
+      analyticsContainer.className = 'break-analytics';
+      breakReminderPanel.querySelector('.panel-content').appendChild(analyticsContainer);
+      this.container = analyticsContainer;
+      
+      // Retry initialization
+      setTimeout(() => this.init(), 100);
+    }
+  }
+
+  /**
+   * Initialize fallback mode when analytics tracker is not available
+   */
+  initializeFallbackMode() {
+    if (!this.container) return;
+    
+    this.container.innerHTML = `
+      <div class="analytics-fallback">
+        <div class="fallback-icon">📊</div>
+        <div class="fallback-message">
+          <h4>Analytics Unavailable</h4>
+          <p>Break analytics will be available once you start taking breaks.</p>
+        </div>
+      </div>
+    `;
+    
+    console.log('Break Analytics Display running in fallback mode');
+  }
+
+
 
   /**
    * Create the analytics UI structure
@@ -59,10 +114,15 @@ class BreakAnalyticsDisplay {
     this.container.innerHTML = `
       <div class="analytics-header">
         <h3>Break Analytics</h3>
-        <div class="period-selector">
-          <button class="period-btn active" data-period="today">Today</button>
-          <button class="period-btn" data-period="week">This Week</button>
-          <button class="period-btn" data-period="month">This Month</button>
+        <div class="analytics-controls">
+          <div class="period-selector">
+            <button class="period-btn active" data-period="today">Today</button>
+            <button class="period-btn" data-period="week">This Week</button>
+            <button class="period-btn" data-period="month">This Month</button>
+          </div>
+          <button class="clean-data-btn" id="cleanAnalyticsBtn" title="Clean all analytics data">
+            🗑️
+          </button>
         </div>
       </div>
       
@@ -189,6 +249,14 @@ class BreakAnalyticsDisplay {
         this.switchPeriod(period);
       });
     });
+
+    // Clean analytics data button
+    const cleanBtn = this.container.querySelector('#cleanAnalyticsBtn');
+    if (cleanBtn) {
+      cleanBtn.addEventListener('click', () => {
+        this.handleCleanAnalytics();
+      });
+    }
   }
 
   /**
@@ -217,15 +285,19 @@ class BreakAnalyticsDisplay {
       this.showLoading();
       
       if (!this.analyticsTracker) {
-        this.showError();
+        console.log('Analytics tracker not available, checking for raw data...');
+        await this.loadRawAnalyticsData();
         return;
       }
 
       // Get comprehensive analytics
       const analytics = await this.analyticsTracker.getComprehensiveAnalytics();
       
+      console.log('Analytics data loaded:', analytics);
+      
       if (!analytics) {
-        this.showError();
+        console.log('No analytics data returned, showing empty state');
+        this.showEmpty();
         return;
       }
 
@@ -245,8 +317,11 @@ class BreakAnalyticsDisplay {
           periodData = analytics.today;
       }
 
+      console.log(`Period data for ${this.currentPeriod}:`, periodData);
+
       // Check if we have any data
       if (!periodData || periodData.totalBreaks === 0) {
+        console.log('No break data for current period, showing empty state');
         this.showEmpty();
         return;
       }
@@ -257,6 +332,47 @@ class BreakAnalyticsDisplay {
       
     } catch (error) {
       console.error('Failed to load analytics data:', error);
+      this.showError();
+    }
+  }
+
+  /**
+   * Load raw analytics data when tracker is not available
+   */
+  async loadRawAnalyticsData() {
+    try {
+      if (typeof StorageManager === 'undefined') {
+        this.showEmpty();
+        return;
+      }
+
+      const storageManager = new StorageManager();
+      
+      // Check for existing break sessions
+      const sessions = await storageManager.get('breakSessions') || [];
+      const dailyStats = await storageManager.get('dailyBreakStats') || {};
+      
+      console.log('Raw data check - Sessions:', sessions.length, 'Daily stats:', Object.keys(dailyStats).length);
+      
+      if (sessions.length === 0 && Object.keys(dailyStats).length === 0) {
+        this.showEmpty();
+        return;
+      }
+
+      // Try to create analytics from raw data
+      const today = new Date().toISOString().split('T')[0];
+      const todayStats = dailyStats[today];
+      
+      if (todayStats && todayStats.totalBreaks > 0) {
+        console.log('Found today stats:', todayStats);
+        this.updateAnalyticsDisplay(todayStats);
+        this.showStats();
+      } else {
+        this.showEmpty();
+      }
+      
+    } catch (error) {
+      console.error('Failed to load raw analytics data:', error);
       this.showError();
     }
   }
@@ -410,6 +526,94 @@ class BreakAnalyticsDisplay {
    */
   async refresh() {
     await this.loadAnalyticsData();
+  }
+
+  /**
+   * Refresh analytics data (alias for external calls)
+   */
+  async refreshData() {
+    await this.loadAnalyticsData();
+  }
+
+  /**
+   * Handle clean analytics button click
+   */
+  async handleCleanAnalytics() {
+    try {
+      if (!confirm("Are you sure you want to clean all break analytics data? This action cannot be undone.")) {
+        return;
+      }
+
+      console.log("Cleaning analytics data from component...");
+      
+      // Send message to background script to clean data
+      const response = await chrome.runtime.sendMessage({
+        type: "CLEAN_ANALYTICS_DATA",
+      });
+
+      if (response && response.success) {
+        console.log("Analytics data cleaned successfully");
+        
+        // Show success feedback
+        this.showTemporaryMessage("Analytics data cleaned successfully!", "success");
+        
+        // Refresh the display to show empty state
+        await this.loadAnalyticsData();
+      } else {
+        console.error("Failed to clean analytics data:", response?.error);
+        this.showTemporaryMessage("Failed to clean analytics data: " + (response?.error || "Unknown error"), "error");
+      }
+    } catch (error) {
+      console.error("Error cleaning analytics data:", error);
+      this.showTemporaryMessage("Error cleaning analytics data: " + error.message, "error");
+    }
+  }
+
+  /**
+   * Show temporary message to user
+   */
+  showTemporaryMessage(message, type = "info") {
+    // Create temporary message element
+    const messageEl = document.createElement('div');
+    messageEl.className = `analytics-message analytics-message-${type}`;
+    messageEl.textContent = message;
+    messageEl.style.cssText = `
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: ${type === 'success' ? '#4CAF50' : type === 'error' ? '#f44336' : '#2196F3'};
+      color: white;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      z-index: 1000;
+      animation: fadeInOut 3s ease-in-out;
+    `;
+    
+    // Add CSS animation if not already present
+    if (!document.querySelector('#analytics-message-styles')) {
+      const style = document.createElement('style');
+      style.id = 'analytics-message-styles';
+      style.textContent = `
+        @keyframes fadeInOut {
+          0% { opacity: 0; transform: translateY(-10px); }
+          15% { opacity: 1; transform: translateY(0); }
+          85% { opacity: 1; transform: translateY(0); }
+          100% { opacity: 0; transform: translateY(-10px); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    
+    this.container.style.position = 'relative';
+    this.container.appendChild(messageEl);
+    
+    // Remove message after animation
+    setTimeout(() => {
+      if (messageEl.parentNode) {
+        messageEl.parentNode.removeChild(messageEl);
+      }
+    }, 3000);
   }
 
   /**

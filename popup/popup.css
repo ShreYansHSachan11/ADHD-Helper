@@ -1256,16 +1256,324 @@ input:focus-visible,
     border-width: 2px;
   }
 }
-.focus-status-indicator,
-.focus-tab-display,
-.session-stat,
-.deviation-item {
-  border-width: 2px;
+
+/* Break Controls Styles */
+.break-controls-section {
+  margin: 16px 0;
+  padding: 16px;
+  background: var(--md-sys-color-surface-variant);
+  border-radius: 12px;
+  border: 1px solid var(--md-sys-color-outline-variant);
 }
 
-.status-dot,
-.live-dot {
-  border: 2px solid currentColor;
+.work-timer-display,
+.break-timer-display {
+  text-align: center;
+  margin-bottom: 16px;
+  padding: 20px;
+  background: var(--md-sys-color-surface);
+  border-radius: 12px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.timer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.timer-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
+}
+
+.timer-status {
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface-variant);
+  padding: 4px 8px;
+  border-radius: 12px;
+  background: var(--md-sys-color-surface-variant);
+}
+
+.timer-status.active {
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+}
+
+.timer-status.break {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.timer-value {
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--md-sys-color-primary);
+  font-family: 'Roboto Mono', monospace;
+  margin-bottom: 12px;
+}
+
+.timer-progress {
+  width: 100%;
+}
+
+.timer-progress .progress-bar {
+  height: 6px;
+  background: var(--md-sys-color-outline-variant);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.timer-progress .progress-fill {
+  height: 100%;
+  background: var(--md-sys-color-primary);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.timer-progress .progress-fill.break-progress {
+  background: var(--md-sys-color-secondary);
+}
+
+.work-controls,
+.break-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+.secondary-controls {
+  display: flex;
+  gap: 8px;
+}
+
+/* Break Control Button Styles */
+.btn-break-primary {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  height: 48px;
+  padding: 0 24px;
+  border-radius: 24px;
+  font-weight: 500;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 160px;
+  justify-content: center;
+  box-shadow: var(--md-sys-elevation-level1);
+}
+
+.btn-break-primary:hover {
+  box-shadow: var(--md-sys-elevation-level2);
+}
+
+.btn-break-primary.recommended {
+  background: #FF6B35;
+  animation: pulse-recommended 2s infinite;
+}
+
+@keyframes pulse-recommended {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+.btn-break-secondary {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 18px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-break-danger {
+  background: var(--md-sys-color-error);
+  color: var(--md-sys-color-on-error);
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 18px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-icon {
+  font-size: 16px;
+}
+
+/* Break Type Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.break-type-modal .modal-content {
+  background: var(--md-sys-color-surface);
+  border-radius: 16px;
+  padding: 24px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: var(--md-sys-elevation-level3);
+}
+
+.break-type-modal .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.break-type-modal .modal-header h3 {
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
+  margin: 0;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: var(--md-sys-color-on-surface-variant);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close:hover {
+  background: var(--md-sys-color-surface-variant);
+}
+
+.break-type-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.break-type-btn {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: var(--md-sys-color-surface-variant);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  width: 100%;
+}
+
+.break-type-btn:hover {
+  background: var(--md-sys-color-primary-container);
+  border-color: var(--md-sys-color-primary);
+  transform: translateY(-1px);
+  box-shadow: var(--md-sys-elevation-level1);
+}
+
+.break-type-btn:active {
+  transform: translateY(0);
+}
+
+.break-type-icon {
+  font-size: 32px;
+  width: 48px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.break-type-info {
+  flex: 1;
+}
+
+.break-type-name {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
+  margin-bottom: 4px;
+}
+
+.break-type-duration {
+  font-size: 14px;
+  color: var(--md-sys-color-primary);
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.break-type-desc {
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* Responsive Design for Break Controls */
+@media (max-width: 400px) {
+  .break-controls-section {
+    padding: 12px;
+  }
+  
+  .work-timer-display,
+  .break-timer-display {
+    padding: 16px;
+  }
+  
+  .timer-value {
+    font-size: 28px;
+  }
+  
+  .btn-break-primary {
+    height: 44px;
+    font-size: 15px;
+    min-width: 140px;
+  }
+  
+  .break-type-btn {
+    padding: 12px;
+    gap: 12px;
+  }
+  
+  .break-type-icon {
+    font-size: 28px;
+    width: 40px;
+  }
+  
+  .break-type-name {
+    font-size: 15px;
+  }
+  
+  .secondary-controls {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .btn-break-secondary,
+  .btn-break-danger {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 .wellness-controls {

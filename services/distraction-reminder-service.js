@@ -15,8 +15,13 @@ class DistractionReminderService {
     // Simple configuration
     this.config = {
       distractionDelayMs: 3000,
-      reminderCooldownMs: 30 * 1000, // 2 minutes between reminders
+      reminderCooldownMs: 30 * 1000, // 30 seconds between reminders
       maxRemindersPerSession: 50, // Max reminders per session
+      baseReminderCooldownMs: 2 * 60 * 1000, // 2 minutes base cooldown
+      maxReminderCooldownMs: 15 * 60 * 1000, // 15 minutes max cooldown
+      reminderEscalationFactor: 1.5, // Escalation factor for adaptive frequency
+      legitimateBreakThresholdMs: 10 * 60 * 1000, // 10 minutes for legitimate break
+      popupDisplayDurationMs: 10 * 1000 // 10 seconds popup display
     };
 
     // User preferences

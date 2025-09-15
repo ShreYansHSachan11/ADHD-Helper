@@ -14,6 +14,7 @@ let pomodoroService = null;
 let breakTimerManager = null;
 let breakNotificationSystem = null;
 let distractionReminderService = null;
+let breakAnalyticsTracker = null;
 
 // Distraction Reminder Variables (directly in background)
 let focusTabId = null;
@@ -107,6 +108,17 @@ chrome.runtime.onInstalled.addListener(async (details) => {
       console.log("BreakNotificationSystem initialized successfully");
     }
 
+    // Initialize break analytics tracker
+    if (
+      !breakAnalyticsTracker &&
+      typeof BreakAnalyticsTracker !== "undefined"
+    ) {
+      console.log("Initializing BreakAnalyticsTracker...");
+      breakAnalyticsTracker = new BreakAnalyticsTracker();
+      await breakAnalyticsTracker.init();
+      console.log("BreakAnalyticsTracker initialized successfully");
+    }
+
     // Initialize distraction reminder (direct in background)
     initializeDistractionReminder();
 
@@ -192,6 +204,15 @@ chrome.runtime.onStartup.addListener(async () => {
       if (breakTimerManager) {
         breakNotificationSystem.setBreakTimerManager(breakTimerManager);
       }
+    }
+
+    // Initialize break analytics tracker
+    if (
+      !breakAnalyticsTracker &&
+      typeof BreakAnalyticsTracker !== "undefined"
+    ) {
+      breakAnalyticsTracker = new BreakAnalyticsTracker();
+      await breakAnalyticsTracker.init();
     }
 
     // Initialize distraction reminder (direct in background)
@@ -1548,6 +1569,30 @@ async function handleMessage(message, sender, sendResponse) {
           });
         } catch (error) {
           console.error("Error testing distraction reminder:", error);
+          sendResponse({ success: false, error: error.message });
+        }
+        break;
+
+      case "CLEAN_ANALYTICS_DATA":
+        try {
+          // Initialize analytics tracker if not already done
+          let analyticsTracker = null;
+          if (typeof BreakAnalyticsTracker !== 'undefined') {
+            analyticsTracker = new BreakAnalyticsTracker();
+            await analyticsTracker.init();
+          }
+
+          if (!analyticsTracker) {
+            throw new Error("Analytics tracker not available");
+          }
+
+          const success = await analyticsTracker.cleanAllAnalyticsData();
+          sendResponse({ 
+            success: success, 
+            message: success ? "All analytics data cleaned successfully" : "Failed to clean analytics data"
+          });
+        } catch (error) {
+          console.error("Error cleaning analytics data:", error);
           sendResponse({ success: false, error: error.message });
         }
         break;

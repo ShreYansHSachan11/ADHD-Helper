@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="../utils/error-feedback.css" />
     <link rel="stylesheet" href="../utils/loading-styles.css" />
     <link rel="stylesheet" href="components/distraction-reminder-settings.css" />
+    <link rel="stylesheet" href="components/break-analytics-display.css" />
   </head>
   <body>
     <div class="container">
@@ -135,8 +136,8 @@
               </div>
             </div>
             
-            <!-- Work Timer Controls (shown when not on break) -->
-            <div class="work-controls" id="workControls">
+            <!-- Time Limit Configuration -->
+            <div class="time-limit-section" id="timeLimitSection">
               <div class="time-limit-control">
                 <label for="timeLimitInput">Break reminder after:</label>
                 <div class="input-group">
@@ -150,15 +151,6 @@
                   />
                   <span>minutes</span>
                 </div>
-              </div>
-              <div class="screen-time-controls">
-                <button
-                  class="btn btn-small"
-                  id="resetScreenTimeBtn"
-                  title="Clear all screen time data"
-                >
-                  Reset Data
-                </button>
               </div>
             </div>
             
@@ -257,8 +249,7 @@
               <button class="btn btn-secondary" id="setFocusBtn">
                 🎯 Set Current Tab as Focus
               </button>
-              <button class="btn btn-small" id="resetFocusBtn">🔄 Reset</button>
-              <!-- <button class="btn btn-small" id="distractionSettingsBtn">⚙️ Reminder Settings</button> -->
+              <button class="btn btn-small" id="resetFocusBtn">🔄 Reset Focus</button>
               <button class="btn btn-small" id="testDistractionBtn">🧪 Test Reminder</button>
             </div>
             

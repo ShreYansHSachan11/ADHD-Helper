@@ -1060,18 +1060,35 @@ class PopupManager {
    */
   async initializeBreakAnalytics() {
     try {
-      if (typeof BreakAnalyticsDisplay !== "undefined") {
+      // Check if container exists, create if missing
+      let analyticsContainer = document.getElementById("breakAnalyticsContainer");
+      if (!analyticsContainer) {
+        const breakPanel = document.getElementById("break-reminderPanel");
+        if (breakPanel) {
+          const panelContent = breakPanel.querySelector(".panel-content");
+          if (panelContent) {
+            analyticsContainer = document.createElement("div");
+            analyticsContainer.id = "breakAnalyticsContainer";
+            analyticsContainer.className = "break-analytics";
+            panelContent.appendChild(analyticsContainer);
+          }
+        }
+      }
+
+      if (analyticsContainer && typeof BreakAnalyticsDisplay !== "undefined") {
         this.breakAnalyticsDisplay = new BreakAnalyticsDisplay(
           "breakAnalyticsContainer"
         );
         console.log("Break analytics display initialized successfully");
       } else {
-        console.warn("BreakAnalyticsDisplay not available");
+        console.warn("BreakAnalyticsDisplay not available or container missing");
       }
     } catch (error) {
       console.error("Failed to initialize break analytics display:", error);
     }
   }
+
+
 
   /**
    * Initialize break settings UI component
@@ -1347,6 +1364,61 @@ class PopupManager {
     } catch (error) {
       console.error("Error handling end break:", error);
       this.showError("Failed to end break. Please try again.");
+    }
+  }
+
+  /**
+   * Clean all analytics data
+   */
+  async cleanAnalyticsData() {
+    try {
+      if (!confirm("Are you sure you want to clean all break analytics data? This action cannot be undone.")) {
+        return;
+      }
+
+      console.log("Cleaning analytics data...");
+      
+      const response = await chrome.runtime.sendMessage({
+        type: "CLEAN_ANALYTICS_DATA",
+      });
+
+      if (response && response.success) {
+        console.log("Analytics data cleaned successfully");
+        
+        // Show success message
+        if (this.errorHandler) {
+          this.errorHandler.showUserFeedback(
+            "All break analytics data has been cleaned successfully.",
+            "success",
+            { duration: 3000 }
+          );
+        } else {
+          alert("All break analytics data has been cleaned successfully.");
+        }
+        
+        // Refresh analytics display if it exists
+        if (this.breakAnalyticsDisplay && typeof this.breakAnalyticsDisplay.refreshData === 'function') {
+          await this.breakAnalyticsDisplay.refreshData();
+        }
+      } else {
+        console.error("Failed to clean analytics data:", response?.error);
+        const errorMsg = "Failed to clean analytics data: " + (response?.error || "Unknown error");
+        
+        if (this.errorHandler) {
+          this.errorHandler.showUserFeedback(errorMsg, "error", { duration: 5000 });
+        } else {
+          alert(errorMsg);
+        }
+      }
+    } catch (error) {
+      console.error("Error cleaning analytics data:", error);
+      const errorMsg = "Error cleaning analytics data: " + error.message;
+      
+      if (this.errorHandler) {
+        this.errorHandler.showUserFeedback(errorMsg, "error", { duration: 5000 });
+      } else {
+        alert(errorMsg);
+      }
     }
   }
 

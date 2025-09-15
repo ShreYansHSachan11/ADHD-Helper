@@ -36,9 +36,10 @@ class BreakAnalyticsTracker {
     try {
       // Initialize dependencies (avoid duplicate imports)
       if (typeof StorageManager !== 'undefined') {
-        this.storageManager = typeof StorageManager.getInstance === 'function' ? 
-          StorageManager.getInstance() : new StorageManager();
+        this.storageManager = new StorageManager();
+        console.log('BreakAnalyticsTracker: StorageManager initialized');
       } else {
+        console.warn('BreakAnalyticsTracker: StorageManager not available');
         this.storageManager = null;
       }
       
@@ -58,13 +59,55 @@ class BreakAnalyticsTracker {
       }
       
       // Initialize default settings with error handling
-      await this.initializeDefaultSettingsWithErrorHandling();
+      if (this.storageManager) {
+        await this.initializeDefaultSettingsWithErrorHandling();
+      } else {
+        console.warn("BreakAnalyticsTracker: Skipping settings initialization due to missing StorageManager");
+      }
       
       console.log("BreakAnalyticsTracker initialized successfully");
     } catch (error) {
       console.error("BreakAnalyticsTracker initialization error:", error);
       // Continue with limited functionality
       await this.initializeFallbackMode();
+    }
+  }
+
+  /**
+   * Clean all existing analytics data
+   */
+  async cleanAllAnalyticsData() {
+    try {
+      if (!this.storageManager) {
+        console.warn("Cannot clean analytics data: StorageManager not available");
+        return false;
+      }
+
+      console.log("Cleaning all existing break analytics data...");
+      
+      // Clear all analytics storage keys
+      await this.storageManager.removeMultiple([
+        this.STORAGE_KEYS.BREAK_SESSIONS,
+        this.STORAGE_KEYS.DAILY_STATS,
+        this.STORAGE_KEYS.WEEKLY_STATS,
+        this.STORAGE_KEYS.MONTHLY_STATS
+      ]);
+      
+      // Reset analytics settings but keep tracking enabled
+      const cleanSettings = {
+        trackingEnabled: true,
+        dataRetentionDays: this.DATA_RETENTION.SESSIONS,
+        lastCleanupDate: Date.now(),
+        aggregationEnabled: true
+      };
+      
+      await this.storageManager.set(this.STORAGE_KEYS.ANALYTICS_SETTINGS, cleanSettings);
+      
+      console.log("All analytics data cleaned successfully");
+      return true;
+    } catch (error) {
+      console.error("Error cleaning analytics data:", error);
+      return false;
     }
   }
 
@@ -94,6 +137,11 @@ class BreakAnalyticsTracker {
    */
   async initializeDefaultSettingsWithErrorHandling() {
     try {
+      if (!this.storageManager) {
+        console.warn("Cannot initialize settings: StorageManager not available");
+        return;
+      }
+
       const existingSettings = await this.storageManager.get(this.STORAGE_KEYS.ANALYTICS_SETTINGS);
       
       if (!existingSettings) {
@@ -103,6 +151,8 @@ class BreakAnalyticsTracker {
           lastCleanupDate: Date.now(),
           aggregationEnabled: true
         };
+        
+        console.log("Creating default analytics settings:", defaultSettings);
         
         // Validate settings data
         if (this.breakErrorHandler) {
@@ -114,6 +164,10 @@ class BreakAnalyticsTracker {
         } else {
           await this.storageManager.set(this.STORAGE_KEYS.ANALYTICS_SETTINGS, defaultSettings);
         }
+        
+        console.log("Default analytics settings created successfully");
+      } else {
+        console.log("Existing analytics settings found:", existingSettings);
       }
     } catch (error) {
       console.error("Error initializing default settings:", error);
@@ -136,6 +190,7 @@ class BreakAnalyticsTracker {
 
   /**
    * Record a break session with metadata and comprehensive error handling
+   * Only records completed breaks (not cancelled ones)
    */
   async recordBreakSession(breakType, durationMinutes, startTime, endTime, metadata = {}) {
     try {
@@ -146,17 +201,33 @@ class BreakAnalyticsTracker {
         return false;
       }
 
+      // Only record if break was actually completed (endTime > 0 and reasonable duration)
+      const isCompleted = endTime > 0 && (endTime > startTime);
+      if (!isCompleted) {
+        console.log("Break was not completed, skipping analytics recording");
+        return false;
+      }
+
+      const actualDurationMs = endTime - startTime;
+      const actualDurationMinutes = Math.round(actualDurationMs / (1000 * 60));
+      
+      // Only record breaks that lasted at least 1 minute
+      if (actualDurationMinutes < 1) {
+        console.log("Break duration too short, skipping analytics recording");
+        return false;
+      }
+
       const rawSession = {
         id: `break_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         type: breakType,
         plannedDuration: durationMinutes,
-        actualDuration: endTime > 0 ? Math.round((endTime - startTime) / (1000 * 60)) : 0, // Convert to minutes, 0 if cancelled
+        actualDuration: actualDurationMinutes,
         startTime: startTime,
         endTime: endTime,
         date: new Date(startTime).toISOString().split('T')[0], // YYYY-MM-DD format
         dayOfWeek: new Date(startTime).getDay(), // 0 = Sunday, 6 = Saturday
         hour: new Date(startTime).getHours(),
-        completed: endTime > 0, // Whether break was completed or cancelled
+        completed: true, // Only completed breaks are recorded now
         metadata: {
           workTimeBeforeBreak: metadata.workTimeBeforeBreak || 0,
           triggeredBy: metadata.triggeredBy || 'unknown', // 'notification', 'manual', 'automatic'

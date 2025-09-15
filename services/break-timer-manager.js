@@ -22,6 +22,7 @@ class BreakTimerManager {
     this.constants = null;
     this.helpers = null;
     this.breakErrorHandler = null;
+    this.analyticsTracker = null;
     
     // Browser focus state
     this.isBrowserFocused = true;
@@ -58,9 +59,19 @@ class BreakTimerManager {
         this.breakErrorHandler = this.breakErrorHandler || new BreakErrorHandler();
       }
       
+      // Initialize analytics tracker if available
+      if (typeof BreakAnalyticsTracker !== 'undefined') {
+        this.analyticsTracker = this.analyticsTracker || new BreakAnalyticsTracker();
+      }
+      
       // Initialize error handler
       if (this.breakErrorHandler) {
         await this.breakErrorHandler.init();
+      }
+      
+      // Initialize analytics tracker
+      if (this.analyticsTracker) {
+        await this.analyticsTracker.init();
       }
       
       // Initialize settings manager
@@ -433,6 +444,34 @@ class BreakTimerManager {
         return false;
       }
       
+      // Record analytics for completed break before clearing state
+      if (this.analyticsTracker && this.breakStartTime && this.breakType) {
+        try {
+          const endTime = Date.now();
+          const plannedDurationMinutes = Math.round(this.breakDuration / (1000 * 60));
+          
+          // Get work time before break from current session
+          const workTimeBeforeBreak = this.totalWorkTime || 0;
+          
+          await this.analyticsTracker.recordBreakSession(
+            this.breakType,
+            plannedDurationMinutes,
+            this.breakStartTime,
+            endTime,
+            {
+              workTimeBeforeBreak: workTimeBeforeBreak,
+              triggeredBy: 'manual', // Could be enhanced to track how break was started
+              browserActive: this.isBrowserFocused
+            }
+          );
+          
+          console.log(`Break analytics recorded: ${this.breakType} break completed`);
+        } catch (analyticsError) {
+          console.error("Error recording break analytics:", analyticsError);
+          // Don't fail the break ending if analytics fails
+        }
+      }
+      
       this.isOnBreak = false;
       this.breakType = null;
       this.breakStartTime = null;
@@ -687,7 +726,7 @@ class BreakTimerManager {
   }
 
   /**
-   * Cancel current break early
+   * Cancel current break early (does not record analytics)
    */
   async cancelBreak() {
     try {
@@ -698,10 +737,19 @@ class BreakTimerManager {
       
       console.log(`Cancelling ${this.breakType} break early`);
       
-      // End the break and reset work timer
-      await this.endBreak();
+      // Clear break state without recording analytics
+      this.isOnBreak = false;
+      this.breakType = null;
+      this.breakStartTime = null;
+      this.breakDuration = 0;
       
-      console.log("Break cancelled successfully");
+      // Reset work timer for new work session
+      await this.resetWorkTimer();
+      
+      // Clear extension badge
+      await this.clearExtensionBadgeWithErrorHandling();
+      
+      console.log("Break cancelled successfully (no analytics recorded)");
       return true;
     } catch (error) {
       console.error("Error cancelling break:", error);
