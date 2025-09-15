@@ -551,40 +551,67 @@ async function ensureWorkTimerStarted() {
     console.log("=== ENSURING WORK TIMER STARTED ===");
     
     if (!breakTimerManager) {
-      console.log("Break timer manager not available, cannot start work timer");
+      console.log("❌ Break timer manager not available, cannot start work timer");
       return false;
     }
 
+    console.log("✅ Break timer manager is available");
+    
     const timerStatus = breakTimerManager.getTimerStatus();
-    console.log("Current timer status:", timerStatus);
+    console.log("📊 Current timer status:", JSON.stringify(timerStatus, null, 2));
 
-    // Always start timer on extension reload unless already active or on break
-    // This ensures work sessions resume immediately after extension reload
-    if (timerStatus && !timerStatus.isWorkTimerActive && !timerStatus.isOnBreak) {
-      console.log("Starting work timer automatically after initialization");
+    if (!timerStatus) {
+      console.log("❌ Timer status is null/undefined");
+      return false;
+    }
+
+    console.log("🔍 Checking conditions:");
+    console.log("  - isWorkTimerActive:", timerStatus.isWorkTimerActive);
+    console.log("  - isOnBreak:", timerStatus.isOnBreak);
+    console.log("  - workStartTime:", timerStatus.workStartTime);
+    
+    // Check for inconsistent state: timer marked as active but no start time
+    const hasInconsistentState = timerStatus.isWorkTimerActive && !timerStatus.workStartTime;
+    console.log("  - hasInconsistentState:", hasInconsistentState);
+    console.log("  - Should start timer:", !timerStatus.isWorkTimerActive && !timerStatus.isOnBreak || hasInconsistentState);
+
+    // Start timer if: not active and not on break, OR if in inconsistent state
+    if (timerStatus && ((!timerStatus.isWorkTimerActive && !timerStatus.isOnBreak) || hasInconsistentState)) {
+      if (hasInconsistentState) {
+        console.log("🔧 Detected inconsistent timer state - fixing by restarting timer");
+        // Force reset the inconsistent state before starting
+        console.log("🔄 Resetting timer state to fix inconsistency");
+        breakTimerManager.isWorkTimerActive = false;
+        breakTimerManager.workStartTime = null;
+      }
+      console.log("🚀 Starting work timer automatically after initialization");
       const success = await breakTimerManager.startWorkTimer();
       
       if (success) {
         console.log("✅ Work timer started successfully after initialization");
+        // Verify it actually started
+        const newStatus = breakTimerManager.getTimerStatus();
+        console.log("📊 New timer status after start:", JSON.stringify(newStatus, null, 2));
       } else {
         console.log("❌ Failed to start work timer after initialization");
       }
       
       return success;
     } else {
-      if (timerStatus?.isWorkTimerActive) {
-        console.log("✅ Work timer already active");
+      if (timerStatus?.isWorkTimerActive && timerStatus?.workStartTime) {
+        console.log("✅ Work timer already active and properly configured - no need to start");
         return true;
       } else if (timerStatus?.isOnBreak) {
-        console.log("Currently on break, not starting work timer");
+        console.log("⏸️ Currently on break, not starting work timer");
         return true;
       } else {
-        console.log("Work timer not started - unknown condition");
+        console.log("❓ Work timer not started - unknown condition");
+        console.log("   Timer status object:", timerStatus);
         return false;
       }
     }
   } catch (error) {
-    console.error("Error ensuring work timer started:", error);
+    console.error("💥 Error ensuring work timer started:", error);
     return false;
   }
 }
