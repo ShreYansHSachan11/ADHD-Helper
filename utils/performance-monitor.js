@@ -57,8 +57,11 @@ class PerformanceMonitor {
    */
   initializeMonitoring() {
     try {
+      // Check if we're in a service worker context (no window object)
+      const globalScope = typeof window !== 'undefined' ? window : globalThis;
+      
       // Initialize Performance Observer if available
-      if ('PerformanceObserver' in window) {
+      if ('PerformanceObserver' in globalScope) {
         this.performanceObserver = new PerformanceObserver((list) => {
           this.processPerformanceEntries(list.getEntries());
         });
@@ -68,8 +71,10 @@ class PerformanceMonitor {
         });
       }
 
-      // Start memory monitoring
-      this.startMemoryMonitoring();
+      // Start memory monitoring (only if not in service worker)
+      if (typeof window !== 'undefined') {
+        this.startMemoryMonitoring();
+      }
 
       console.log('Performance monitoring initialized');
     } catch (error) {

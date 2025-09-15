@@ -342,11 +342,7 @@ class BreakSettingsUI {
         throw new Error("Settings manager not available");
       }
 
-      // Confirm reset
-      const confirmed = confirm("Reset all break reminder settings to defaults?");
-      if (!confirmed) {
-        return;
-      }
+      // Reset without confirmation
 
       // Reset settings
       const success = await this.settingsManager.resetToDefaults();

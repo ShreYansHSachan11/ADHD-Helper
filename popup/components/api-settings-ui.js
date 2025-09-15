@@ -378,10 +378,7 @@ class ApiSettingsUI {
         throw new Error("Gemini service not available");
       }
 
-      const confirmed = confirm("Are you sure you want to clear the stored API key?");
-      if (!confirmed) {
-        return;
-      }
+      // Clear API key without confirmation dialog
 
       this.showStatusMessage("Clearing API key...", "info");
       this.clearButton.disabled = true;

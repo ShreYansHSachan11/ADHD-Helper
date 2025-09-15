@@ -14,7 +14,7 @@ class BreakTimerManager {
     this.breakType = null;
     this.lastActivityTime = null;
     this.inactivityThreshold = 5 * 60 * 1000; // 5 minutes in milliseconds
-    this.workTimeThreshold = 30 * 60 * 1000; // 30 minutes in milliseconds
+    this.workTimeThreshold = 5 * 60 * 1000; // 5 minutes in milliseconds
     
     // Storage and dependencies
     this.storageManager = null;
@@ -131,7 +131,7 @@ class BreakTimerManager {
             this.isOnBreak = sanitized.isOnBreak || false;
             this.breakType = sanitized.breakType || null;
             this.lastActivityTime = sanitized.lastActivityTime || Date.now();
-            this.workTimeThreshold = sanitized.workTimeThreshold || (30 * 60 * 1000);
+            this.workTimeThreshold = sanitized.workTimeThreshold || (5 * 60 * 1000);
           }
         } else {
           // Fallback: use timer state directly without validation
@@ -139,7 +139,7 @@ class BreakTimerManager {
           this.isOnBreak = timerState.isOnBreak || false;
           this.breakType = timerState.breakType || null;
           this.lastActivityTime = timerState.lastActivityTime || Date.now();
-          this.workTimeThreshold = timerState.workTimeThreshold || (30 * 60 * 1000);
+          this.workTimeThreshold = timerState.workTimeThreshold || (5 * 60 * 1000);
         }
       }
       
@@ -274,12 +274,12 @@ class BreakTimerManager {
         console.log(`Work time threshold loaded: ${this.workTimeThreshold / 1000 / 60} minutes`);
       } else {
         // Fallback to default
-        this.workTimeThreshold = 30 * 60 * 1000;
+        this.workTimeThreshold = 5 * 60 * 1000;
         console.warn("Settings manager not available, using default threshold");
       }
     } catch (error) {
       console.error("Error loading settings from manager:", error);
-      this.workTimeThreshold = 30 * 60 * 1000;
+      this.workTimeThreshold = 5 * 60 * 1000;
     }
   }
 
@@ -289,12 +289,12 @@ class BreakTimerManager {
   async startWorkTimer() {
     try {
       if (this.isOnBreak) {
-        console.log("Cannot start work timer while on break");
+        console.log("BreakTimerManager: Cannot start work timer while on break");
         return false;
       }
       
       if (this.isWorkTimerActive) {
-        console.log("Work timer already active");
+        console.log("BreakTimerManager: Work timer already active");
         return true;
       }
       
@@ -309,7 +309,8 @@ class BreakTimerManager {
         // Continue anyway for better user experience
       }
       
-      console.log("Work timer started");
+      console.log("BreakTimerManager: Work timer started at", new Date(this.workStartTime).toLocaleTimeString());
+      console.log("BreakTimerManager: Work time threshold is", this.workTimeThreshold / (1000 * 60), "minutes");
       return true;
     } catch (error) {
       console.error("Error starting work timer:", error);
@@ -351,6 +352,7 @@ class BreakTimerManager {
   async resumeWorkTimer() {
     try {
       if (this.isWorkTimerActive || this.isOnBreak) {
+        console.log("BreakTimerManager: Cannot resume - timer already active or on break");
         return false;
       }
       
@@ -360,7 +362,8 @@ class BreakTimerManager {
       
       await this.persistTimerState();
       
-      console.log("Work timer resumed");
+      console.log("BreakTimerManager: Work timer resumed at", new Date(this.workStartTime).toLocaleTimeString());
+      console.log("BreakTimerManager: Work time threshold is", this.workTimeThreshold / (1000 * 60), "minutes");
       return true;
     } catch (error) {
       console.error("Error resuming work timer:", error);
@@ -571,7 +574,21 @@ class BreakTimerManager {
         }
       }
       
-      return Math.max(0, currentWorkTime);
+      const result = Math.max(0, currentWorkTime);
+      
+      // Debug logging (only log occasionally to avoid spam)
+      if (Math.random() < 0.1) { // Log ~10% of the time
+        console.log("BreakTimerManager: Current work time calculation:", {
+          totalWorkTime: this.totalWorkTime,
+          isWorkTimerActive: this.isWorkTimerActive,
+          workStartTime: this.workStartTime ? new Date(this.workStartTime).toLocaleTimeString() : null,
+          sessionTime: this.isWorkTimerActive && this.workStartTime ? Date.now() - this.workStartTime : 0,
+          currentWorkTimeMs: result,
+          currentWorkTimeMinutes: Math.floor(result / (1000 * 60))
+        });
+      }
+      
+      return result;
     } catch (error) {
       console.error("Error getting current work time:", error);
       return 0;
@@ -773,7 +790,7 @@ class BreakTimerManager {
       this.breakDuration = 0;
       this.breakType = null;
       this.lastActivityTime = Date.now();
-      this.workTimeThreshold = 30 * 60 * 1000;
+      this.workTimeThreshold = 5 * 60 * 1000;
       this.isBrowserFocused = true;
       
       // Create minimal error handler if not available

@@ -13,7 +13,7 @@ class BreakSettingsManager {
     
     // Default settings configuration
     this.DEFAULT_SETTINGS = {
-      workTimeThresholdMinutes: 30,
+      workTimeThresholdMinutes: 5,
       notificationsEnabled: true,
       breakTypes: {
         short: { duration: 5, label: "Short Break (5 min)" },

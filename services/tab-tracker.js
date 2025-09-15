@@ -759,6 +759,8 @@ class TabTracker {
         console.log("Break reminder request sent for tab", tabId);
       } catch (error) {
         console.error("Error sending break reminder request:", error);
+        // This error is expected if the background script is not ready
+        // The notification will be handled when the script is available
       }
     } catch (error) {
       console.error("Error showing break reminder:", error);
@@ -975,22 +977,35 @@ class TabTracker {
    */
   async startContinuousWorkTimeTracking() {
     try {
+      console.log("TabTracker: Starting continuous work time tracking...");
+      
       if (!this.breakTimerManager) {
-        console.warn("Break timer manager not available for continuous tracking");
+        console.warn("TabTracker: Break timer manager not available for continuous tracking");
         return;
       }
 
       // Start work timer if not already active and not on break
       const timerStatus = this.breakTimerManager.getTimerStatus();
+      console.log("TabTracker: Current timer status:", timerStatus);
+      
       if (timerStatus && !timerStatus.isWorkTimerActive && !timerStatus.isOnBreak) {
+        console.log("TabTracker: Starting work timer for continuous tracking");
         await this.breakTimerManager.startWorkTimer();
-        console.log("Continuous work time tracking started");
+        console.log("TabTracker: Continuous work time tracking started");
+      } else {
+        if (timerStatus?.isWorkTimerActive) {
+          console.log("TabTracker: Work timer already active");
+        } else if (timerStatus?.isOnBreak) {
+          console.log("TabTracker: Currently on break, not starting work timer");
+        } else {
+          console.log("TabTracker: No timer status available");
+        }
       }
 
       // Set up periodic activity detection and timer state recovery
       this.setupPeriodicActivityDetection();
       
-      console.log("Continuous work time tracking initialized");
+      console.log("TabTracker: Continuous work time tracking initialized");
     } catch (error) {
       console.error("Error starting continuous work time tracking:", error);
     }
@@ -1023,6 +1038,14 @@ class TabTracker {
   setBreakTimerManager(breakTimerManager) {
     this.breakTimerManager = breakTimerManager;
     console.log("Break timer manager integrated with TabTracker");
+  }
+
+  /**
+   * Set break notification system reference for direct notifications
+   */
+  setBreakNotificationSystem(breakNotificationSystem) {
+    this.breakNotificationSystem = breakNotificationSystem;
+    console.log("Break notification system integrated with TabTracker");
   }
 
   // Distraction reminder service integration is no longer needed
@@ -1081,16 +1104,18 @@ class TabTracker {
       if (status && status.isThresholdExceeded && !status.isOnBreak) {
         const workTimeMinutes = Math.floor(status.currentWorkTime / (1000 * 60));
         
-        // Send message to background script to show break timer notification
+        // Direct call to notification system instead of sending message to self
         try {
-          await chrome.runtime.sendMessage({
-            type: "SHOW_BREAK_TIMER_NOTIFICATION",
-            workMinutes: workTimeMinutes,
-          });
-          console.log("Break timer notification request sent, work time:", workTimeMinutes, "minutes");
-          return true;
+          if (this.breakNotificationSystem) {
+            const success = await this.breakNotificationSystem.showWorkTimeThresholdNotification(workTimeMinutes);
+            console.log("Break timer notification shown directly from threshold check, work time:", workTimeMinutes, "minutes, success:", success);
+            return success;
+          } else {
+            console.warn("Break notification system not available in TabTracker for threshold check");
+            return false;
+          }
         } catch (error) {
-          console.error("Error sending break timer notification request:", error);
+          console.error("Error showing break timer notification directly from threshold check:", error);
         }
       }
       
@@ -1243,16 +1268,16 @@ class TabTracker {
     try {
       const workMinutes = Math.floor(workTime / (1000 * 60));
       
-      // Send message to background script to show break timer notification
+      // Direct call to notification system instead of sending message to self
       try {
-        await chrome.runtime.sendMessage({
-          type: "SHOW_BREAK_TIMER_NOTIFICATION",
-          workTime: workTime,
-          workMinutes: workMinutes,
-        });
-        console.log("Break timer notification request sent, work time:", workMinutes, "minutes");
+        if (this.breakNotificationSystem) {
+          const success = await this.breakNotificationSystem.showWorkTimeThresholdNotification(workMinutes);
+          console.log("Break timer notification shown directly, work time:", workMinutes, "minutes, success:", success);
+        } else {
+          console.warn("Break notification system not available in TabTracker");
+        }
       } catch (error) {
-        console.error("Error sending break timer notification request:", error);
+        console.error("Error showing break timer notification directly:", error);
       }
     } catch (error) {
       console.error("Error showing break timer notification:", error);

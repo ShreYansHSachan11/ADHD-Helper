@@ -235,7 +235,7 @@ function onMemoryCardClick(cardElem, innerElem) {
     if (memoryState.matchedPairs === pairs) {
       stopMemoryTimer();
       setTimeout(() => {
-        alert(`Nice! You completed the memory game in ${memoryState.elapsed}s`);
+        console.log(`Nice! You completed the memory game in ${memoryState.elapsed}s`);
       }, 250);
     }
   } else {

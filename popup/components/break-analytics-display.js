@@ -540,10 +540,6 @@ class BreakAnalyticsDisplay {
    */
   async handleCleanAnalytics() {
     try {
-      if (!confirm("Are you sure you want to clean all break analytics data? This action cannot be undone.")) {
-        return;
-      }
-
       console.log("Cleaning analytics data from component...");
       
       // Send message to background script to clean data

@@ -476,9 +476,6 @@ class BreakControlsUI {
    */
   async handleResetWorkTimer() {
     try {
-      const confirmed = confirm("Reset work timer? This will clear your current work session.");
-      if (!confirmed) return;
-
       const response = await chrome.runtime.sendMessage({
         type: 'RESET_WORK_TIMER'
       });
@@ -513,7 +510,7 @@ class BreakControlsUI {
   showError(message) {
     console.error("BreakControlsUI Error:", message);
     // You can implement a toast notification or error display here
-    alert(message); // Simple fallback
+    console.error("BreakControlsUI:", message); // Replaced alert with console logging
   }
 
   /**

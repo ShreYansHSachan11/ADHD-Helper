@@ -2120,8 +2120,7 @@ class TaskManager {
         return;
       }
       
-      const confirmed = confirm('Are you sure you want to regenerate this task breakdown? This will replace the current breakdown.');
-      if (!confirmed) return;
+      // Regenerate task breakdown without confirmation dialog
       
       // Clear current breakdown
       this.elements.taskBreakdown.style.display = 'none';
@@ -2140,8 +2139,7 @@ class TaskManager {
    */
   handleClearTask() {
     try {
-      const confirmed = confirm('Are you sure you want to clear this task breakdown?');
-      if (!confirmed) return;
+      // Clear task breakdown without confirmation dialog
       
       // Clear breakdown display
       this.elements.taskBreakdown.style.display = 'none';

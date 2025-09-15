@@ -367,7 +367,7 @@ class DistractionReminderService {
         message: message,
         priority: 2,
         requireInteraction: true,
-        buttons: [{ title: "Return to Focus" }, { title: "Dismiss" }],
+        buttons: [{ title: "Return to Focus" }, { title: "Remove Focus Tab" }],
       };
 
       await chrome.notifications.create(notificationId, notificationOptions);
@@ -528,11 +528,8 @@ class DistractionReminderService {
         case 0: // "Return to Focus"
           await this.handleReturnToFocus();
           break;
-        case 1: // "Take Break"
-          await this.handleTakeBreak();
-          break;
-        case 2: // "Dismiss"
-          await this.handleDismiss();
+        case 1: // "Remove Focus Tab"
+          await this.handleRemoveFocusTab();
           break;
       }
 
@@ -603,6 +600,38 @@ class DistractionReminderService {
       console.log("User dismissed reminder");
     } catch (error) {
       console.error("Error handling dismiss:", error);
+    }
+  }
+
+  /**
+   * Handle "Remove Focus Tab" action
+   */
+  async handleRemoveFocusTab() {
+    try {
+      console.log("User requested to remove focus tab - stopping distraction reminders");
+      
+      // Reset focus tab to stop future reminders
+      this.resetFocusTab();
+      
+      // Clear any pending timers
+      this.clearDistractionTimer();
+      
+      // Reset reminder count
+      this.reminderCount = 0;
+      
+      // Notify tab tracker if available
+      if (this.tabTracker && typeof this.tabTracker.resetFocusTab === 'function') {
+        try {
+          await this.tabTracker.resetFocusTab();
+          console.log("Focus tab reset in tab tracker");
+        } catch (error) {
+          console.error("Error resetting focus tab in tab tracker:", error);
+        }
+      }
+      
+      console.log("Focus tab removed successfully - no more distraction reminders will be shown");
+    } catch (error) {
+      console.error("Error handling remove focus tab:", error);
     }
   }
 

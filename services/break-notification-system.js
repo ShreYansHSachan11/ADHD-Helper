@@ -4,11 +4,24 @@
  */
 
 class BreakNotificationSystem {
+  // Constants for better maintainability
+  static NOTIFICATION_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
+  static DEFAULT_ICON_PATH = "/assets/icons/icon48.png";
+  static WORK_TIME_CONVERSION_FACTOR = 1000 * 60; // Convert ms to minutes
+
+  // Logging utility for consistent log levels
+  static log = {
+    info: (message, ...args) => console.log(`[BreakNotificationSystem] ${message}`, ...args),
+    warn: (message, ...args) => console.warn(`[BreakNotificationSystem] ${message}`, ...args),
+    error: (message, ...args) => console.error(`[BreakNotificationSystem] ${message}`, ...args),
+    debug: (message, ...args) => console.debug(`[BreakNotificationSystem] ${message}`, ...args)
+  };
+
   constructor() {
     this.activeNotifications = new Map();
     this.lastBreakNotificationTime = 0;
     this.notificationPermissionGranted = false;
-    this.cooldownPeriod = 5 * 60 * 1000; // 5 minutes in milliseconds
+    this.cooldownPeriod = BreakNotificationSystem.NOTIFICATION_COOLDOWN_MS;
     
     // Break type configurations
     this.breakTypes = {
@@ -33,7 +46,10 @@ class BreakNotificationSystem {
       // Initialize dependencies (avoid duplicate imports)
       if (typeof StorageManager !== 'undefined') {
         this.storageManager = new StorageManager();
+      } else {
+        BreakNotificationSystem.log.warn("StorageManager not available, using fallback mode");
       }
+      
       if (typeof BreakErrorHandler !== 'undefined') {
         this.breakErrorHandler = new BreakErrorHandler();
       }
@@ -44,9 +60,9 @@ class BreakNotificationSystem {
       }
       
       await this.checkNotificationPermissionWithErrorHandling();
-      console.log("BreakNotificationSystem initialized successfully");
+      BreakNotificationSystem.log.info("Initialized successfully");
     } catch (error) {
-      console.error("BreakNotificationSystem initialization error:", error);
+      BreakNotificationSystem.log.error("Initialization error:", error);
       // Continue with limited functionality
       await this.initializeFallbackMode();
     }
@@ -183,7 +199,7 @@ class BreakNotificationSystem {
       // Create the notification with default settings
       const notificationOptions = {
         type: "basic",
-        iconUrl: "/assets/icons/48.ico",
+        iconUrl: BreakNotificationSystem.DEFAULT_ICON_PATH,
         requireInteraction: true, // Keep notification visible until user interacts
         ...options,
       };
@@ -454,15 +470,43 @@ class BreakNotificationSystem {
    */
   async checkAndNotifyWorkTimeThreshold() {
     try {
+      // Early validation with single check
       if (!this.breakTimerManager) {
+        console.log("BreakNotificationSystem: No break timer manager available");
         return false;
       }
 
       const status = this.breakTimerManager.getTimerStatus();
       
-      if (status && status.isThresholdExceeded && !status.isOnBreak) {
-        const workTimeMinutes = Math.floor(status.currentWorkTime / (1000 * 60));
+      if (!status) {
+        console.log("BreakNotificationSystem: No timer status available");
+        return false;
+      }
+
+      // Early exit if already on break to avoid unnecessary processing
+      if (status.isOnBreak) {
+        console.log("BreakNotificationSystem: Currently on break, not showing notification");
+        return false;
+      }
+
+      // Calculate work time minutes once for efficiency
+      const workTimeMinutes = Math.floor(status.currentWorkTime / BreakNotificationSystem.WORK_TIME_CONVERSION_FACTOR);
+      
+      console.log("BreakNotificationSystem: Timer status check:", {
+        isWorkTimerActive: status.isWorkTimerActive,
+        isOnBreak: status.isOnBreak,
+        currentWorkTime: status.currentWorkTime,
+        workTimeThreshold: status.workTimeThreshold,
+        isThresholdExceeded: status.isThresholdExceeded,
+        workTimeMinutes: workTimeMinutes
+      });
+      
+      if (status.isThresholdExceeded) {
+        console.log(`BreakNotificationSystem: Work time threshold exceeded! Showing notification for ${workTimeMinutes} minutes`);
         return await this.showWorkTimeThresholdNotification(workTimeMinutes);
+      } else {
+        const thresholdMinutes = Math.floor(status.workTimeThreshold / BreakNotificationSystem.WORK_TIME_CONVERSION_FACTOR);
+        console.log(`BreakNotificationSystem: Work time ${workTimeMinutes}min has not exceeded threshold ${thresholdMinutes}min yet`);
       }
       
       return false;

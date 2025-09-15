@@ -41,10 +41,14 @@ class BreakErrorHandler {
       // Import dependencies if in service worker context
       if (typeof importScripts !== "undefined") {
         try {
-          importScripts(
-            "/services/storage-manager.js",
-            "/utils/error-handler.js"
-          );
+          // Only import if not already available globally
+          if (typeof StorageManager === 'undefined') {
+            importScripts("/services/storage-manager.js");
+          }
+          if (typeof ErrorHandler === 'undefined') {
+            importScripts("/utils/error-handler.js");
+          }
+          
           this.storageManager = new StorageManager();
           this.errorHandler = new ErrorHandler();
         } catch (importError) {

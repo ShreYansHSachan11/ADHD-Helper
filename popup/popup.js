@@ -419,6 +419,11 @@ class PopupManager {
     this.calendarConfig = document.getElementById("calendarConfig");
     this.toggleConfigBtn = document.getElementById("toggleConfigBtn");
     this.configContent = document.getElementById("configContent");
+    
+    // Check if calendar elements exist
+    if (!this.calendarConfig) {
+      console.warn("Calendar configuration elements not found in DOM");
+    }
     this.apiKeyInput = document.getElementById("apiKeyInput");
     this.accessTokenInput = document.getElementById("accessTokenInput");
     this.saveConfigBtn = document.getElementById("saveConfigBtn");
@@ -687,8 +692,8 @@ class PopupManager {
         });
       } else {
         console.error("Error:", message);
-        // Fallback: show alert if no error handler
-        alert(message);
+        // Fallback: log error instead of showing alert
+        console.error("Error fallback:", message);
       }
     } catch (error) {
       console.error("Error showing error message:", error);
@@ -1372,10 +1377,6 @@ class PopupManager {
    */
   async cleanAnalyticsData() {
     try {
-      if (!confirm("Are you sure you want to clean all break analytics data? This action cannot be undone.")) {
-        return;
-      }
-
       console.log("Cleaning analytics data...");
       
       const response = await chrome.runtime.sendMessage({
@@ -1393,7 +1394,7 @@ class PopupManager {
             { duration: 3000 }
           );
         } else {
-          alert("All break analytics data has been cleaned successfully.");
+          console.log("All break analytics data has been cleaned successfully.");
         }
         
         // Refresh analytics display if it exists
@@ -1407,7 +1408,7 @@ class PopupManager {
         if (this.errorHandler) {
           this.errorHandler.showUserFeedback(errorMsg, "error", { duration: 5000 });
         } else {
-          alert(errorMsg);
+          console.error("Error:", errorMsg);
         }
       }
     } catch (error) {
@@ -1417,7 +1418,7 @@ class PopupManager {
       if (this.errorHandler) {
         this.errorHandler.showUserFeedback(errorMsg, "error", { duration: 5000 });
       } else {
-        alert(errorMsg);
+        console.error("Error:", errorMsg);
       }
     }
   }
@@ -2453,6 +2454,12 @@ class PopupManager {
   // Calendar Methods
   async loadCalendarConfiguration() {
     try {
+      // Skip if calendar elements don't exist
+      if (!this.calendarConfig) {
+        console.log("Calendar configuration not available - elements not found");
+        return;
+      }
+      
       // Initialize calendar service if not already done
       if (!this.calendarService) {
         this.calendarService = new CalendarService();
@@ -2465,7 +2472,7 @@ class PopupManager {
       this.updateCalendarConnectionStatus();
 
       // Show/hide configuration panel based on connection status
-      if (!this.calendarService.isAuthenticated) {
+      if (!this.calendarService.isAuthenticated && this.calendarConfig) {
         this.calendarConfig.style.display = "block";
       }
 
@@ -2494,6 +2501,11 @@ class PopupManager {
   }
 
   toggleCalendarConfig() {
+    if (!this.configContent || !this.toggleConfigBtn) {
+      console.warn("Calendar config elements not available");
+      return;
+    }
+    
     const isVisible = this.configContent.style.display === "block";
 
     if (isVisible) {
@@ -2506,6 +2518,11 @@ class PopupManager {
   }
 
   async handleSaveCalendarConfig() {
+    if (!this.apiKeyInput || !this.accessTokenInput) {
+      console.warn("Calendar input elements not available");
+      return;
+    }
+    
     const apiKey = this.apiKeyInput.value.trim();
     const accessToken = this.accessTokenInput.value.trim();
 
@@ -2590,7 +2607,8 @@ class PopupManager {
   }
 
   async handleClearCalendarConfig() {
-    if (confirm("Are you sure you want to clear the calendar configuration?")) {
+    // Clear calendar configuration without confirmation dialog
+    {
       try {
         if (this.calendarService) {
           await this.calendarService.clearCredentials();
@@ -2605,7 +2623,9 @@ class PopupManager {
         this.showCalendarStatus("Configuration cleared", "success");
 
         // Show config panel
-        this.calendarConfig.style.display = "block";
+        if (this.calendarConfig) {
+          this.calendarConfig.style.display = "block";
+        }
       } catch (error) {
         console.error("Failed to clear calendar configuration:", error);
         this.showCalendarStatus("Failed to clear configuration", "error");
@@ -3175,7 +3195,7 @@ class PopupManager {
   showError(message) {
     // Simple error display - could be enhanced with a proper notification system
     console.error(message);
-    alert(message); // Temporary - should be replaced with better UI
+    console.error("Error:", message); // Replaced alert with console logging
   }
 
   handleKeydown(event) {
@@ -3416,7 +3436,7 @@ function createGoogleCalendarEvent(hoursBefore) {
   const taskName = taskInput.value || "Untitled Task";
   const deadlineStr = deadlineInput.value;
   if (!deadlineStr) {
-    alert("Please enter a deadline.");
+    console.warn("Please enter a deadline for Google Calendar event.");
     return;
   }
   const deadline = new Date(deadlineStr);
@@ -3438,7 +3458,7 @@ downloadICSBtn.addEventListener("click", () => {
   const taskName = taskInput.value || "Untitled Task";
   const deadlineStr = deadlineInput.value;
   if (!deadlineStr) {
-    alert("Please enter a deadline.");
+    console.warn("Please enter a deadline for ICS download.");
     return;
   }
   const deadline = new Date(deadlineStr);

@@ -1,0 +1,22 @@
+{
+  "enabled": true,
+  "name": "Code Quality Analyzer",
+  "description": "Monitors source code files for changes and provides automated code quality analysis including code smells detection, design pattern suggestions, and best practices recommendations to improve readability, maintainability, and performance.",
+  "version": "1",
+  "when": {
+    "type": "userTriggered",
+    "patterns": [
+      "*.js",
+      "*.css",
+      "*.html",
+      "popup/*.js",
+      "services/*.js",
+      "utils/*.js",
+      "external-pages/*.js"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Analyze the modified code in the changed files for potential improvements. Focus on:\n\n1. **Code Smells**: Identify any code smells like long functions, duplicate code, complex conditionals, or poor naming conventions\n2. **Design Patterns**: Suggest appropriate design patterns that could improve the code structure\n3. **Best Practices**: Recommend JavaScript, CSS, and HTML best practices specific to the file type\n4. **Performance**: Identify potential performance optimizations\n5. **Readability**: Suggest improvements for code clarity and maintainability\n6. **Security**: Flag any potential security concerns\n\nFor each suggestion, provide:\n- Clear explanation of the issue\n- Specific recommendation for improvement\n- Code example if applicable\n- Rationale for why this change would be beneficial\n\nMaintain focus on preserving existing functionality while enhancing code quality."
+  }
+}

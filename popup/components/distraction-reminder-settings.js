@@ -343,8 +343,7 @@ class DistractionReminderSettings {
         requireInteraction: false,
         buttons: [
           { title: "Return to Focus" },
-          { title: "Take Break" },
-          { title: "Dismiss" }
+          { title: "Remove Focus Tab" }
         ]
       };
 

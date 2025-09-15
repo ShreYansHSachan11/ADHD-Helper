@@ -141,6 +141,11 @@ chrome.runtime.onInstalled.addListener(async (details) => {
         if (breakTimerManager) {
           tabTracker.setBreakTimerManager(breakTimerManager);
         }
+        
+        // Set break notification system reference for direct notifications
+        if (breakNotificationSystem) {
+          tabTracker.setBreakNotificationSystem(breakNotificationSystem);
+        }
 
         console.log("TabTracker initialized successfully");
       } catch (error) {
@@ -166,9 +171,28 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 
     // Distraction reminder is now initialized directly in background
 
+    // Ensure work timer starts automatically after initialization (with delay)
+    setTimeout(async () => {
+      await ensureWorkTimerStarted();
+    }, 1000); // 1 second delay to ensure all components are ready
+    
+    // Additional backup timer start after a longer delay
+    setTimeout(async () => {
+      if (breakTimerManager) {
+        const status = breakTimerManager.getTimerStatus();
+        if (status && !status.isWorkTimerActive && !status.isOnBreak) {
+          console.log("Backup work timer start after extension reload");
+          await breakTimerManager.startWorkTimer();
+        }
+      }
+    }, 3000); // 3 second backup delay
+
     console.log(
       "Background service worker initialized successfully with integrated work time tracking"
     );
+    
+    // Set up periodic work timer check every 20 seconds
+    setInterval(periodicWorkTimerCheck, 20000);
   } catch (error) {
     console.error("Error initializing background service worker:", error);
   }
@@ -236,6 +260,11 @@ chrome.runtime.onStartup.addListener(async () => {
         if (breakTimerManager) {
           tabTracker.setBreakTimerManager(breakTimerManager);
         }
+        
+        // Set break notification system reference for direct notifications
+        if (breakNotificationSystem) {
+          tabTracker.setBreakNotificationSystem(breakNotificationSystem);
+        }
 
         console.log("TabTracker initialized on startup");
       } catch (error) {
@@ -253,6 +282,11 @@ chrome.runtime.onStartup.addListener(async () => {
 
     // Reinitialize notification system
     await initializeNotificationSystem();
+
+    // Ensure work timer starts automatically after startup recovery (with delay)
+    setTimeout(async () => {
+      await ensureWorkTimerStarted();
+    }, 1000); // 1 second delay to ensure all components are ready
 
     console.log(
       "Browser startup recovery completed - work time tracking restored"
@@ -370,7 +404,7 @@ async function createNotification(notificationId, options) {
     try {
       await chrome.notifications.create(notificationId, {
         type: "basic",
-        iconUrl: "/assets/icons/48.ico",
+        iconUrl: "/assets/icons/icon48.png",
         ...options,
       });
     } catch (error) {
@@ -493,6 +527,69 @@ async function showBreakTimerNotification(workTime, workMinutes) {
 }
 
 /**
+ * Periodic check to ensure work timer stays active
+ */
+async function periodicWorkTimerCheck() {
+  try {
+    if (!breakTimerManager) return;
+    
+    const status = breakTimerManager.getTimerStatus();
+    if (status && !status.isWorkTimerActive && !status.isOnBreak) {
+      console.log("Work timer inactive, attempting to restart...");
+      await ensureWorkTimerStarted();
+    }
+  } catch (error) {
+    console.error("Error in periodic work timer check:", error);
+  }
+}
+
+/**
+ * Ensure work timer is started after initialization
+ */
+async function ensureWorkTimerStarted() {
+  try {
+    console.log("=== ENSURING WORK TIMER STARTED ===");
+    
+    if (!breakTimerManager) {
+      console.log("Break timer manager not available, cannot start work timer");
+      return false;
+    }
+
+    const timerStatus = breakTimerManager.getTimerStatus();
+    console.log("Current timer status:", timerStatus);
+
+    // Always start timer on extension reload unless already active or on break
+    // This ensures work sessions resume immediately after extension reload
+    if (timerStatus && !timerStatus.isWorkTimerActive && !timerStatus.isOnBreak) {
+      console.log("Starting work timer automatically after initialization");
+      const success = await breakTimerManager.startWorkTimer();
+      
+      if (success) {
+        console.log("✅ Work timer started successfully after initialization");
+      } else {
+        console.log("❌ Failed to start work timer after initialization");
+      }
+      
+      return success;
+    } else {
+      if (timerStatus?.isWorkTimerActive) {
+        console.log("✅ Work timer already active");
+        return true;
+      } else if (timerStatus?.isOnBreak) {
+        console.log("Currently on break, not starting work timer");
+        return true;
+      } else {
+        console.log("Work timer not started - unknown condition");
+        return false;
+      }
+    }
+  } catch (error) {
+    console.error("Error ensuring work timer started:", error);
+    return false;
+  }
+}
+
+/**
  * Handle messages from popup and content scripts
  */
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -567,7 +664,7 @@ async function completePomodoroSession(session) {
     const sessionTypeName = formatPomodoroSessionType(session.type);
     await chrome.notifications.create({
       type: "basic",
-      iconUrl: "assets/icons/48.ico",
+      iconUrl: "/assets/icons/icon48.png",
       title: `${sessionTypeName} Completed!`,
       message: "Great job! Time for the next session.",
       priority: 2,
@@ -673,11 +770,20 @@ async function handleBreakAlarm(alarm) {
  */
 async function handleBreakTimerCheck() {
   try {
-    if (!breakTimerManager || !breakNotificationSystem) return;
+    console.log("=== BREAK TIMER CHECK ===");
+    
+    if (!breakTimerManager || !breakNotificationSystem) {
+      console.log("Break timer manager or notification system not available");
+      console.log("breakTimerManager:", !!breakTimerManager);
+      console.log("breakNotificationSystem:", !!breakNotificationSystem);
+      return;
+    }
 
     const timerStatus = breakTimerManager.getTimerStatus();
+    console.log("Break timer status:", timerStatus);
 
     if (timerStatus && timerStatus.isOnBreak) {
+      console.log("Currently on break, checking remaining time");
       const remainingTime = breakTimerManager.getRemainingBreakTime();
 
       // Update badge with remaining time
@@ -685,6 +791,7 @@ async function handleBreakTimerCheck() {
 
       // If break time is up, end the break
       if (remainingTime <= 0) {
+        console.log("Break time is up, ending break");
         await breakTimerManager.endBreak();
 
         // Show break completion notification (simple approach)
@@ -700,11 +807,16 @@ async function handleBreakTimerCheck() {
         });
 
         console.log("Break completed via periodic check");
+      } else {
+        console.log(`Break in progress, ${Math.ceil(remainingTime / (1000 * 60))} minutes remaining`);
       }
     } else {
+      console.log("Not on break, checking work time threshold");
       // Check if work time threshold is exceeded and show notification
       await breakNotificationSystem.checkAndNotifyWorkTimeThreshold();
     }
+    
+    console.log("=== END BREAK TIMER CHECK ===");
   } catch (error) {
     console.error("Error in break timer check:", error);
   }
@@ -774,6 +886,16 @@ async function handleDistractionReminderCheck() {
 function initializeDistractionReminder() {
   console.log("Initializing distraction reminder in background script");
 
+  // Initialize distraction reminder service if available
+  if (!distractionReminderService && typeof DistractionReminderService !== "undefined") {
+    try {
+      distractionReminderService = new DistractionReminderService();
+      console.log("DistractionReminderService initialized successfully");
+    } catch (error) {
+      console.error("Error initializing DistractionReminderService:", error);
+    }
+  }
+
   // Load focus tab info from storage
   loadFocusTabInfo();
 
@@ -787,6 +909,19 @@ function initializeDistractionReminder() {
     if (windowId === chrome.windows.WINDOW_ID_NONE) {
       // Browser lost focus - clear any pending timers
       clearDistractionTimer();
+    } else {
+      // Browser gained focus - ensure work timer is running
+      try {
+        if (breakTimerManager) {
+          const timerStatus = breakTimerManager.getTimerStatus();
+          if (timerStatus && !timerStatus.isWorkTimerActive && !timerStatus.isOnBreak) {
+            console.log("Starting work timer due to browser focus");
+            await breakTimerManager.startWorkTimer();
+          }
+        }
+      } catch (error) {
+        console.error("Error ensuring work timer on browser focus:", error);
+      }
     }
   });
 
@@ -818,28 +953,36 @@ async function handleTabActivated(tabId) {
   try {
     console.log("=== TAB ACTIVATION ===");
     console.log("Tab activated:", tabId);
+
+    // Ensure work timer is started when user activates any tab
+    try {
+      if (breakTimerManager) {
+        const timerStatus = breakTimerManager.getTimerStatus();
+        if (timerStatus && !timerStatus.isWorkTimerActive && !timerStatus.isOnBreak) {
+          console.log("Starting work timer due to tab activation");
+          await breakTimerManager.startWorkTimer();
+        }
+      }
+    } catch (error) {
+      console.error("Error ensuring work timer on tab activation:", error);
+    }
+
+    // Handle distraction reminders
     console.log("Distraction reminder enabled:", distractionReminderEnabled);
     console.log("Focus tab ID:", focusTabId);
 
-    if (!distractionReminderEnabled) {
-      console.log("Distraction reminder disabled, ignoring tab activation");
-      return;
+    if (distractionReminderEnabled && focusTabId) {
+      if (tabId === focusTabId) {
+        // User returned to focus tab - clear any pending reminder
+        console.log("User returned to focus tab, clearing timer");
+        clearDistractionTimer();
+      } else {
+        // User switched away from focus tab - start distraction timer
+        console.log("User switched away from focus tab, starting timer");
+        startDistractionTimer();
+      }
     }
-
-    if (!focusTabId) {
-      console.log("No focus tab set, ignoring tab activation");
-      return;
-    }
-
-    if (tabId === focusTabId) {
-      // User returned to focus tab - clear any pending reminder
-      console.log("User returned to focus tab, clearing timer");
-      clearDistractionTimer();
-    } else {
-      // User switched away from focus tab - start distraction timer
-      console.log("User switched away from focus tab, starting timer");
-      startDistractionTimer();
-    }
+    
     console.log("=== END TAB ACTIVATION ===");
   } catch (error) {
     console.error("Error handling tab activation:", error);
@@ -949,7 +1092,7 @@ async function showDistractionReminder() {
       message: message,
       priority: 2,
       requireInteraction: true,
-      buttons: [{ title: "Return to Focus" }, { title: "Dismiss" }],
+      buttons: [{ title: "Return to Focus" }, { title: "Remove Focus Tab" }],
     };
 
     console.log("Creating notification with ID:", notificationId);
@@ -1026,8 +1169,41 @@ async function handleDistractionReminderButtonClick(
           console.error("Error switching to focus tab:", error);
         }
       }
+    } else if (buttonIndex === 1) {
+      // "Remove Focus Tab" button - clear focus tab to stop notifications
+      console.log("Removing focus tab to stop distraction reminders");
+      
+      // Clear focus tab variables
+      focusTabId = null;
+      focusTabUrl = null;
+      reminderCount = 0;
+      
+      // Clear any pending distraction timer
+      clearDistractionTimer();
+      
+      // Update storage to remove focus tab
+      try {
+        if (storageManager) {
+          const sessionData = await storageManager.get("currentSession") || {};
+          delete sessionData.focusTabId;
+          delete sessionData.focusUrl;
+          await storageManager.set("currentSession", sessionData);
+        }
+      } catch (error) {
+        console.error("Error updating storage when removing focus tab:", error);
+      }
+      
+      // Notify tab tracker if available
+      if (tabTracker && typeof tabTracker.resetFocusTab === 'function') {
+        try {
+          await tabTracker.resetFocusTab();
+        } catch (error) {
+          console.error("Error resetting focus tab in tab tracker:", error);
+        }
+      }
+      
+      console.log("Focus tab removed successfully - no more distraction reminders will be shown");
     }
-    // Button index 1 is "Dismiss" - just clear the notification (already done above)
   } catch (error) {
     console.error("Error handling distraction reminder button click:", error);
   }
@@ -1046,6 +1222,49 @@ function formatPomodoroSessionType(type) {
       return "Long Break";
     default:
       return "Session";
+  }
+}
+
+/**
+ * Helper function to handle messages with consistent error handling and validation
+ * @param {string} messageType - The type of message being handled
+ * @param {Function} handler - Async function that processes the message and returns result
+ * @param {Function} sendResponse - Chrome extension sendResponse callback
+ * @param {Object} validationRules - Optional validation rules to apply
+ * @param {boolean} validationRules.requiresAuth - Whether authentication is required
+ * @returns {Promise<void>} - Resolves when message handling is complete
+ */
+async function handleMessageWithErrorHandling(messageType, handler, sendResponse, validationRules = {}) {
+  try {
+    // Validate message type
+    if (!messageType || typeof messageType !== 'string') {
+      throw new Error('Invalid message type');
+    }
+
+    // Apply validation rules if provided (authentication check removed for now)
+    if (validationRules.requiresAuth) {
+      console.warn('Authentication validation requested but not implemented');
+    }
+
+    const result = await handler();
+    
+    // Ensure result is an object
+    const safeResult = result && typeof result === 'object' ? result : {};
+    
+    sendResponse({ 
+      success: true, 
+      ...safeResult 
+    });
+  } catch (error) {
+    console.error(`Error handling ${messageType}:`, error);
+    
+    // Sanitize error message to prevent information leakage
+    const sanitizedError = error.message || 'An unexpected error occurred';
+    
+    sendResponse({ 
+      success: false, 
+      error: sanitizedError 
+    });
   }
 }
 
@@ -1308,6 +1527,14 @@ async function handleMessage(message, sender, sendResponse) {
           }
 
           const status = breakTimerManager.getTimerStatus();
+          
+          // Quietly attempt to start work timer if not active (non-blocking)
+          if (status && !status.isWorkTimerActive && !status.isOnBreak) {
+            breakTimerManager.startWorkTimer().catch(error => {
+              console.log("Could not auto-start work timer:", error.message);
+            });
+          }
+          
           sendResponse({ success: true, data: status });
         } catch (error) {
           console.error("Error getting break timer status:", error);
@@ -1392,6 +1619,14 @@ async function handleMessage(message, sender, sendResponse) {
           }
 
           const status = await tabTracker.getIntegratedTimerStatus();
+          
+          // Quietly attempt to start work timer if not active (non-blocking)
+          if (breakTimerManager && status?.breakTimer && !status.breakTimer.isWorkTimerActive && !status.breakTimer.isOnBreak) {
+            breakTimerManager.startWorkTimer().catch(error => {
+              console.log("Could not auto-start work timer from integrated status:", error.message);
+            });
+          }
+          
           sendResponse({ success: true, data: status });
         } catch (error) {
           console.error("Error getting integrated timer status:", error);
@@ -1543,8 +1778,7 @@ async function handleMessage(message, sender, sendResponse) {
             requireInteraction: true,
             buttons: [
               { title: "Return to Focus" },
-              { title: "Take Break" },
-              { title: "Dismiss" },
+              { title: "Remove Focus Tab" },
             ],
           };
 
@@ -1595,6 +1829,54 @@ async function handleMessage(message, sender, sendResponse) {
           console.error("Error cleaning analytics data:", error);
           sendResponse({ success: false, error: error.message });
         }
+        break;
+
+      case "START_WORK_TIMER":
+        try {
+          if (!breakTimerManager) {
+            throw new Error("Break timer manager not initialized");
+          }
+
+          const success = await breakTimerManager.startWorkTimer();
+          sendResponse({ 
+            success: success, 
+            message: success ? "Work timer started successfully" : "Failed to start work timer"
+          });
+        } catch (error) {
+          console.error("Error starting work timer:", error);
+          sendResponse({ success: false, error: error.message });
+        }
+        break;
+
+      case "ENSURE_WORK_TIMER_STARTED":
+        try {
+          const success = await ensureWorkTimerStarted();
+          sendResponse({ 
+            success: success, 
+            message: success ? "Work timer ensured to be running" : "Failed to ensure work timer"
+          });
+        } catch (error) {
+          console.error("Error ensuring work timer started:", error);
+          sendResponse({ success: false, error: error.message });
+        }
+        break;
+
+      case "CHECK_BREAK_TIMER_THRESHOLD":
+        await handleMessageWithErrorHandling(
+          "CHECK_BREAK_TIMER_THRESHOLD",
+          async () => {
+            if (!breakNotificationSystem) {
+              throw new Error("Break notification system not available");
+            }
+            
+            const notificationShown = await breakNotificationSystem.checkAndNotifyWorkTimeThreshold();
+            return { 
+              notificationShown: notificationShown,
+              message: notificationShown ? "Break reminder notification shown" : "No notification needed"
+            };
+          },
+          sendResponse
+        );
         break;
 
       default:
@@ -1790,6 +2072,16 @@ chrome.notifications.onClosed.addListener(async (notificationId, byUser) => {
       breakNotificationSystem = new BreakNotificationSystem();
       if (breakTimerManager) {
         breakNotificationSystem.setBreakTimerManager(breakTimerManager);
+      }
+    }
+
+    // Set TabTracker dependencies after all services are created
+    if (tabTracker) {
+      if (breakTimerManager) {
+        tabTracker.setBreakTimerManager(breakTimerManager);
+      }
+      if (breakNotificationSystem) {
+        tabTracker.setBreakNotificationSystem(breakNotificationSystem);
       }
     }
 
