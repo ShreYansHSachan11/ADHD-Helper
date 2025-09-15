@@ -305,7 +305,7 @@ class DistractionReminderService {
       // Adaptive frequency: increase cooldown with each reminder
       cooldownMs = Math.min(
         this.config.baseReminderCooldownMs *
-          Math.pow(this.config.reminderEscalationFactor, this.reminderCount),
+        Math.pow(this.config.reminderEscalationFactor, this.reminderCount),
         this.config.maxReminderCooldownMs
       );
     }

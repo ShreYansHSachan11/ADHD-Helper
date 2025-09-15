@@ -361,7 +361,7 @@ class PopupManager {
     // Screen Time elements
     this.currentTimeEl = document.getElementById("currentTime");
     this.timeLimitInput = document.getElementById("timeLimitInput");
-    this.takeBreakBtn = document.getElementById("takeBreakBtn");
+    // takeBreakBtn removed - handled by BreakControlsUI component
     this.resetScreenTimeBtn = document.getElementById("resetScreenTimeBtn");
 
     // Break status elements
@@ -489,7 +489,7 @@ class PopupManager {
     this.timeLimitInput?.addEventListener("blur", (e) =>
       this.handleTimeLimitChange(e)
     );
-    this.takeBreakBtn?.addEventListener("click", () => this.handleTakeBreak());
+    // takeBreakBtn event listener removed - handled by BreakControlsUI component
     this.resetScreenTimeBtn?.addEventListener("click", () =>
       this.resetScreenTimeData()
     );
@@ -1217,21 +1217,7 @@ class PopupManager {
         this.breakStatus.style.display = "none";
         this.workControls.style.display = "block";
 
-        // Enable/disable take break button based on timer state
-        if (this.takeBreakBtn) {
-          this.takeBreakBtn.disabled = !status.isWorkTimerActive;
-
-          // Update button text based on work time
-          if (status.isThresholdExceeded) {
-            this.takeBreakBtn.textContent = "Take Break Now (Recommended)";
-            this.takeBreakBtn.classList.add("btn-primary");
-            this.takeBreakBtn.classList.remove("btn-secondary");
-          } else {
-            this.takeBreakBtn.textContent = "Take Break Now";
-            this.takeBreakBtn.classList.add("btn-secondary");
-            this.takeBreakBtn.classList.remove("btn-primary");
-          }
-        }
+        // Button state management is now handled by BreakControlsUI component
       }
     } catch (error) {
       console.error("Error showing work controls:", error);

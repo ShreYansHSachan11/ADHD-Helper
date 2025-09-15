@@ -397,11 +397,18 @@ async function showBreakReminderNotification(tabId, timeSpent) {
     const notificationId = `break-reminder-${tabId}-${now}`;
     const timeFormatted = Math.floor(timeSpent / (1000 * 60)) + " minutes";
 
-    const success = await createNotification(notificationId, {
+    // Show break reminder notification (simple approach)
+    console.log("Showing break reminder notification");
+    chrome.notifications.create(notificationId, {
+      type: "basic",
+      iconUrl: "assets/icons/icon48.png",
       title: "Time for a Break! 🕐",
       message: `You've been on this tab for ${timeFormatted}. Consider taking a short break to rest your eyes and mind.`,
+      priority: 2,
+      requireInteraction: true,
       buttons: [{ title: "Take Break" }, { title: "Continue Working" }],
     });
+    const success = true;
 
     if (success) {
       notificationState.lastBreakNotificationTime = now;
@@ -431,15 +438,22 @@ async function showBreakTimerNotification(workTime, workMinutes) {
 
     const notificationId = `break-timer-${now}`;
 
-    const success = await createNotification(notificationId, {
+    // Show work time threshold notification (simple approach)
+    console.log("Showing work time threshold notification");
+    chrome.notifications.create(notificationId, {
+      type: "basic",
+      iconUrl: "assets/icons/icon48.png",
       title: "Break Reminder! ⏰",
       message: `You've been working for ${workMinutes} minutes. Time to take a break!`,
+      priority: 2,
+      requireInteraction: true,
       buttons: [
         { title: "Short Break (5 min)" },
         { title: "Medium Break (15 min)" },
         { title: "Long Break (30 min)" },
       ],
     });
+    const success = true;
 
     if (success) {
       notificationState.lastBreakNotificationTime = now;
@@ -613,10 +627,15 @@ async function handleBreakAlarm(alarm) {
       if (remainingTime <= 0) {
         await breakTimerManager.endBreak();
 
-        // Show break completion notification
-        await createNotification(`break-complete-${Date.now()}`, {
+        // Show break completion notification (simple approach)
+        console.log("Showing break completion notification");
+        chrome.notifications.create(`break-complete-${Date.now()}`, {
+          type: "basic",
+          iconUrl: "assets/icons/icon48.png",
           title: "Break Complete! 🎯",
           message: "Your break is over. Ready to get back to work?",
+          priority: 2,
+          requireInteraction: true,
           buttons: [{ title: "Start Working" }],
         });
 
@@ -647,10 +666,17 @@ async function handleBreakTimerCheck() {
       if (remainingTime <= 0) {
         await breakTimerManager.endBreak();
 
-        // Show break completion notification using the notification system
-        await breakNotificationSystem.showBreakCompletionNotification(
-          timerStatus.breakType || "break"
-        );
+        // Show break completion notification (simple approach)
+        console.log("Showing break completion notification via periodic check");
+        chrome.notifications.create(`break-complete-periodic-${Date.now()}`, {
+          type: "basic",
+          iconUrl: "assets/icons/icon48.png",
+          title: "Break Complete! 🎯",
+          message: "Your break is over. Ready to get back to work?",
+          priority: 2,
+          requireInteraction: true,
+          buttons: [{ title: "Start Working" }],
+        });
 
         console.log("Break completed via periodic check");
       }
