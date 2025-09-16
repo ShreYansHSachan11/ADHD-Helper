@@ -4,17 +4,19 @@ A comprehensive Chrome extension designed to enhance productivity through intell
 
 ## 🚀 Installation
 
-### Install from GitHub (Local Development)
+### Install from GitHub
 
 1. **Download the Extension**
+
    ```bash
    git clone https://github.com/your-username/nudge-extension.git
    cd nudge-extension
    ```
-   
+
    Or download as ZIP and extract to your desired folder.
 
 2. **Load in Chrome**
+
    - Open Chrome and navigate to `chrome://extensions/`
    - Enable "Developer mode" (toggle in top-right corner)
    - Click "Load unpacked"
@@ -37,8 +39,6 @@ A comprehensive Chrome extension designed to enhance productivity through intell
 - **White Noise** – "Block out distractions, tune into productivity!"
 - **ASMR Fidgets** – "Stress relief meets fun—right in your browser!"
 - **Wellness Tools** – "Your personal wellness toolkit… always a click away!"
-
-
 
 ## 📄 License
 
