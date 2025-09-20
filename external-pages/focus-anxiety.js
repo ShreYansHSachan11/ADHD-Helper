@@ -235,7 +235,9 @@ function onMemoryCardClick(cardElem, innerElem) {
     if (memoryState.matchedPairs === pairs) {
       stopMemoryTimer();
       setTimeout(() => {
-        console.log(`Nice! You completed the memory game in ${memoryState.elapsed}s`);
+        showCongrats(
+          `You completed the memory game in ${memoryState.elapsed}s!`
+        );
       }, 250);
     }
   } else {
@@ -393,6 +395,24 @@ window.addEventListener("keydown", (e) => {
     }
   }
 });
+
+/* ------------------ CONGRATULATIONS POPUP ------------------ */
+function showCongrats(message) {
+  const popup = document.getElementById("congratsPopup");
+  const messageEl = document.getElementById("congratsMessage");
+  messageEl.textContent = message;
+  popup.classList.add("show");
+
+  // Auto-hide after 3 seconds
+  setTimeout(() => {
+    hideCongrats();
+  }, 3000);
+}
+
+function hideCongrats() {
+  const popup = document.getElementById("congratsPopup");
+  popup.classList.remove("show");
+}
 
 /* ------------------ Init ------------------ */
 buildMemoryBoard();
